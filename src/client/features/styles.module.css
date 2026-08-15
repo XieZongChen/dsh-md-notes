@@ -1,0 +1,75 @@
+/* Shared dsh-md-notes styles: overlay, dialog, form controls. */
+
+.mask {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  font-family: inherit;
+}
+
+.iconBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--dsw-alias-label-secondary, #888);
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.iconBtn:hover {
+  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.15));
+  color: var(--dsw-alias-label-primary, #222);
+}
+
+.btn {
+  border: 1px solid var(--dsw-alias-border-l1, #ddd);
+  background: var(--dsw-alias-bg-layer-1, #fafafa);
+  color: var(--dsw-alias-label-primary, #222);
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.btn:hover {
+  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.15));
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btnPrimary {
+  background: var(--dsw-alias-brand-primary, #4a7bff);
+  border-color: transparent;
+  color: #fff;
+}
+.btnPrimary:hover {
+  filter: brightness(1.08);
+  background: var(--dsw-alias-brand-primary, #4a7bff);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--dsw-alias-border-l1, #ddd);
+  background: var(--dsw-alias-bg-base, #fff);
+  color: var(--dsw-alias-label-primary, #222);
+  font-size: 12px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  outline: none;
+}
+.input:focus {
+  border-color: var(--dsw-alias-brand-primary, #4a7bff);
+}
+
+.empty {
+  padding: 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary, #888);
+}

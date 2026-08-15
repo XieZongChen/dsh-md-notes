@@ -1,6 +1,7 @@
-# dsh-md-notes 设计文档
+# dsh-md-notes 架构设计文档
 
-DSH 第三方插件（bundle）"MD 笔记管理"的设计说明：架构、目录结构、开发环境、配置与实现细节。
+DSH 第三方插件（bundle）"MD 笔记管理"的架构设计：架构、目录结构、开发环境、配置与实现细节。
+功能设计见 [features.md](features.md)。
 
 ## 1. 架构
 
@@ -25,32 +26,49 @@ DSH 第三方插件（bundle）"MD 笔记管理"的设计说明：架构、目�
 dsh-md-notes/
 ├── package.json          # dsh.bundle + dsh.client + exports
 ├── cordis.patch.yml      # bundle 补丁：插入 md-notes 行
+├── assets/
+│   └── dsh-md-notes.svg  # 插件图标（唯一事实来源，host 直接 serve）
 ├── tsconfig.json         # host program（exclude src/client）
 ├── tsconfig.client.json  # client program（jsx: react-jsx）
 ├── tsdown.config.ts      # client bundle 构建（复刻仓库 tsdown.client.ts 协议）
 ├── docs/
-│   └── design.md         # 本文档
+│   ├── features.md        # 功能设计文档
+│   └── architecture.md    # 本文档（架构设计）
 ├── scripts/
 │   └── link-deps.mjs     # 开发期链接 deepseek-harness checkout 类型
 └── src/
-    ├── index.ts          # host 入口：函数插件 + HTTP API
+    ├── index.ts          # host 插件入口（name/inject/Config/apply，纯装配）
+    ├── host/
+    │   ├── notes.ts      # 笔记领域逻辑（目录/元数据/各操作方法）
+    │   └── http.ts       # HTTP 工具 + 路由 handler 组装
     └── client/
-        ├── index.tsx     # 浏览器入口：三个 slot + fetch
-        └── styles.ts     # 注入的样式（CSS 字符串）
+        ├── index.ts     # 入口（组装层，无 JSX）：apply + 三个 slot 注册 + NotesOverlay
+        └── features/
+            ├── api.ts            # Host HTTP API 封装
+            ├── store.ts          # NotesStore（pub/sub 共享状态）
+            ├── markdown.ts       # markdown 渲染器（纯函数）
+            ├── styles.module.css # 共享样式（mask/dialog/btn/input 等）
+            ├── NotesEntry/       # 侧边栏入口（NotesEntry.tsx + notes-entry.module.css）
+            ├── NoteAction/       # 记入笔记图标（NoteAction.tsx + note-action.module.css）
+            ├── NotePicker/       # 记入笔记弹窗（NotePicker.tsx + note-picker.module.css）
+            └── NotesManager/     # 笔记管理面板（NotesManager.tsx + notes-manager.module.css）
 ```
 
-## 3. Host 半（src/index.ts）
+## 3. Host 半（src/）
 
-- 插件导出：`name`（`md-notes`）、`inject`（`webServer`）、`Config`（schemastery schema：
-  `root`、`route`）、`apply(ctx, config)`。
-- 笔记目录解析规则（`notesDir`）：
-  - `config.root` 显式给出 → 直接作为最终目录；
-  - 未配置 → 回退到 `join(process.cwd(), '.dsh-notes')`。
-- 文件名规范化（`sanitizeName`）：去除路径分隔符/非法字符，强制 `.md` 后缀。
-- HTTP 路由（`ctx.webServer.register({ kind: 'prefix', path: route, handler })`）：
-  - 仅接受 `POST`；body 为 `{ method, ...args }`；
-  - 每个 `method` 映射一个文件操作；`appendConversation` 额外读取
+- 插件入口 `index.ts`：导出 `name`（`md-notes`）、`inject`（`webServer`）、`Config`（schemastery
+  schema：`root`、`route`）、`apply(ctx, config)`；`apply` 只做装配——解析目录、构建 handler、注册路由。
+- 领域逻辑 `host/notes.ts`：`notesDir` / `sanitizeName` / `titleOf` / `blocksToText` + 六个操作方法
+  （`listNotes` / `readNote` / `writeNote` / `createNote` / `deleteNote` / `appendConversation`），
+  全部为纯函数（目录参数注入，无 ctx 依赖），可独立测试。
+- HTTP 层 `host/http.ts`：`readBody`（有界 JSON 读取）、`sendJson`、`notesApiHandler`（method 分发）、
+  `iconHandler`（GET 返回打包的 SVG 图标）。
+- HTTP 路由（`ctx.webServer.register`）：
+  - `{ kind: 'prefix', path: route }`：仅接受 `POST`；body 为 `{ method, ...args }`；
+    每个 `method` 映射一个领域操作；`appendConversation` 额外读取
     `ctx.get('sessionQuery')` 以把指定消息的「用户提问 + 回答」格式化成 markdown 追加。
+  - `{ kind: 'exact', path: `${route}/icon.svg` }`：GET 返回 `assets/dsh-md-notes.svg`（`image/svg+xml`），
+    供 client 用 `<img>` 引用；exact 表先于 prefix 匹配，不会被 API 路由拦截。
 - 所有副作用（路由注册）都包在 `ctx.effect(..., label)` 内，HMR 安全。
 
 ### Host API 端点
@@ -64,13 +82,20 @@ dsh-md-notes/
 | `delete` | `{ name }` | `{ ok, name }` |
 | `appendConversation` | `{ noteName, sessionId, messageId }` | `{ ok, name }` |
 
-## 4. Client 半（src/client/index.tsx）
+## 4. Client 半（src/client/）
 
-- `inject: ['slots']`；`apply` 里注入样式（`<style data-plugin="dsh-md-notes">`）并注册三个 slot：
-  - `sidebar.footer.action` → 📓 侧边栏入口（独占一行、位于底部区域最上一行，JS 强制父 flex 换行）；
-  - `conversation.chat.assistant-actions` → 📝 记入笔记图标；
+- 入口 `index.ts`（无 JSX，用 `React.createElement`）：`inject: ['slots']`；`apply` 里创建共享
+  `NotesStore` 并注册三个 slot：
+  - `sidebar.footer.action` → 侧边栏入口（独占一行、位于底部区域最上一行，JS 强制父 flex 换行）；
+  - `conversation.chat.assistant-actions` → 记入笔记图标；
   - `shell.overlay` → 笔记管理器（列表 + 编辑/预览）与记入笔记选择弹窗。
-- 组件间通过 `apply` 闭包里的 `NotesStore`（pub/sub）共享打开状态。
+- 图标：`<img src="/plugins/md-notes/icon.svg">` 直接引用 host serve 的 SVG 文件（`api.ts` 导出
+  `ICON_URL`），不内联任何 path —— 单一事实来源，改 `assets/dsh-md-notes.svg` 即生效。
+- 目录约定：功能模块放在 `features/` 下，**每个功能一个子目录**，`index.tsx` 与 `styles.module.css` 成对；
+  共享模块（`api.ts` / `store.ts` / `markdown.ts`）与共享样式 `styles.module.css` 直接放在 `features/` 根。
+- 样式用 **CSS Modules**：`import styles from './styles.module.css'`，构建时编译为哈希类名并注入
+  `<style data-plugin-css="dsh-md-notes/<file>">`（tsdown 的 `dsh-md-notes-css-modules` 插件，
+  `sourceAssetPath` 把 `lib/client/` 下的导入映射回 `src/client/`）。
 - markdown 预览用内置轻量渲染器（先 HTML 转义，再逐行渲染标题/列表/引用/代码块/内联样式）。
 - 所有数据经 `fetch('/plugins/md-notes', { method: 'POST', body: JSON.stringify({ method, ...args }) })`。
 

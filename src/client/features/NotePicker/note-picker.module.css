@@ -1,0 +1,89 @@
+/* Note picker popup (记入笔记). */
+
+.dialog {
+  width: 420px;
+  max-width: 92vw;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--dsw-alias-bg-overlay, #fff);
+  border: 1px solid var(--dsw-alias-border-l1, #ddd);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.dialogHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, #ddd);
+  background: var(--dsw-alias-bg-layer-1, #fafafa);
+}
+
+.dialogIcon {
+  flex: none;
+  display: block;
+}
+
+.dialogTitle {
+  font-weight: 600;
+  font-size: 14px;
+  flex: 1;
+  color: var(--dsw-alias-label-primary, #222);
+}
+
+.dialogBody {
+  padding: 12px 14px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pickList {
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--dsw-alias-border-l1, #ddd);
+  border-radius: 8px;
+}
+
+.pickItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary, #222);
+}
+.pickItem:hover {
+  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.12));
+}
+.pickItemActive {
+  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.18));
+}
+
+.pickRadio {
+  color: var(--dsw-alias-brand-primary, #4a7bff);
+  font-size: 11px;
+}
+
+.newRow {
+  display: flex;
+  gap: 8px;
+}
+
+.status {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary, #888);
+  min-height: 16px;
+}
+
+.dialogFoot {
+  padding: 10px 14px;
+  border-top: 1px solid var(--dsw-alias-border-l1, #ddd);
+  display: flex;
+  justify-content: flex-end;
+}

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.client.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "../../lib",
+    "declarationDir": "../../lib/types/client"
+  },
+  "include": [".", "../css-modules.d.ts"],
+  "exclude": []
+}

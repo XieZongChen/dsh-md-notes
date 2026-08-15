@@ -1,0 +1,59 @@
+/* Sidebar entry row styles — mirrors the Settings trigger
+   (SettingsRoot.module.css): 34px compact row / 36px rail circle, 12px
+   radius, interactive hover fill, 14/22 text on primary ink, so the sidebar
+   footer reads as one row. */
+
+.notesRow {
+  order: -1; /* top row of the sidebar bottom area */
+  flex: 1 0 100%;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 0;
+}
+
+.entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: calc(100% + 8px);
+  height: 34px;
+  margin: 4px -4px 4px;
+  padding: 6px 2px 6px 10px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+  color: var(--dsw-alias-label-primary);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 22px;
+}
+.entry:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.entrySvg {
+  display: block;
+  flex: none;
+}
+
+.entryLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Rail entry: the same 36x36 circle box as the other rail controls. */
+.entryRail {
+  width: 36px;
+  height: 36px;
+  margin: 8px 0 10px;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border-radius: 50%;
+}

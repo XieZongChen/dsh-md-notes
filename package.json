@@ -19,6 +19,7 @@
   },
   "files": [
     "lib",
+    "assets",
     "cordis.patch.yml",
     "README.md"
   ],
@@ -46,6 +47,7 @@
     "@deepseek-ai/dsh-client-ui-conversation": "*",
     "@deepseek-ai/dsh-client-ui-sidebar": "*",
     "@deepseek-ai/dsh-client-ui-layout": "*",
+    "@deepseek-ai/dsh-client-ui-primitives": "*",
     "@deepseek-ai/dsh-client-ui-slots": "*",
     "@deepseek-ai/dsh-host-webserver": "*",
     "@deepseek-ai/dsh-session": "*",
@@ -61,6 +63,7 @@
     "@deepseek-ai/dsh-client-ui-conversation": { "optional": true },
     "@deepseek-ai/dsh-client-ui-sidebar": { "optional": true },
     "@deepseek-ai/dsh-client-ui-layout": { "optional": true },
+    "@deepseek-ai/dsh-client-ui-primitives": { "optional": true },
     "@deepseek-ai/dsh-client-ui-slots": { "optional": true },
     "@deepseek-ai/dsh-host-webserver": { "optional": true },
     "@deepseek-ai/dsh-session": { "optional": true },

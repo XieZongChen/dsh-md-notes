@@ -1,0 +1,27 @@
+/* Assistant-message note action — mirrors the shared message IconActions
+   chrome (copy / feedback): 28px circle, tertiary ink, interactive hover
+   fill, so the action strip reads as one row. */
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  border: none;
+  border-radius: 28px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.action:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-secondary);
+}
+
+.actionSvg {
+  display: block;
+  flex: none;
+}
