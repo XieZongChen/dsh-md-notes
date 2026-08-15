@@ -1,24 +1,26 @@
 # Changelog
 
-> 中文 · [English](CHANGELOG.en.md)
+> [中文](CHANGELOG.zh.md) · English
 
-本项目版本遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
-仅记录用户可见的功能性改动（不记录文档、代码重构、构建/工具链调整）。
+This project follows [Semantic Versioning](https://semver.org/).
+Only user-visible functional changes are recorded (no documentation, code refactoring, or build/toolchain adjustments).
+
+## [0.1.1] - 2026-08-16
+
+Docs-only release — no functional changes. README and CHANGELOG now default to English, with Chinese versions available via `README.zh.md` / `CHANGELOG.zh.md`.
 
 ## [0.1.0] - 2026-08-16
 
 ### Added
 
-- 正式 bundle 插件（可随 dsh 常驻，重启不丢），经 `dsh plugin --profile web add` 安装
-- **侧边栏入口**：笔记入口，位于侧边栏底部区域最上一行，点击打开笔记管理界面
-- **笔记管理界面**（`shell.overlay` 全屏面板）：
-  - 左侧笔记列表（标题 + 更新时间），支持新建（空标题自动用"未命名笔记 日期"）与删除
-  - 右侧编辑 / 预览双 Tab，内置轻量 markdown 渲染器，保存即写入
-- **记入笔记**：每条回答下方操作栏图标，弹出面板选择（或新建）目标笔记，将「用户提问 + 回答」
-  以时间戳分段追加到笔记末尾
-- 笔记以普通 `.md` 文件存储（默认 `<cwd>/.dsh-notes`，可用 Config `root` 覆盖），`meta.json`
-  记录标题与更新时间，可直接在文件系统编辑
-- 回答操作栏新增悬停 Tooltip「发送到笔记」（与复制按钮同款，side=bottom）
-- 笔记管理面板与记入笔记弹窗的标题图标改用插件 SVG 图标（与侧边栏/操作栏一致）
-- 图标去掉四周留白（SVG viewBox 收紧），显示不再偏小
-- 侧边栏笔记入口与回答操作栏按钮样式对齐原生控件（设置按钮 / 复制按钮）
+- Official bundle plugin (persists with dsh, survives restarts), installed via `dsh plugin --profile web add`
+- **Sidebar entry**: notes entry at the top row of the sidebar bottom area; click to open the notes manager
+- **Notes manager** (`shell.overlay` full-screen panel):
+  - Left: note list (title + updated time); create (an empty title auto-falls back to "Untitled note <date>") and delete
+  - Right: Edit / Preview tabs with a built-in lightweight markdown renderer; Save writes to disk
+- **Add to note**: action icon below each answer; pick (or create) a target note in the popup — the user question + answer are appended to the end of the note with a timestamped section
+- Notes are plain `.md` files (default `<cwd>/.dsh-notes`, overridable via Config `root`); `meta.json` records the title and updated time; editable directly on the filesystem
+- Hover Tooltip "Add to note" on the assistant action (same as the copy button, side=bottom)
+- Notes manager and note-picker popup titles now use the plugin SVG icon (same source as the sidebar/action icons)
+- Icon trimmed: the SVG viewBox was tightened to remove the ~173px border, so it no longer renders small
+- Sidebar entry and assistant-action styling aligned with native controls (Settings button / copy button)
