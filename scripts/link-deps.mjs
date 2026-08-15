@@ -9,8 +9,9 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-// 指向 deepseek-harness checkout（可用环境变量覆盖）
-const checkout = resolve(process.env.DSH_CHECKOUT ?? '/Users/xiezongchen/space/deepseek/deepseek-harness')
+// 指向 deepseek-harness checkout（可用环境变量 DSH_CHECKOUT 覆盖；
+// 默认解析为脚本目录上两级目录下的 deepseek-harness）
+const checkout = resolve(process.env.DSH_CHECKOUT ?? join(root, '..', '..', 'deepseek-harness'))
 
 const targets = [
   'vendor/cordis',

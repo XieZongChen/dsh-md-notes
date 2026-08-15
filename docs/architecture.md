@@ -114,7 +114,7 @@ npm run build
 
 - `scripts/link-deps.mjs` 把 `@deepseek-ai/*` 包符号链接到 checkout 的构建产物
   （`packages/<group>/<pkg>`），使 TypeScript 能解析类型。`DSH_CHECKOUT` 环境变量
-  覆盖默认的 `/Users/xiezongchen/space/deepseek/deepseek-harness`。
+  覆盖默认 checkout 路径（默认解析为脚本目录上两级目录下的 `deepseek-harness`）。
 - **host 与 client 必须两个 tsc program**：host 侧 `dsh-session` 与浏览器侧
   `dsh-client-runtime` 对 `Context.sessions` 的声明不同，同一 program 内会冲突；
   host program `exclude: ["src/client"]`，client program 只编译浏览器侧。
@@ -132,12 +132,13 @@ npm run build
     route: '/plugins/md-notes'   # HTTP API 前缀；默认即可
 ```
 
-本机部署（web profile）已在 `~/.dsh/profiles/web/cordis.patch.yml` 配置：
+本机部署（web profile）已在 `~/.dsh/profiles/web/cordis.patch.yml` 配置，
+`root` 指向本机工作区下的 `.dsh-notes` 目录（示例，按需替换）：
 
 ```yaml
 - id: md-notes
   config:
-    root: '/Users/xiezongchen/space/deepseek/dsh-work/.dsh-notes'
+    root: '<工作区>/.dsh-notes'
     route: '/plugins/md-notes'
 ```
 

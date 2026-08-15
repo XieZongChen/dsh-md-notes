@@ -5,6 +5,10 @@
 <h1 align="center">dsh-md-notes</h1>
 
 <p align="center">
+  <a href="README.en.md">English</a>
+</p>
+
+<p align="center">
   DSH 第三方插件（bundle）：<b>MD 笔记管理</b>
   <br />
   <a href="docs/features.md">功能设计</a> · <a href="docs/architecture.md">架构设计</a> · <a href="CHANGELOG.md">变更记录</a>
@@ -22,18 +26,30 @@
 
 前置：已安装 `dsh` CLI，目标 profile 为 `web`。
 
+从 npm 安装（推荐）：
+
 ```sh
-# 从插件工程目录的上一级执行（或使用绝对路径）
-dsh plugin --profile web add /Users/xiezongchen/space/deepseek/dsh-work/dsh-md-notes
+dsh plugin --profile web add dsh-md-notes
 ```
 
 然后**重启 dsh web**（bundle 层与 client 包元数据在进程内缓存，必须重启才生效）。
 
-卸载：
+## 升级
+
+```sh
+dsh plugin --profile web update dsh-md-notes
+```
+
+同样需要重启 dsh web 生效。
+
+## 卸载
 
 ```sh
 dsh plugin --profile web remove dsh-md-notes
 ```
+
+> 从源码调试（开发用）：在插件工程目录的上一级执行
+> `dsh plugin --profile web add ./dsh-md-notes`。
 
 ## 使用
 

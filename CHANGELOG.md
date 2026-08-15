@@ -1,5 +1,7 @@
 # Changelog
 
+> 中文 · [English](CHANGELOG.en.md)
+
 本项目版本遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 仅记录用户可见的功能性改动（不记录文档、代码重构、构建/工具链调整）。
 
