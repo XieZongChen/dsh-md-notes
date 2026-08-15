@@ -1,0 +1,4 @@
+# dsh-md-notes bundle patch: inserts the plugin row into the host composition.
+- insert:
+    - id: md-notes
+      name: dsh-md-notes
