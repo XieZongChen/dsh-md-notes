@@ -142,7 +142,8 @@ export function apply(ctx: Context, config: Config): void {
     const cwd = sessionStore?.get(sessionId)?.header?.cwd
     if (typeof cwd !== 'string' || cwd === '') return undefined
     const registry = workspaces()
-    const ws = registry?.list().find((candidate) => {
+    if (registry === undefined) return undefined
+    const ws = registry.list().find((candidate) => {
       try {
         return normPath(candidate.path) === normPath(cwd)
       } catch {
