@@ -205,7 +205,9 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       return { ok: true, settings: deps.readSettings() }
     }
     case 'checkUpdate': {
-      return deps.checkUpdate()
+      const r = await deps.checkUpdate()
+      if (!r.ok) return { ok: false }
+      return { ok: true, update: { current: r.current, latest: r.latest, hasUpdate: r.hasUpdate } }
     }
     case 'gitSuggest': {
       return { ok: true, suggestions: deps.suggest() }
