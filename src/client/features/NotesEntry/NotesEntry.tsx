@@ -58,14 +58,16 @@ export function NotesEntry(props: NotesEntryProps): React.ReactElement {
         aria-label={t('sidebar.entry')}
         onClick={() => store.set({ managerOpen: true })}
       >
-        <img
-          src={ICON_URL}
-          width={wide ? 16 : 18}
-          height={wide ? 16 : 18}
-          alt=""
-          className={styles.entrySvg}
-        />
-        {wide ? <span className={styles.entryLabel}>{t('sidebar.label')}</span> : null}
+        <span className={styles.entryMain}>
+          <img
+            src={ICON_URL}
+            width={wide ? 16 : 18}
+            height={wide ? 16 : 18}
+            alt=""
+            className={styles.entrySvg}
+          />
+          {wide ? <span className={styles.entryLabel}>{t('sidebar.label')}</span> : null}
+        </span>
         {wide && update !== null && (
           <span className={styles.updateTag} title={t('sidebar.updateTitle', { latest: update.latest })}>
             {t('sidebar.updateTag')}

@@ -35,13 +35,20 @@
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
+.entryMain {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
 .entrySvg {
   display: block;
   flex: none;
 }
 
 .entryLabel {
-  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -57,6 +64,9 @@
   gap: 0;
   padding: 0;
   border-radius: 50%;
+}
+.entryRail .entryMain {
+  flex: none;
 }
 
 /* "Update available" tag — yellow accent, sits after the entry label. */
