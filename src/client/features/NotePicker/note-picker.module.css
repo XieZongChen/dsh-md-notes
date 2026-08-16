@@ -1,4 +1,6 @@
-/* Note picker popup (记入笔记). */
+/* Note picker popup (记入笔记). The card/mask/shadow come from dsh's Modal
+   component (headless mode); this file only lays out the picker's own content
+   with dsh theme tokens so dark mode renders correctly. */
 
 .dialog {
   width: 420px;
@@ -6,10 +8,6 @@
   max-height: 70vh;
   display: flex;
   flex-direction: column;
-  background: var(--dsw-alias-bg-overlay, #fff);
-  border: 1px solid var(--dsw-alias-border-l1, #ddd);
-  border-radius: 10px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
   overflow: hidden;
 }
 
@@ -17,9 +15,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--dsw-alias-border-l1, #ddd);
-  background: var(--dsw-alias-bg-layer-1, #fafafa);
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+  background: var(--dsw-alias-bg-layer-1);
 }
 
 .dialogIcon {
@@ -28,25 +26,25 @@
 }
 
 .dialogTitle {
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 500;
+  font-size: 16px;
   flex: 1;
-  color: var(--dsw-alias-label-primary, #222);
+  color: var(--dsw-alias-label-primary);
 }
 
 .dialogBody {
-  padding: 12px 14px;
+  padding: 16px 20px;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .pickList {
   max-height: 240px;
   overflow: auto;
-  border: 1px solid var(--dsw-alias-border-l1, #ddd);
-  border-radius: 8px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 10px;
 }
 
 .pickItem {
@@ -56,17 +54,17 @@
   padding: 8px 10px;
   cursor: pointer;
   font-size: 13px;
-  color: var(--dsw-alias-label-primary, #222);
+  color: var(--dsw-alias-label-primary);
 }
 .pickItem:hover {
-  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.12));
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 .pickItemActive {
-  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.18));
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
 .pickRadio {
-  color: var(--dsw-alias-brand-primary, #4a7bff);
+  color: var(--dsw-alias-brand-primary);
   font-size: 11px;
 }
 
@@ -77,13 +75,13 @@
 
 .status {
   font-size: 12px;
-  color: var(--dsw-alias-label-secondary, #888);
+  color: var(--dsw-alias-label-secondary);
   min-height: 16px;
 }
 
 .dialogFoot {
-  padding: 10px 14px;
-  border-top: 1px solid var(--dsw-alias-border-l1, #ddd);
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--dsw-alias-border-l1);
   display: flex;
   justify-content: flex-end;
 }

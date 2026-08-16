@@ -7,10 +7,12 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NoteSummary } from '../api.ts'
 import { api, ICON_URL } from '../api.ts'
 import type { NotesStore } from '../store.ts'
 import type { MdNotesKey } from '../locales/index.ts'
+import { DshInput } from '../components/DshInput/DshInput.tsx'
 import shared from '../styles.module.css'
 import styles from './note-picker.module.css'
 
@@ -84,49 +86,53 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
   const close = (): void => store.set({ picker: null })
 
   return (
-    <div className={shared.mask} onClick={(e) => { if (e.target === e.currentTarget) close() }}>
-      <div className={styles.dialog}>
-        <div className={styles.dialogHead}>
-          <img src={ICON_URL} width={16} height={16} alt="" className={styles.dialogIcon} />
-          <span className={styles.dialogTitle}>{t('picker.title')}</span>
-          <button type="button" className={shared.iconBtn} onClick={close} title={t('picker.close')}>✕</button>
-        </div>
-        <div className={styles.dialogBody}>
-          {noWorkspaces
-            ? <div className={shared.empty}>{t('picker.noWorkspaces')}</div>
-            : notes.length === 0
-              ? <div className={shared.empty}>{t('picker.empty')}</div>
-              : <div className={styles.pickList}>
-                {notes.map((n) => (
-                  <div
-                    key={n.name}
-                    className={selected === n.name ? `${styles.pickItem} ${styles.pickItemActive}` : styles.pickItem}
-                    onClick={() => setSelected(n.name)}
-                  >
-                    <span className={styles.pickRadio}>{selected === n.name ? '●' : '○'}</span>
-                    <span>{n.title}</span>
-                  </div>
-                ))}
-              </div>}
-          <div className={styles.newRow}>
-            <input
-              className={shared.input}
-              placeholder={t('picker.newPlaceholder')}
-              value={newTitle}
-              disabled={noWorkspaces}
-              onChange={(e) => setNewTitle(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') createAndPick() }}
-            />
-            <button type="button" className={shared.btn} onClick={createAndPick} disabled={busy || noWorkspaces}>{t('picker.new')}</button>
-          </div>
-          <div className={styles.status}>{status === '' ? '' : t(status.key, status.params)}</div>
-        </div>
-        <div className={styles.dialogFoot}>
-          <button type="button" className={`${shared.btn} ${shared.btnPrimary}`} onClick={send} disabled={busy || !selected || noWorkspaces}>
-            {busy ? t('picker.writing') : t('picker.write')}
-          </button>
-        </div>
+    <Modal
+      open
+      headless
+      title={t('picker.title')}
+      closeLabel={t('picker.close')}
+      onClose={close}
+      className={styles.dialog}
+    >
+      <div className={styles.dialogHead}>
+        <img src={ICON_URL} width={16} height={16} alt="" className={styles.dialogIcon} />
+        <span className={styles.dialogTitle}>{t('picker.title')}</span>
+        <button type="button" className={shared.iconBtn} onClick={close} title={t('picker.close')}>✕</button>
       </div>
-    </div>
+      <div className={styles.dialogBody}>
+        {noWorkspaces
+          ? <div className={shared.empty}>{t('picker.noWorkspaces')}</div>
+          : notes.length === 0
+            ? <div className={shared.empty}>{t('picker.empty')}</div>
+            : <div className={styles.pickList}>
+              {notes.map((n) => (
+                <div
+                  key={n.name}
+                  className={selected === n.name ? `${styles.pickItem} ${styles.pickItemActive}` : styles.pickItem}
+                  onClick={() => setSelected(n.name)}
+                >
+                  <span className={styles.pickRadio}>{selected === n.name ? '●' : '○'}</span>
+                  <span>{n.title}</span>
+                </div>
+              ))}
+            </div>}
+        <div className={styles.newRow}>
+          <DshInput
+            placeholder={t('picker.newPlaceholder')}
+            value={newTitle}
+            disabled={noWorkspaces}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') createAndPick() }}
+          />
+          <button type="button" className={shared.btn} onClick={createAndPick} disabled={busy || noWorkspaces}>{t('picker.new')}</button>
+        </div>
+        <div className={styles.status}>{status === '' ? '' : t(status.key, status.params)}</div>
+      </div>
+      <div className={styles.dialogFoot}>
+        <button type="button" className={`${shared.btn} ${shared.btnPrimary}`} onClick={send} disabled={busy || !selected || noWorkspaces}>
+          {busy ? t('picker.writing') : t('picker.write')}
+        </button>
+      </div>
+    </Modal>
   )
 }
