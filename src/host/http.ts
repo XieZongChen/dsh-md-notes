@@ -76,6 +76,12 @@ export interface NotesApiDeps {
   workspaceIdForSession(sessionId: string | undefined): string | undefined
   /** Persist L3 settings (whitelisted keys only, see `gitConfig`). */
   updateSettings(patch: Record<string, unknown>): Promise<void>
+  /** Current user-level (L3) settings for the config form. */
+  readSettings(): Record<string, unknown>
+  /** Suggested repo paths (per workspace `.dsh-notes`, central under DSH_HOME). */
+  suggest(): Record<string, unknown>
+  /** Whether the workspace registry has at least one real workspace. */
+  hasWorkspaces(): boolean
   /** Bound git operations. */
   git: GitApi
   /** Persist the authorization flag for a workspace repo (or the central repo). */
@@ -100,7 +106,7 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
         const result = await listNotes(ws.notesDir)
         workspaces.push({ workspaceId: ws.workspaceId, name: ws.name, notes: result.ok ? result.notes : [] })
       }
-      return { ok: true, workspaces }
+      return { ok: true, workspaces, noWorkspaces: !deps.hasWorkspaces() }
     }
     case 'read':
       return readNote(deps.resolveDir(workspaceId), name)
@@ -174,6 +180,12 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       } catch (error) {
         return { ok: false, error: error instanceof Error ? error.message : String(error) }
       }
+    case 'gitSettings': {
+      return { ok: true, settings: deps.readSettings() }
+    }
+    case 'gitSuggest': {
+      return { ok: true, suggestions: deps.suggest() }
+    }
     case 'gitConfig': {
       // Whitelist the settings keys this API may write (L3), dropping anything else.
       const allowed = [

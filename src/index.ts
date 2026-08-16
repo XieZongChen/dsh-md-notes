@@ -11,7 +11,7 @@
  */
 
 import { fileURLToPath } from 'node:url'
-import path, { resolve } from 'node:path'
+import path, { join, resolve } from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
@@ -53,7 +53,7 @@ export interface Config {
 }
 
 export const name = 'md-notes'
-export const inject = ['webServer']
+export const inject = ['webServer', 'settings']
 export const Config: s<Config> = s.object({
   root: s.string().default('.dsh-notes'),
   route: s.string().default('/plugins/md-notes'),
@@ -186,6 +186,16 @@ export function apply(ctx: Context, config: Config): void {
     sync: (repo) => gitSync(ctx, repo, readSettings().gitBranch ?? 'main'),
   }
 
+  const suggest = (): Record<string, unknown> => {
+    const registry = workspaces()
+    const wsEntries = registry === undefined ? [] : registry.list()
+    const home = process.env.DSH_HOME ?? join(process.env.HOME ?? '', '.dsh')
+    return {
+      workspaces: wsEntries.map((ws) => ({ workspaceId: ws.id, path: join(ws.path, '.dsh-notes') })),
+      centralPath: join(home, 'notes-repo'),
+    }
+  }
+
   const deps: NotesApiDeps = {
     defaultDir,
     resolveDir,
@@ -193,6 +203,12 @@ export function apply(ctx: Context, config: Config): void {
     listWorkspaces,
     workspaceIdForSession,
     updateSettings,
+    readSettings: () => (scope?.get() ?? {}) as Record<string, unknown>,
+    suggest,
+    hasWorkspaces: () => {
+      const registry = workspaces()
+      return registry !== undefined && registry.list().length > 0
+    },
     git,
     setAuthorized,
     sessionQuery: ctx.get('sessionQuery'),

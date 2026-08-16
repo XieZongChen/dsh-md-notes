@@ -26,14 +26,28 @@ export interface GitStatusData {
   error?: string
 }
 
+/** The user-level (L3) git settings surfaced to the config forms. */
+export interface GitSettingsData {
+  gitMode?: 'off' | 'on'
+  gitCentral?: { path?: string; remote?: string; authorized?: boolean }
+  gitRepos?: Record<string, { path?: string; remote?: string; authorized?: boolean }>
+  gitBranch?: string
+  gitAutoPull?: boolean
+  gitAuthorName?: string
+  gitAuthorEmail?: string
+}
+
 export type ApiResult =
   | {
     ok: true
     workspaces?: WorkspaceNotes[]
+    noWorkspaces?: boolean
     content?: string
     name?: string
     dir?: string
     status?: GitStatusData
+    settings?: GitSettingsData
+    suggestions?: GitSuggestData
   }
   | { ok: false; error: string; code?: string }
 
@@ -81,4 +95,32 @@ export function gitPullApi(workspaceId?: string): Promise<ApiResult> {
 /** User-initiated conflict resolution: merge the remote into the local branch. */
 export function gitSyncApi(workspaceId?: string): Promise<ApiResult> {
   return api('gitSync', workspaceId === undefined ? {} : { workspaceId })
+}
+
+/** Current user-level (L3) git settings. */
+export function gitSettingsApi(): Promise<ApiResult> {
+  return api('gitSettings')
+}
+
+/** Write git settings (whitelisted keys, see the host `gitConfig`). */
+export function gitConfigApi(patch: Record<string, unknown>): Promise<ApiResult> {
+  return api('gitConfig', patch)
+}
+
+/** Suggested repo paths from the host (per-workspace `.dsh-notes` + central). */
+export interface GitSuggestData {
+  workspaces?: Array<{ workspaceId: string; path: string }>
+  centralPath?: string
+}
+
+export function gitSuggestApi(): Promise<ApiResult> {
+  return api('gitSuggest')
+}
+
+/** Authorize (or revoke) a workspace repo — or the central repo when no id. */
+export function gitAuthorizeApi(workspaceId?: string): Promise<ApiResult> {
+  return api('gitAuthorize', workspaceId === undefined ? {} : { workspaceId })
+}
+export function gitRevokeApi(workspaceId?: string): Promise<ApiResult> {
+  return api('gitRevoke', workspaceId === undefined ? {} : { workspaceId })
 }

@@ -1,0 +1,157 @@
+/* dsh settings panel section: git configuration form. */
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 640px;
+}
+
+.loading {
+  padding: 12px 0;
+  color: var(--dsw-alias-label-secondary, #888);
+  font-size: 13px;
+}
+
+.row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 160px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary, #888);
+}
+
+.input,
+.field select {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--dsw-alias-border-l2, #ddd);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-primary, #fff);
+  color: var(--dsw-alias-label-primary, #222);
+  font: inherit;
+  font-size: 13px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary, #222);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l1, #eee);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-layer-1, #fafafa);
+}
+
+.groupTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #222);
+}
+
+.wsRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wsName {
+  flex: none;
+  width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary, #222);
+}
+
+.wsRow .input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.authBtn {
+  flex: none;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2, #ddd);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary, #222);
+  font-size: 12px;
+  cursor: pointer;
+}
+.authBtn:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.authBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.suggestBtn {
+  flex: none;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px dashed var(--dsw-alias-border-l2, #bbb);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #888);
+  font-size: 12px;
+  cursor: pointer;
+}
+.suggestBtn:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary, #222);
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary, #aaa);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.msg {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary, #888);
+}
+
+.saveBtn {
+  height: 30px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dsw-alias-interactive-bg-primary, #4a7bff);
+  color: var(--dsw-alias-label-inverse, #fff);
+  font-size: 13px;
+  cursor: pointer;
+}
+.saveBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

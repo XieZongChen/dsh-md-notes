@@ -78,7 +78,12 @@
   background: var(--dsw-alias-bg-layer-1, #f5f5f5);
 }
 .noteItemActive {
-  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.15));
+  /* Same recognizable fill as dsh's selected rows (and our workspace header). */
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.noteItemActive .noteTitle {
+  font-weight: 600;
 }
 
 .noteMain {
@@ -207,19 +212,122 @@
 }
 .preview a { color: var(--dsw-alias-brand-primary, #4a7bff); }
 
-/* Workspace grouping in the left list (central mode). */
+/* Workspace grouping in the left list. The workspace header mirrors dsh's
+   sidebar workspace row (ui-workspace Rows.module.css .projectRow): 34px,
+   radius 8, hover + selected share the interactive hover fill. Notes under a
+   workspace keep their own row styles. */
 .wsGroup {
   display: flex;
   flex-direction: column;
 }
 
 .wsGroupHead {
-  padding: 6px 10px 2px;
-  font-size: 11px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  color: var(--dsw-alias-label-primary);
+  box-sizing: border-box;
+}
+
+.wsGroupHead:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.wsGroupHeadActive {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.wsGroupTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Folder glyph: tertiary grey; business-primary (blue) when the workspace is
+   the active one — matches ui-workspace's .folder / .folderActive. */
+.wsFolder {
+  flex: none;
+  width: 16px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.wsFolderActive {
+  color: var(--dsw-alias-state-business-primary);
+}
+
+/* Expand chevron: caption grey, rotates to point down when expanded. */
+.wsChevron {
+  flex: none;
+  width: 16px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-caption);
+}
+
+.wsArrow {
+  transition: transform 150ms var(--ds-ease-in-out);
+}
+
+.wsArrowOpen {
+  transform: rotate(90deg);
+}
+
+/* Persistent new-note button on the active workspace row — mirrors dsh's
+   workspace new-session iconButton (16px, radius 4, tertiary → primary on
+   hover) but always visible instead of hover-gated. */
+.wsNewBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 4px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.wsNewBtn:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+/* No-workspace guidance in the left panel. */
+.listLoading {
+  display: flex;
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.editorLoading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.noWsPrompt {
+  padding: 14px 12px;
+  font-size: 12px;
+  line-height: 1.6;
   color: var(--dsw-alias-label-secondary, #888);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
 }
 
 .wsEmpty {
@@ -231,12 +339,17 @@
 .gitBtn {
   flex: none;
   height: 28px;
-  padding: 0 10px;
+  padding: 0 12px;
   border: 1px solid var(--dsw-alias-border-l2, #ddd);
   border-radius: 8px;
   background: transparent;
   color: var(--dsw-alias-label-primary, #222);
   font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
   cursor: pointer;
 }
 .gitBtn:hover {
@@ -251,6 +364,32 @@
   display: inline-flex;
   gap: 6px;
   margin-right: 4px;
+}
+
+/* Primary action button (保存 / 提交并推送) — same geometry as .gitBtn so
+   the editor-head trio reads as one row. */
+.saveBtn {
+  flex: none;
+  height: 28px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dsw-alias-brand-primary, #4a7bff);
+  color: #fff;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.saveBtn:hover {
+  filter: brightness(1.08);
+}
+.saveBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 /* Commit popover panel (anchored under the editor head). */

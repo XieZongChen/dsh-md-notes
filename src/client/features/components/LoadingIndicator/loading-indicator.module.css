@@ -1,0 +1,13 @@
+/* Loading indicator row (dsh pixel-chase dot + optional label). */
+
+.indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label {
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--dsw-alias-label-secondary, #888);
+}

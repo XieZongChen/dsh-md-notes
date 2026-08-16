@@ -192,11 +192,18 @@ export function resolveCentralRepo(settings: MdNotesSettings): ResolvedRepo | un
   }
 }
 
-/** Notes directory for a workspace under the current settings (git-aware). */
+/**
+ * Notes directory for a workspace under the current settings (git-aware).
+ * git off → `config.root` (an absolute override applies as-is; a relative
+ * root resolves per workspace). git on with a usable repo → the repo's note
+ * dir; git on with NO repo → the workspace's OWN `.dsh-notes` (isolated from
+ * other workspaces, never the shared absolute root).
+ */
 export function resolveNotesDir(settings: MdNotesSettings, ws: WorkspaceInfo, fallbackRoot: string): string {
   if (settings.gitMode !== 'on') return resolveInside(ws.path, fallbackRoot)
   const repo = resolveWorkspaceRepo(settings, ws)
-  return repo?.noteDir ?? resolveInside(ws.path, fallbackRoot)
+  if (repo !== undefined) return repo.noteDir
+  return join(resolve(ws.path), '.dsh-notes')
 }
 
 /** Resolve a possibly-relative fallback root against the workspace path. */

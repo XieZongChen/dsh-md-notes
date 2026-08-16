@@ -13,6 +13,8 @@ import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/c
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+import type {} from '@deepseek-ai/dsh-client-ui-settings-general/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { NotesStore } from './features/store.ts'
@@ -21,6 +23,7 @@ import { NotesEntry } from './features/NotesEntry/NotesEntry.tsx'
 import { NoteAction } from './features/NoteAction/NoteAction.tsx'
 import { NotePicker } from './features/NotePicker/NotePicker.tsx'
 import { NotesManager } from './features/NotesManager/NotesManager.tsx'
+import { SettingsSection } from './features/Settings/SettingsSection.tsx'
 
 export const inject = ['slots', 'locale']
 
@@ -82,4 +85,9 @@ export function apply(ctx: ClientContext): void {
     (props: { t: TranslateNS<'md-notes'> }) =>
       React.createElement(NotesOverlay, { store, t: props.t }),
   )), 'dsh-md-notes: overlay')
+
+  ctx.effect(() => ctx.slots.inject('settings.section', () => ctx.slots.register(
+    { name: 'settings.section', id: 'md-notes', order: 10, label: () => t('git.settingsNav'), locale: 'md-notes' },
+    SettingsSection,
+  )), 'dsh-md-notes: settings section')
 }

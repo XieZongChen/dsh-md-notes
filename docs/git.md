@@ -4,6 +4,39 @@
 > [TODO.md](TODO.md) 第 1 项的实现蓝图。功能设计总览见 [features.md](features.md)，
 > 架构与现状见 [architecture.md](architecture.md)。
 
+## 0. 实现状态
+
+> 最后更新 2026-08-16。✅ 已实现（slice 1 随 `b20a367` 提交；slice 2 待提交）；🚧 设计已定、未实现；⏳ 待实测确认。
+
+### 已实现（slice 1 + slice 2）
+
+- ✅ 三层配置模型：schema 默认 → cordis Config（L2 yaml）→ settings 命名空间 `md-notes`（L3），host 侧逐层合并
+- ✅ 仓库解析：工作区独立仓库 / 总仓库（central）/ **无仓库时各工作区独立 `.dsh-notes`（互相隔离）**（§3.3、§4）
+- ✅ git 执行（subprocess 收集输出）+ **授权门禁**：沙箱外仓库必须 `authorized=true`，持久化于每仓库记录
+- ✅ API：`gitStatus` / `gitInit` / `gitPush` / `gitPull` / `gitAuthorize` / `gitRevoke` / `gitConfig` / `gitSync` / `gitSettings`
+- ✅ 提交身份解析：仓库自身 git 配置优先 → 插件 `gitAuthorName/Email` 兜底 → 都没有时明确报错
+- ✅ non-fast-forward 冲突：`gitPush` 返回错误码 + client「合并远端并重试」（`gitSync`，用户触发，不自动处理）
+- ✅ session→工作区路由、分组 `list`（多工作区视图）
+- ✅ Client 管理器：按工作区分组、编辑器头部 更新/推送、commit 弹层面板、打开笔记自动拉取（**受 `gitAutoPull` 开关控制**）、底部状态行、central 全局按钮、冲突解决 UI、i18n 中英
+- ✅ **dsh 设置面板「MD 笔记」分区**（`settings.section`）：gitMode / 分支 / 自动拉取 / 作者 / 总仓库（路径+远程+授权）/ 按工作区仓库（路径+远程+授权）的完整表单（`gitSettings` 读 + `gitConfig` 写）
+- ✅ **授权按钮 UI**（设置面板内，central + 各工作区仓库）：`gitAuthorize` / `gitRevoke`，持久化
+
+### 未实现（slice 3+）
+
+- 🚧 管理器「同步区」独立配置表单（当前配置入口在 dsh 设置面板）
+- 🚧 授权走 `approval.request` 审批（当前为界面确认后直接置 `authorized`）
+- 🚧 工作区改名跟随（`.dsh-workspaces.json` 的 `git mv`，当前文件夹名首次创建后锁定）
+- 🚧 笔记目录迁移确认（off→on / 切换仓库时已有笔记处理，§4.1）
+- 🚧 自动拉取限频（同一仓库 30s 内不重复）
+
+### 待实测 / 待确认
+
+- ⏳ host 进程内 fs 是否受命令沙箱限制（决定授权是否需同时覆盖 notes 读写，§6）
+- ⏳ git 子进程经 `subprocess` 服务 + 沙箱模式覆盖的组合（当前为插件自身门禁，无沙箱强制）
+- ⏳ 跨机工作区 title 一致性（影响改名跟随设计）
+- ⏳ schemastery `s.dict` 在真实 settings 服务的序列化（已通过冒烟测试，待完整运行验证）
+- ⏳ 设置面板分区在真实运行中的渲染与保存（待重启验证）
+
 ## 1. 目标
 
 让笔记目录成为一个可同步的 Git 仓库：支持一键提交、推送到远程（GitHub/GitLab 等），
@@ -131,10 +164,10 @@ dsh 的命令沙箱以**会话工作区（cwd）为边界**：工作区内的文
 
 | 配置 | 仓库 | 笔记目录 |
 |---|---|---|
-| `gitMode=off` | 无 | `config.root`（现状） |
+| `gitMode=off` | 无 | `config.root`（绝对覆盖原样生效；相对 root 按工作区解析） |
 | `gitMode=on`，且 `gitRepos[ws].path` 有值 | 工作区独立仓库 | `<ownRepo>/` |
 | `gitMode=on`，未配置，但总仓库**已授权** | 总仓库 | `<gitCentralPath>/<工作区名>/` |
-| `gitMode=on`，未配置且总仓库未授权/未配置 | 无仓库 | 仅本地笔记（git 按钮隐藏） |
+| `gitMode=on`，未配置且总仓库未授权/未配置 | 无仓库 | `<ws>/.dsh-notes`（**该工作区自己的目录，与其他工作区隔离**；git 按钮隐藏） |
 
 > 默认 `gitMode: 'off'`，完全不影响现有非 Git 用户。
 
@@ -144,10 +177,10 @@ dsh 的命令沙箱以**会话工作区（cwd）为边界**：工作区内的文
 
 ```
 resolveNotesDir(ws):
-  gitMode=off                    → config.root（相对 cwd 解析，现状）
+  gitMode=off                    → config.root（绝对覆盖原样生效；相对 root 按工作区解析）
   gitRepos[ws.id].path           → 该工作区独立仓库路径（即笔记根目录）
   总仓库已配置且已授权          → gitCentralPath/<wsFolder(ws)>/
-  否则（无可用仓库）            → 回退 config.root（仅本地笔记，git 按钮隐藏）
+  否则（无可用仓库）            → <ws>/.dsh-notes（该工作区自己的目录，与其他工作区隔离；git 按钮隐藏）
 ```
 
 - **工作区识别**：host 用 `ctx.workspaceRegistry.resolveByPath(session.cwd)` 拿到

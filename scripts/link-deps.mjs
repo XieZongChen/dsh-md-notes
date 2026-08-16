@@ -24,6 +24,7 @@ const targets = [
   'packages/client/ui-primitives',
   'packages/client/locale',
   'packages/client/ui-settings',
+  'packages/client/ui-settings-general',
   'packages/settings/settings',
   'packages/subprocess/subprocess',
   'packages/workspace/workspace',
