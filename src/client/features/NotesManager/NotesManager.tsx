@@ -171,7 +171,9 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const doUpdate = (wsId: string): void => {
     setUpdating(true)
     setGitMsg('')
-    void gitPullApi(wsId).then((res) => {
+    // Manual update: the remote version wins (force = true), replacing local
+    // files so pulling actually brings the remote notes down.
+    void gitPullApi(wsId, true).then((res) => {
       setUpdating(false)
       if (res.ok) {
         refreshStatus(wsId)
@@ -180,6 +182,8 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
             if (r.ok && isCurrent(wsId, selected)) setContent(r.content ?? '')
           })
         }
+        setFlash('manager.updated')
+        window.setTimeout(() => setFlash(''), 1200)
       } else {
         setGitMsg(res.error)
       }
@@ -187,8 +191,8 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   }
 
   const updateClick = (wsId: string): void => {
-    refreshStatus(wsId)
-    if (status && (status.uncommitted ?? 0) > 0 && !window.confirm(t('git.updateConfirm'))) return
+    // Manual update is the user's explicit request to pull the remote version
+    // down (force = true in doUpdate), so no extra confirmation is needed.
     doUpdate(wsId)
   }
 

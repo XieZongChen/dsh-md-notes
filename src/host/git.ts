@@ -381,15 +381,19 @@ export async function gitPush(
 /**
  * Refresh a workspace's notes from the repo: ensure the branch is up to date
  * with the remote, then copy the repo's `<subdir>` `.md` notes back into the
- * local notes dir — without overwriting a locally-different file (conservative).
+ * local notes dir. `force` distinguishes the two callers:
+ * - manual "Update" button → force = true: the remote version wins, replacing
+ *   a locally-different file (the user explicitly asked to pull remote notes);
+ * - auto-pull on open → force = false: conservative, never overwrites a
+ *   locally-modified file (conflicts stay with the user).
  */
 export async function gitPull(
-  ctx: Context, repo: ResolvedRepo, notesDir: string,
+  ctx: Context, repo: ResolvedRepo, notesDir: string, force: boolean,
 ): Promise<{ ok: boolean; error?: string; skipped?: number }> {
   await gitInit(ctx, repo, repo.branch)
   await ensureBranch(ctx, repo)
   const target = repoTargetDir(repo)
-  const { skipped } = await syncNotes(target, notesDir, false)
+  const { skipped } = await syncNotes(target, notesDir, force)
   return { ok: true, skipped }
 }
 

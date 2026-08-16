@@ -50,7 +50,7 @@ export interface GitApi {
   status(repo: ResolvedRepo): Promise<GitStatusView>
   init(repo: ResolvedRepo): Promise<void>
   push(repo: ResolvedRepo, notesDir: string, message: string): Promise<{ ok: boolean; error?: string; code?: string }>
-  pull(repo: ResolvedRepo, notesDir: string): Promise<{ ok: boolean; error?: string; skipped?: number }>
+  pull(repo: ResolvedRepo, notesDir: string, force: boolean): Promise<{ ok: boolean; error?: string; skipped?: number }>
   sync(repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }>
 }
 
@@ -161,7 +161,9 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'gitPull': {
       const repo = deps.resolveRepo(workspaceId)
       if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
-      return deps.git.pull(repo, deps.resolveDir(workspaceId))
+      // Manual "Update" (force=true) pulls the remote version over local files;
+      // the auto-pull on open omits force → conservative (never overwrites).
+      return deps.git.pull(repo, deps.resolveDir(workspaceId), req.force === true)
     }
     case 'gitSync': {
       // User-initiated conflict resolution after a rejected push.

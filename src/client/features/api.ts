@@ -95,9 +95,13 @@ export function gitPushApi(workspaceId: string | undefined, message: string): Pr
   return api('gitPush', workspaceId === undefined ? { message } : { workspaceId, message })
 }
 
-/** Pull a workspace repo (or the whole central repo). */
-export function gitPullApi(workspaceId?: string): Promise<ApiResult> {
-  return api('gitPull', workspaceId === undefined ? {} : { workspaceId })
+/**
+ * Pull a workspace repo. `force = true` (manual Update button) replaces
+ * locally-different files with the remote version; the auto-pull on open
+ * omits it → conservative (never overwrites local changes).
+ */
+export function gitPullApi(workspaceId: string | undefined, force?: boolean): Promise<ApiResult> {
+  return api('gitPull', workspaceId === undefined ? { force: force === true } : { workspaceId, force: force === true })
 }
 
 /** User-initiated conflict resolution: merge the remote into the local branch. */

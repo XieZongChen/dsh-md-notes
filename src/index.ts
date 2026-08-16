@@ -170,7 +170,7 @@ export function apply(ctx: Context, config: Config): void {
       name: readSettings().gitAuthorName ?? '',
       email: readSettings().gitAuthorEmail ?? '',
     }),
-    pull: (repo, notesDir) => gitPull(ctx, repo, notesDir),
+    pull: (repo, notesDir, force) => gitPull(ctx, repo, notesDir, force),
     sync: (repo) => gitSync(ctx, repo),
   }
 
