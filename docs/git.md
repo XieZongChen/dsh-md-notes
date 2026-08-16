@@ -20,12 +20,21 @@
   - 二选一且互斥；`gitMode: 'on'`（旧值）自动归一化：有共享 URL → shared，否则 → own
 - ✅ 三层配置模型：schema 默认 → cordis Config（L2 yaml）→ settings 命名空间 `md-notes`（L3）
 - ✅ API：`gitStatus` / `gitInit` / `gitPush` / `gitPull` / `gitConfig` / `gitSync` / `gitSettings`
-- ✅ **推送 = 同步**：`git clone`（首次）→ 确保目标分支 → 把 `<ws>/.dsh-notes` 的 `.md`
-  复制到 clone 的目标目录（`<subdir>`，空 = 仓库根）→ `git add <subdir>` → commit → push `branch`
-- ✅ **更新 = 反向同步**：拉取远端分支后把 `<subdir>` 的 `.md` 复制回本地，
-  **不覆盖本地已修改的文件**（保守，冲突交用户）
-- ✅ 提交身份解析：仓库自身 git 配置优先 → 插件 `gitAuthorName/Email` 兜底 → 都没有时明确报错
+- ✅ **推送 = 镜像同步**：`git clone`（首次）→ 确保目标分支 → 把 `<ws>/.dsh-notes` 的 `.md`
+  复制到 clone 的目标目录（`<subdir>`，空 = 仓库根）→ **删除远端有而本地无的 `.md`（删除同步）**
+  → `git add -A <subdir>` → commit → push `branch`
+- ✅ **更新 = 反向同步**：先 `git fetch origin` 再对齐分支 → 把 `<subdir>` 的 `.md` 复制回本地，
+  **不覆盖本地已修改的文件**（保守）；`changed` 返回「远端有本地无/同名不同内容」的笔记名单
+- ✅ **推送冲突检测**：推送前比较远端与本地同名笔记（`changedNotes`）+ 远端独有文件
+  （`remoteOnlyNotes`），有差异返回 `remote-changed` + 变更名单，弹页面内 Modal 确认后覆盖/删除
+- ✅ 提交身份解析：仓库自身 git 配置优先 → 插件 `gitAuthorName/Email` 兜底 → 都没有时明确报错（错误码 `identity`）
 - ✅ non-fast-forward 冲突：`gitPush` 返回错误码 + client「合并远端并重试」（`gitSync`，用户触发）
+- ✅ **i18n 错误码**：host 错误返回 `{ code, detail }`（`no-repo` / `sync-branch` / `git-failed` /
+  `identity` / `non-fast-forward` / `remote-changed` 等），client 用 `gitErrorText` 渲染中英文案
+- ✅ **页面内确认弹窗**：删除/推送覆盖/更新覆盖统一用 `Modal`（不依赖原生 confirm），
+  推送按钮「用本地覆盖远端」、更新按钮「用远端覆盖本地」
+- ✅ **分支空串回退**：仓库分支留空自动回退 `main`（`??` 不兜底空串的坑已修）
+- ✅ **拉取后刷新列表**：静默/手动更新成功后会重新 list，远端新增笔记立即出现在左侧面板
 - ✅ session→工作区路由、分组 `list`（多工作区视图）
 - ✅ Client 管理器：按工作区分组、编辑器头部 更新/推送、commit 弹层面板、打开笔记自动拉取
   （受 `gitAutoPull` 控制）、底部状态行（分支/子路径/未提交/最近提交）、冲突解决 UI、i18n 中英
@@ -163,11 +172,16 @@ resolveNotesDir(ws) = <ws.path>/.dsh-notes        // 有工作区：永远
 | 按钮 | 行为 | 说明 |
 |---|---|---|
 | **保存** | 当前笔记写入本地 `<ws>/.dsh-notes/*.md` | 只写本地，不碰 git |
-| **推送** | 本地 `.dsh-notes` → 仓库目标目录（覆盖）→ commit → push `branch`（先弹 commit 面板） | 首次自动 clone |
-| **更新** | 拉取远端分支 → 目标目录 `.md` → 复制回本地 | **不覆盖本地已修改的文件**；冲突交用户 |
+| **推送** | 本地 `.dsh-notes` **镜像同步**到仓库目标目录（覆盖 + 删除本地已删文件）→ commit → push `branch`（先弹 commit 面板） | 首次自动 clone；推送前检测远端差异 |
+| **更新** | 先 `fetch` 对齐分支 → 目标目录 `.md` → 复制回本地 | 手动「更新」force 覆盖（确认后）；自动拉取保守跳过本地修改 |
 
-> **冲突交用户决定**：推送被拒（non-fast-forward）→ 提示「合并远端并重试」；更新时
-> 本地已修改的文件**保守跳过**，绝不自动覆盖。
+> **冲突交用户决定**：
+> - 推送前检测到远端同名笔记不同/远端独有文件 → 弹页面内 Modal「远端有以下笔记与本地不同或
+>   本地已删除：{names}，是否用本地版本覆盖/删除远端？」→「用本地覆盖远端」/取消；
+> - 更新时本地已修改的文件**保守跳过**，静默拉取时在更新按钮左侧提示「远端有更新，需手动更新」；
+> - 手动「更新」检测到差异 → 弹 Modal「远端有 N 个笔记与本地不同，是否用远端版本覆盖本地？」
+>   →「用远端覆盖本地」/取消；
+> - 推送被拒（non-fast-forward）→ 提示「合并远端并重试」（`gitSync`，用户触发）。
 
 ### 5.3 UI 布局
 
@@ -180,28 +194,35 @@ resolveNotesDir(ws) = <ws.path>/.dsh-notes        // 有工作区：永远
 ### 5.4 自动拉取（默认开启）
 
 - 打开一篇笔记时（`open()`），若其工作区有仓库且 `gitAutoPull = true`：
-  先 `gitPull(workspaceId)`，再读取文件内容。
-- 自动拉取失败/跳过（本地有修改）**不阻断打开**：显示提示，仍读取本地版本。
+  先 `gitPull(workspaceId)`（保守，不覆盖本地修改），再读取文件内容；
+  拉取成功后重新 `list`，远端新增笔记立即出现在左侧面板。
+- 自动拉取失败/跳过（本地有修改）**不阻断打开**：显示提示，仍读取本地版本；
+  同名内容不同时在更新按钮左侧提示「远端有更新，需手动更新」。
 
 ### 5.5 dsh 设置面板「MD 笔记」分区
 
-- `settings.section` 注册（`id: 'md-notes'`，order 10）。
+- `settings.section` 注册（`id: 'md-notes'`，order 10），表单控件用 **DshInput / DshSelect**
+  （与 dsh 原生表单一致，token 化配色适配暗黑模式）。
 - **模式三态选择**（select）+ 互斥配置区：
   - **关闭**：提示"笔记仅保存在本地 `.dsh-notes`"；
   - **共享仓库**：仓库 URL + 分支（默认 main）；提示"推到该分支 + 工作区名子目录"；
   - **独立仓库**：每工作区 仓库 URL + 分支（默认 main）+ 仓库内子路径（默认仓库根）；
     提示"推送 = 同步到该分支/子路径；更新 = 拉回（不覆盖本地修改）"。
 - 全局字段：自动拉取、作者名/邮箱；保存写 L3 命名空间。
-- **tip 面板**（顶部，随模式切换文案）：说明笔记保存位置与同步目标。
-- i18n：`git.*` 前缀 key（`md-notes` 命名空间，中英各一份）。
+- **tip 面板**（顶部，固定文案）：说明笔记本地保存在 `<工作区>/.dsh-notes`，Git 同步
+  只是推送/拉取，不影响本地保存位置（路径以 code 样式渲染，中英文各自术语）。
+- i18n：`git.*` 前缀 key（`md-notes` 命名空间，中英各一份）；错误经错误码本地化。
 
 ## 6. 定案
 
 - **笔记位置恒定** `<ws>/.dsh-notes`（§4）：不存在目录迁移。
 - **URL 驱动**（§3）：仓库只配 URL；插件管理 clone（DSH_HOME 下）；无路径、无授权。
 - **互斥模式**（§3.2/3.3）：shared / own 二选一；`gitMode: 'on'` 归一化兼容。
-- **推送 = 同步、更新 = 反向同步且保守**（§5.2）：本地与仓库目标目录双向复制。
+- **推送 = 镜像同步**（§5.2）：本地与仓库目标目录双向复制，**本地删除同步到远端**
+  （`deleteMissingNotes`，删除前经冲突确认）。
 - **`meta.json` 不入库**：本地缓存；`.gitignore` 忽略。
-- **提交身份**：仓库自身 git config 优先 → 插件兜底 → 明确报错。
-- **non-fast-forward**：`gitPush` 返回错误码 + `gitSync`（用户触发合并重试）。
+- **提交身份**：仓库自身 git config 优先 → 插件兜底 → 明确报错（错误码 `identity`）。
+- **冲突交用户**：推送/更新覆盖均弹页面内 Modal 确认；`non-fast-forward` 返回错误码 +
+  `gitSync`（用户触发合并重试）。
+- **i18n 错误码**：host 返回 `{ code, detail }`，client `gitErrorText` 渲染中英文案。
 - **自动提交本期不实现**；**自动拉取**受 `gitAutoPull` 开关控制、保守跳过本地已修改文件。

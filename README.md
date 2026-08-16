@@ -69,7 +69,7 @@ dsh plugin --profile web remove dsh-md-notes
 2. **Create a note**: click the notes entry at the bottom of the sidebar (above Settings) → enter a title in the "New note title…" field → **New** → type in the editor → **Save**.
 3. **Capture a conversation**: below any assistant answer, click the notes icon (next to copy) → pick a target note (or create one on the spot) → **Write to note**. The user question + answer are appended to the note with a timestamped section.
 
-Note files live in the configured local directory (default `<cwd>/.dsh-notes/`); you can open and edit them directly with any editor.
+Note files live in each workspace's `.dsh-notes/` directory (`<workspace>/.dsh-notes`); you can open and edit them directly with any editor. Git sync is optional — point the plugin at a repo URL and it keeps notes in sync (shared repo or per-workspace repo).
 
 ## Configuration
 
@@ -78,20 +78,22 @@ All options are plugin Config keys, overridable in the profile's `cordis.patch.y
 ```yaml
 - id: md-notes
   config:
-    root: '/abs/path/to/notes'   # notes directory; default <cwd>/.dsh-notes
+    root: '/abs/path/to/notes'   # notes dir for sessions without a workspace; default <cwd>/.dsh-notes
     route: '/plugins/md-notes'   # HTTP API prefix; default is fine
+    gitMode: 'off'               # 'off' | 'shared' | 'own'
+    gitAutoPull: true            # pull remote before opening a note
 ```
 
 | Key | Default | Meaning |
 |---|---|---|
-| `root` | `<cwd>/.dsh-notes` | Directory where notes (`.md` files + `meta.json`) are stored. |
+| `root` | `<cwd>/.dsh-notes` | Notes dir for sessions **without a workspace** (workspaces always use `<workspace>/.dsh-notes`). |
 | `route` | `/plugins/md-notes` | HTTP API prefix served by the plugin; also hosts the icon at `<route>/icon.svg`. |
 
 There are **no environment variables and no secrets** in this plugin's configuration.
 
 ## Permissions & data
 
-- **Filesystem**: reads and writes notes as plain `.md` files (plus a `meta.json` title/updated-time sidecar) under the configured `root` directory. Nothing else is touched.
+- **Filesystem**: reads and writes notes as plain `.md` files (plus a `meta.json` sidecar) under each workspace's `.dsh-notes` directory (`root` only for sessions without a workspace); git operations touch only the plugin-managed clones under `$DSH_HOME/md-notes-repos/`.
 - **Network**: a loopback HTTP API (`POST <route>`, browser ↔ local dsh server) and the icon served from the same origin. **No external network calls, no telemetry.**
 - **Credentials**: none collected or transmitted.
 
@@ -103,7 +105,7 @@ There are **no environment variables and no secrets** in this plugin's configura
 | Icon looks stale | Hard-refresh the page; the icon is served with `no-cache` and reflects `assets/dsh-md-notes.svg` on every request. |
 | Plugin doesn't load | Verify the layer: `dsh --profile web --dump-config` and look for the `md-notes` row. |
 | Installed from git and `add` failed | pnpm ≥10 blocks build scripts by default; add the printed package key under `allowBuilds` in the profile's `pnpm-workspace.yaml`, then re-run `add`. |
-| Notes can't be created/saved | Make sure the configured `root` points to an existing writable directory. |
+| Notes can't be created/saved | Make sure the workspace's `.dsh-notes` (or the configured `root`) points to an existing writable directory. |
 
 Rollback: `dsh plugin --profile web remove dsh-md-notes` restores the previous state (notes files are untouched).
 
