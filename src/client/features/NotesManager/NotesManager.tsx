@@ -261,16 +261,23 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
    * so this simulates the two clicks a user would make: the sidebar
    * settings trigger, then the section's nav cell. The trigger is the only
    * `button[aria-haspopup="dialog"]` without an aria-label on the page; the
-   * nav cell is matched by the section's localized label.
+   * nav cell is matched by the section's localized label. Closes the manager
+   * first so its overlay cannot cover the settings modal.
    */
   const openDshSettings = (): void => {
+    close()
     const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]:not([aria-label])')
     trigger?.click()
-    window.setTimeout(() => {
+    // The panel mounts async; retry locating the nav cell a few times.
+    let attempts = 0
+    const locate = (): void => {
+      attempts += 1
       const cells = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="dialog"] nav button'))
       const cell = cells.find((b) => b.textContent?.trim() === t('git.settingsNav'))
-      cell?.click()
-    }, 60)
+      if (cell !== undefined) { cell.click(); return }
+      if (attempts < 8) window.setTimeout(locate, 100)
+    }
+    window.setTimeout(locate, 60)
   }
   const previewHtml = mode === 'preview' ? renderMd(content) : ''
   const grouped = workspaces.length > 1
