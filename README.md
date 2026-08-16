@@ -11,7 +11,7 @@
 <p align="center">
   DSH third-party plugin (bundle): <b>MD Notes Manager</b>
   <br />
-  <a href="docs/features.md">Features</a> · <a href="docs/architecture.md">Architecture</a> · <a href="CHANGELOG.md">Changelog</a>
+  <a href="docs/usage.md">User Guide</a> · <a href="docs/features.md">Features</a> · <a href="docs/architecture.md">Architecture</a> · <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 ---
@@ -70,6 +70,8 @@ dsh plugin --profile web remove dsh-md-notes
 3. **Capture a conversation**: below any assistant answer, click the notes icon (next to copy) → pick a target note (or create one on the spot) → **Write to note**. The user question + answer are appended to the note with a timestamped section.
 
 Note files live in each workspace's `.dsh-notes/` directory (`<workspace>/.dsh-notes`); you can open and edit them directly with any editor. Git sync is optional — point the plugin at a repo URL and it keeps notes in sync (shared repo or per-workspace repo).
+
+> For everything the plugin can do — the notes manager, capturing conversations, Git sync (shared / per-workspace repos), pushing/updating, conflict handling, and the settings panel — see the [User Guide](docs/usage.md).
 
 ## Configuration
 

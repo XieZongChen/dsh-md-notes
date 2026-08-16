@@ -11,7 +11,7 @@
 <p align="center">
   DSH 第三方插件（bundle）：<b>MD 笔记管理</b>
   <br />
-  <a href="docs/features.md">功能设计</a> · <a href="docs/architecture.md">架构设计</a> · <a href="CHANGELOG.zh.md">变更记录</a>
+  <a href="docs/usage.zh.md">使用文档</a> · <a href="docs/features.md">功能设计</a> · <a href="docs/architecture.md">架构设计</a> · <a href="CHANGELOG.zh.md">变更记录</a>
 </p>
 
 ---
@@ -70,6 +70,8 @@ dsh plugin --profile web remove dsh-md-notes
 3. **记入对话**：在某条回答下方点笔记图标（复制按钮旁）→ 选择目标笔记（或现场新建）→ **写入笔记**。该回答及对应的用户提问会带时间戳分段追加到笔记末尾。
 
 笔记文件存放在各工作区的 `.dsh-notes/` 目录（`<工作区>/.dsh-notes`），随时可以直接用任意编辑器打开修改。Git 同步为可选功能——配置一个仓库 URL 即可把笔记同步到远程（共享仓库或每工作区独立仓库）。
+
+> 关于插件的全部功能与使用方式——笔记管理、记入对话、Git 同步（共享 / 独立仓库）、推送与更新、冲突处理、设置面板——请参阅 [使用文档](docs/usage.zh.md)。
 
 ## 配置（Configuration）
 
