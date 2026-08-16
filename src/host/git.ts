@@ -1,23 +1,21 @@
 /**
  * Git domain logic for dsh-md-notes: `runGit` via the subprocess service,
- * workspace → repo resolution (mutually exclusive shared / own modes), the
- * sandbox-external authorization gate, and the git operations the API
- * dispatches (status / init / push / pull / sync).
+ * workspace → repo resolution (mutually exclusive shared / own modes), and
+ * the git operations the API dispatches (status / init / push / pull / sync).
  *
- * Model (v3): notes ALWAYS live at `<workspace>/.dsh-notes` locally — the git
- * repo is an independent sync target. Pushing copies the workspace's `.md`
- * notes into the repo's target directory (`<subpath>` on `<branch>`), commits,
- * and pushes; pulling refreshes the repo, then copies those notes back (never
- * overwriting a locally-different file).
- *
- * The subprocess seam is a raw spawn (no command sandbox), so authorization is
- * enforced **in-plugin**: the persisted per-repo `authorized` flag is the gate
- * for repos outside the session workspace. `meta.json` is gitignored (never
- * committed).
+ * Model (v4): notes ALWAYS live at `<workspace>/.dsh-notes` locally; the git
+ * repo is identified by its **URL only** — the plugin keeps a local clone at
+ * `$DSH_HOME/md-notes-repos/<url-hash>/`, so the user never supplies a path
+ * and no sandbox authorization is needed (the clone lives in plugin-managed
+ * storage under DSH_HOME). Pushing copies the workspace's `.md` notes into
+ * the clone's target directory (`<subpath>` on `<branch>`), commits, and
+ * pushes; pulling refreshes the clone, then copies those notes back (never
+ * overwriting a locally-different file). `meta.json` is never committed.
  * @module dsh-md-notes/git
  */
 
-import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { join, resolve, sep } from 'node:path'
+import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync, existsSync, realpathSync } from 'node:fs'
 import { mkdir, readdir, readFile, copyFile, stat } from 'node:fs/promises'
 import type { Context } from '@deepseek-ai/cordis'
@@ -40,17 +38,14 @@ export interface GitRunResult {
 /** A workspace's resolved repo (or undefined when git is off / no usable repo). */
 export interface ResolvedRepo {
   kind: 'shared' | 'own'
-  /** Git repository root directory. */
+  /** Git repository root directory (plugin-managed clone under DSH_HOME). */
   repoDir: string
   /** In-repo relative directory holding this workspace's notes ('' = repo root). */
   subdir: string
   /** Branch to push/pull on. */
   branch: string
+  /** Remote URL (the repo's identity). */
   remote: string
-  /** Repo lives outside the session workspace (needs the authorization gate). */
-  external: boolean
-  /** Persisted authorization for external repos; internal repos are always allowed. */
-  authorized: boolean
 }
 
 const GIT_TIMEOUT_MS = 60_000
@@ -110,62 +105,48 @@ export function normPath(p: string): string {
   }
 }
 
-/** True when `child` is inside or equal to `parent`. */
-function isInside(parent: string, child: string): boolean {
-  const rel = relative(normPath(parent), normPath(child))
-  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
-}
-
 /** Sanitize a workspace title into a filesystem folder name. */
 function sanitizeFolder(name: string): string {
   const cleaned = name.replace(/[^\w\u4e00-\u9fff.-]+/g, '-').replace(/^-+|-+$/g, '')
   return cleaned || 'workspace'
 }
 
-/**
- * The in-repo subdir for a workspace under the shared repo: the workspace
- * name (sanitized); a collision appends the id's first 8 chars.
- */
-export function sharedSubdir(ws: WorkspaceInfo): string {
-  return sanitizeFolder(ws.title)
+/** The plugin-managed clone directory for one remote URL. */
+export function cloneDirFor(remote: string): string {
+  const home = process.env.DSH_HOME ?? join(process.env.HOME ?? '', '.dsh')
+  const hash = createHash('sha1').update(remote).digest('hex').slice(0, 12)
+  return join(home, 'md-notes-repos', hash)
 }
 
 /**
  * Resolve the repo serving one workspace under the CURRENT mode:
- * - `gitMode: 'shared'` → the shared repo (`main` branch, per-workspace
- *   folder) when configured and authorized.
- * - `gitMode: 'own'` → the workspace's own repo (branch defaults to
- *   `main`, subpath defaults to the repo root).
+ * - `gitMode: 'shared'` → the shared repo (`gitCentral.remote`, branch from
+ *   `gitCentral.branch` / 'main') with a per-workspace folder.
+ * - `gitMode: 'own'` → the workspace's own repo (`gitRepos[ws]`:
+ *   remote + branch / subpath).
  * - otherwise → undefined (git off / nothing configured).
  */
 export function resolveWorkspaceRepo(settings: MdNotesSettings, ws: WorkspaceInfo): ResolvedRepo | undefined {
   if (settings.gitMode === 'shared') {
-    const centralPath = settings.gitCentral?.path
-    if (!centralPath || settings.gitCentral?.authorized !== true) return undefined
-    const repoDir = resolve(centralPath)
+    const remote = settings.gitCentral?.remote
+    if (!remote) return undefined
     return {
       kind: 'shared',
-      repoDir,
-      subdir: sharedSubdir(ws),
-      branch: 'main',
-      remote: settings.gitCentral?.remote ?? '',
-      external: true,
-      authorized: true,
+      repoDir: cloneDirFor(remote),
+      subdir: sanitizeFolder(ws.title),
+      branch: settings.gitCentral?.branch ?? 'main',
+      remote,
     }
   }
   if (settings.gitMode === 'own') {
     const own = settings.gitRepos?.[ws.id]
-    if (!own?.path) return undefined
-    const repoDir = resolve(own.path)
-    const external = !isInside(resolve(ws.path), repoDir)
+    if (!own?.remote) return undefined
     return {
       kind: 'own',
-      repoDir,
+      repoDir: cloneDirFor(own.remote),
       subdir: own.subpath ?? '',
       branch: own.branch ?? 'main',
-      remote: own.remote ?? '',
-      external,
-      authorized: external ? own.authorized === true : true,
+      remote: own.remote,
     }
   }
   return undefined
@@ -173,29 +154,24 @@ export function resolveWorkspaceRepo(settings: MdNotesSettings, ws: WorkspaceInf
 
 /**
  * The shared repo as a GLOBAL operation target (whole-repo add scope).
- * Returns undefined when gitMode is not 'shared' or the shared repo is not
- * configured/authorized.
+ * Returns undefined when gitMode is not 'shared' or the shared repo has no URL.
  */
 export function resolveSharedRepo(settings: MdNotesSettings): ResolvedRepo | undefined {
   if (settings.gitMode !== 'shared') return undefined
-  const centralPath = settings.gitCentral?.path
-  if (!centralPath || settings.gitCentral?.authorized !== true) return undefined
-  const repoDir = resolve(centralPath)
+  const remote = settings.gitCentral?.remote
+  if (!remote) return undefined
   return {
     kind: 'shared',
-    repoDir,
+    repoDir: cloneDirFor(remote),
     subdir: '',
-    branch: 'main',
-    remote: settings.gitCentral?.remote ?? '',
-    external: true,
-    authorized: true,
+    branch: settings.gitCentral?.branch ?? 'main',
+    remote,
   }
 }
 
 /**
- * Notes directory for a workspace: ALWAYS `<ws>/.dsh-notes` (v3 — the git
- * repo never determines where notes live). The fallback root only applies to
- * sessions with no workspace.
+ * Notes directory for a workspace: ALWAYS `<ws>/.dsh-notes` (v3/v4 — the git
+ * repo never determines where notes live).
  */
 export function resolveNotesDir(_settings: MdNotesSettings, ws: WorkspaceInfo, _fallbackRoot: string): string {
   return join(resolve(ws.path), '.dsh-notes')
@@ -253,13 +229,15 @@ export class GitError extends Error {
   }
 }
 
-/** Ensure the repo exists (git init + .gitignore), idempotent. */
-export async function gitInit(ctx: Context, repo: ResolvedRepo, branch: string): Promise<void> {
-  if (!existsSync(join(repo.repoDir, '.git'))) {
-    mkdirSync(repo.repoDir, { recursive: true })
-    const init = await runGit(ctx, repo.repoDir, ['init', '-b', branch])
-    if (init.code !== 0) throw new GitError(`git init 失败: ${init.stderr || init.stdout}`)
-  }
+/**
+ * Ensure the clone exists: `git clone` the remote URL into the
+ * plugin-managed directory when absent. Idempotent.
+ */
+export async function gitInit(ctx: Context, repo: ResolvedRepo, _branch: string): Promise<void> {
+  if (existsSync(join(repo.repoDir, '.git'))) return
+  mkdirSync(join(repo.repoDir, '..'), { recursive: true })
+  const clone = await runGit(ctx, join(repo.repoDir, '..'), ['clone', repo.remote, repo.repoDir])
+  if (clone.code !== 0) throw new GitError(`git clone 失败: ${clone.stderr || clone.stdout}`)
   const ignorePath = join(repo.repoDir, '.gitignore')
   if (!existsSync(ignorePath)) {
     try {
@@ -289,18 +267,16 @@ export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
-  const [branchRes, porcelain, lastLog, remoteName] = await Promise.all([
+  const [branchRes, porcelain, lastLog] = await Promise.all([
     runGit(ctx, repo.repoDir, ['branch', '--show-current']),
     runGit(ctx, repo.repoDir, ['status', '--porcelain']),
     runGit(ctx, repo.repoDir, ['log', '-1', '--format=%cr']),
-    runGit(ctx, repo.repoDir, ['remote']),
   ])
   const currentBranch = branchRes.code === 0 ? branchRes.stdout.trim() : branch
   const uncommitted = porcelain.code === 0
     ? porcelain.stdout.split('\n').filter((line) => line.trim() !== '').length
     : 0
   const lastCommit = lastLog.code === 0 ? lastLog.stdout.trim() : undefined
-  const remote = remoteName.code === 0 && remoteName.stdout.trim() !== '' ? remoteName.stdout.trim().split('\n')[0] ?? '' : repo.remote
   return {
     ok: true,
     repoDir: repo.repoDir,
@@ -308,7 +284,7 @@ export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string
     branch: currentBranch,
     uncommitted,
     lastCommit: lastCommit || undefined,
-    remote,
+    remote: repo.remote,
   }
 }
 
@@ -336,15 +312,35 @@ async function resolveIdentity(
 }
 
 /**
+ * Ensure the target branch exists locally and tracks the remote: try
+ * `git checkout <branch>` then `git pull`, falling back to creating the
+ * branch from the remote (`origin/<branch>`) or from HEAD when absent.
+ */
+async function ensureBranch(ctx: Context, repo: ResolvedRepo): Promise<GitRunResult> {
+  const remoteBranch = `origin/${repo.branch}`
+  const hasRemoteBranch = await runGit(ctx, repo.repoDir, ['show-ref', '--verify', `refs/remotes/${remoteBranch}`])
+  if (hasRemoteBranch.code === 0) {
+    await runGit(ctx, repo.repoDir, ['checkout', '-B', repo.branch, remoteBranch])
+    return runGit(ctx, repo.repoDir, ['pull', '--no-edit'])
+  }
+  const hasLocal = await runGit(ctx, repo.repoDir, ['show-ref', '--verify', `refs/heads/${repo.branch}`])
+  if (hasLocal.code === 0) {
+    await runGit(ctx, repo.repoDir, ['checkout', repo.branch])
+    return runGit(ctx, repo.repoDir, ['pull', '--no-edit'])
+  }
+  return runGit(ctx, repo.repoDir, ['checkout', '-b', repo.branch])
+}
+
+/**
  * Push a workspace's notes into the repo target directory: copy the local
  * `.md` notes into `<repo>/<subdir>` (overwrite), stage that subdir, commit,
- * and push `branch`. Conflicts surface to the caller; the push-back pull is
- * best-effort.
+ * and push `branch`. Conflicts surface to the caller.
  */
 export async function gitPush(
   ctx: Context, repo: ResolvedRepo, notesDir: string, message: string, author: { name: string; email: string },
 ): Promise<{ ok: boolean; error?: string; code?: string }> {
   await gitInit(ctx, repo, repo.branch)
+  await ensureBranch(ctx, repo)
   // Copy the workspace's notes into the repo target directory.
   const target = repoTargetDir(repo)
   try {
@@ -367,43 +363,31 @@ export async function gitPush(
     if (commit.code !== 0) return { ok: false, error: `git commit 失败: ${commit.stderr || commit.stdout}` }
   }
 
-  if (repo.remote) {
-    const remotes = await runGit(ctx, repo.repoDir, ['remote'])
-    if (!remotes.stdout.includes('origin')) {
-      const addRemote = await runGit(ctx, repo.repoDir, ['remote', 'add', 'origin', repo.remote])
-      if (addRemote.code !== 0) return { ok: false, error: `git remote add 失败: ${addRemote.stderr || addRemote.stdout}` }
-    }
-    const push = await runGit(ctx, repo.repoDir, [...identity.args, 'push', '-u', 'origin', repo.branch])
-    if (push.code !== 0) {
-      const out = `${push.stderr || ''} ${push.stdout || ''}`
-      if (/non-fast-forward|rejected/.test(out)) {
-        return {
-          ok: false,
-          code: 'non-fast-forward',
-          error: 'git push 失败：远端领先或历史不相关，需先合并远端再推送（可在界面点「合并远端并重试」）',
-        }
+  const push = await runGit(ctx, repo.repoDir, [...identity.args, 'push', '-u', 'origin', repo.branch])
+  if (push.code !== 0) {
+    const out = `${push.stderr || ''} ${push.stdout || ''}`
+    if (/non-fast-forward|rejected/.test(out)) {
+      return {
+        ok: false,
+        code: 'non-fast-forward',
+        error: 'git push 失败：远端领先或历史不相关，需先合并远端再推送（可在界面点「合并远端并重试」）',
       }
-      return { ok: false, error: `git push 失败: ${push.stderr || push.stdout}` }
     }
-    // Pull back after a successful push to stay in sync (conflicts surface to the caller).
-    await runGit(ctx, repo.repoDir, ['pull', '--no-edit'])
+    return { ok: false, error: `git push 失败: ${push.stderr || push.stdout}` }
   }
   return { ok: true }
 }
 
 /**
- * Refresh a workspace's notes from the repo: pull the repo (when a remote
- * exists), then copy the repo's `<subdir>` `.md` notes back into the local
- * notes dir — without overwriting a locally-different file (conservative).
+ * Refresh a workspace's notes from the repo: ensure the branch is up to date
+ * with the remote, then copy the repo's `<subdir>` `.md` notes back into the
+ * local notes dir — without overwriting a locally-different file (conservative).
  */
 export async function gitPull(
   ctx: Context, repo: ResolvedRepo, notesDir: string,
 ): Promise<{ ok: boolean; error?: string; skipped?: number }> {
   await gitInit(ctx, repo, repo.branch)
-  if (repo.remote) {
-    const pull = await runGit(ctx, repo.repoDir, ['pull', '--no-edit'])
-    if (pull.code !== 0) return { ok: false, error: pull.stderr || pull.stdout || 'git pull 失败' }
-  }
+  await ensureBranch(ctx, repo)
   const target = repoTargetDir(repo)
   const { skipped } = await syncNotes(target, notesDir, false)
   return { ok: true, skipped }
@@ -417,7 +401,13 @@ export async function gitPull(
  */
 export async function gitSync(ctx: Context, repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }> {
   await gitInit(ctx, repo, repo.branch)
-  if (!repo.remote) return { ok: false, error: '未配置远程，无法合并' }
+  const remoteBranch = `origin/${repo.branch}`
+  const hasRemoteBranch = await runGit(ctx, repo.repoDir, ['show-ref', '--verify', `refs/remotes/${remoteBranch}`])
+  if (hasRemoteBranch.code === 0) {
+    await runGit(ctx, repo.repoDir, ['checkout', '-B', repo.branch, remoteBranch])
+  } else {
+    await runGit(ctx, repo.repoDir, ['checkout', '-b', repo.branch])
+  }
   const merge = await runGit(ctx, repo.repoDir, ['pull', '--no-rebase', '--no-edit'])
   if (merge.code === 0) return { ok: true }
   const out = `${merge.stderr || ''} ${merge.stdout || ''}`
@@ -427,9 +417,4 @@ export async function gitSync(ctx: Context, repo: ResolvedRepo): Promise<{ ok: b
     return { ok: false, error: merge2.stderr || merge2.stdout || 'git pull 失败（历史不相关）' }
   }
   return { ok: false, error: merge.stderr || merge.stdout || 'git pull 失败' }
-}
-
-/** True when the caller may run git operations on this repo. */
-export function isAuthorized(repo: ResolvedRepo): boolean {
-  return !repo.external || repo.authorized
 }

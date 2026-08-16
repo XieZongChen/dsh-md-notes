@@ -13,7 +13,7 @@ import {
   appendConversation, createNote, deleteNote, listNotes, readNote, writeNote,
 } from './notes.ts'
 import {
-  GitError, isAuthorized, type GitStatusView, type ResolvedRepo,
+  GitError, type GitStatusView, type ResolvedRepo,
 } from './git.ts'
 
 /** Read a JSON request body (bounded). */
@@ -84,8 +84,6 @@ export interface NotesApiDeps {
   hasWorkspaces(): boolean
   /** Bound git operations. */
   git: GitApi
-  /** Persist the authorization flag for a workspace repo (or the central repo). */
-  setAuthorized(workspaceId: string | undefined, authorized: boolean): Promise<void>
   /** Optional session query service (for appendConversation). */
   sessionQuery?: SessionQueryEngine | undefined
 }
@@ -139,14 +137,12 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'gitStatus': {
       const repo = deps.resolveRepo(workspaceId)
       if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
-      if (!isAuthorized(repo)) return { ok: false, error: '仓库未授权，请先在设置中授权' }
       const view = await deps.git.status(repo)
       return { ok: true, status: view }
     }
     case 'gitInit': {
       const repo = deps.resolveRepo(workspaceId)
       if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
-      if (!isAuthorized(repo)) return { ok: false, error: '仓库未授权，请先在设置中授权' }
       try {
         await deps.git.init(repo)
         return { ok: true }
@@ -157,7 +153,6 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'gitPush': {
       const repo = deps.resolveRepo(workspaceId)
       if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
-      if (!isAuthorized(repo)) return { ok: false, error: '仓库未授权，请先在设置中授权' }
       const message = typeof req.message === 'string' && req.message.trim() !== ''
         ? req.message.trim()
         : `笔记更新 ${new Date().toLocaleString()}`
@@ -166,30 +161,14 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'gitPull': {
       const repo = deps.resolveRepo(workspaceId)
       if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
-      if (!isAuthorized(repo)) return { ok: false, error: '仓库未授权，请先在设置中授权' }
       return deps.git.pull(repo, deps.resolveDir(workspaceId))
     }
     case 'gitSync': {
       // User-initiated conflict resolution after a rejected push.
       const repo = deps.resolveRepo(workspaceId)
       if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
-      if (!isAuthorized(repo)) return { ok: false, error: '仓库未授权，请先在设置中授权' }
       return deps.git.sync(repo)
     }
-    case 'gitAuthorize':
-      try {
-        await deps.setAuthorized(workspaceId, true)
-        return { ok: true }
-      } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : String(error) }
-      }
-    case 'gitRevoke':
-      try {
-        await deps.setAuthorized(workspaceId, false)
-        return { ok: true }
-      } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : String(error) }
-      }
     case 'gitSettings': {
       return { ok: true, settings: deps.readSettings() }
     }

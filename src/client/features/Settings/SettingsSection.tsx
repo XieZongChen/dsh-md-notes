@@ -1,15 +1,17 @@
 /**
  * dsh-md-notes settings panel section ("MD 笔记"): the full git configuration
  * form, registered into `settings.section`. Reads/writes the `md-notes` L3
- * settings via the host API (`gitSettings` / `gitConfig`), and authorizes or
- * revokes sandbox-external repos (`gitAuthorize` / `gitRevoke`).
+ * settings via the host API (`gitSettings` / `gitConfig`).
+ *
+ * Model (v4): repos are identified by **URL only** — the plugin manages the
+ * local clone, so there is no path input and no sandbox authorization.
  * @module dsh-md-notes/client/SettingsSection
  */
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { GitSettingsData, WorkspaceNotes } from '../api.ts'
-import { api, gitAuthorizeApi, gitConfigApi, gitRevokeApi, gitSettingsApi } from '../api.ts'
+import { api, gitConfigApi, gitSettingsApi } from '../api.ts'
 import styles from './settings-section.module.css'
 
 export interface SettingsSectionProps {
@@ -20,9 +22,9 @@ export interface SettingsSectionProps {
 }
 
 /**
- * The settings panel section: git master switch, branch, auto-pull, commit
- * author, the central repo (path/remote + authorization), and per-workspace
- * repos.
+ * The settings panel section: mode (off/shared/own), auto-pull, commit
+ * author, the shared repo (URL + branch), and per-workspace repos (URL +
+ * branch + subpath).
  */
 export function SettingsSection(props: SettingsSectionProps): React.ReactElement {
   const { t } = props
@@ -74,7 +76,7 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
         return
       }
       // Merge the user's edits over the LATEST settings so an external change
-      // (e.g. an authorization toggle elsewhere) is never clobbered.
+      // is never clobbered.
       const merged = overlayDirty(res.settings, settings)
       setSettings(merged)
       const patch: Record<string, unknown> = {}
@@ -105,37 +107,15 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
     })
   }
 
-  const toggleCentralAuth = (): void => {
-    if (settings === null) return
-    const authorized = !(settings.gitCentral?.authorized === true)
-    setBusy(true)
-    void (authorized ? gitAuthorizeApi() : gitRevokeApi()).then((res) => {
-      setBusy(false)
-      if (res.ok) load()
-      else setMsg(t('git.failed', { error: res.error ?? '' }))
-    })
-  }
-
-  const toggleWsAuth = (workspaceId: string): void => {
-    const repo = settings?.gitRepos?.[workspaceId]
-    const authorized = !(repo?.authorized === true)
-    setBusy(true)
-    void (authorized ? gitAuthorizeApi(workspaceId) : gitRevokeApi(workspaceId)).then((res) => {
-      setBusy(false)
-      if (res.ok) load()
-      else setMsg(t('git.failed', { error: res.error ?? '' }))
-    })
-  }
-
   const set = (patch: Partial<GitSettingsData>): void => {
     for (const key of Object.keys(patch)) dirtyScalar.current.add(key)
     setSettings((prev) => ({ ...(prev ?? {}), ...patch }))
   }
-  const setCentral = (patch: { path?: string; remote?: string; authorized?: boolean }): void => {
+  const setCentral = (patch: { remote?: string; branch?: string }): void => {
     dirtyCentral.current = true
     setSettings((prev) => ({ ...(prev ?? {}), gitCentral: { ...(prev?.gitCentral ?? {}), ...patch } }))
   }
-  const setWs = (workspaceId: string, patch: { path?: string; branch?: string; subpath?: string; remote?: string; authorized?: boolean }): void => {
+  const setWs = (workspaceId: string, patch: { remote?: string; branch?: string; subpath?: string }): void => {
     dirtyWs.current.add(workspaceId)
     setSettings((prev) => ({
       ...(prev ?? {}),
@@ -204,35 +184,24 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
           <div className={styles.groupTitle}>{t('git.centralTitle')}</div>
           <div className={styles.row}>
             <label className={styles.field}>
-              <span className={styles.label}>{t('git.repoPath')}</span>
+              <span className={styles.label}>{t('git.url')}</span>
               <input
                 className={styles.input}
-                placeholder={t('git.repoPathPlaceholder')}
-                value={settings.gitCentral?.path ?? ''}
-                onChange={(e) => setCentral({ path: e.target.value })}
-              />
-            </label>
-            <label className={styles.field}>
-              <span className={styles.label}>{t('git.remote')}</span>
-              <input
-                className={styles.input}
-                placeholder={t('git.remotePlaceholder')}
+                placeholder={t('git.urlPlaceholder')}
                 value={settings.gitCentral?.remote ?? ''}
                 onChange={(e) => setCentral({ remote: e.target.value })}
               />
             </label>
-            <button
-              type="button"
-              className={styles.authBtn}
-              disabled={busy || !settings.gitCentral?.path}
-              onClick={toggleCentralAuth}
-            >
-              {settings.gitCentral?.authorized === true ? t('git.revoke') : t('git.authorize')}
-            </button>
+            <label className={styles.field}>
+              <span className={styles.label}>{t('git.branch')}</span>
+              <input
+                className={styles.input}
+                placeholder={t('git.branchPlaceholder')}
+                value={settings.gitCentral?.branch ?? ''}
+                onChange={(e) => setCentral({ branch: e.target.value })}
+              />
+            </label>
           </div>
-          {settings.gitCentral?.path && settings.gitCentral?.authorized !== true && (
-            <div className={styles.hint}>{t('git.needAuthorize')}</div>
-          )}
         </div>
       )}
 
@@ -249,9 +218,9 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
                   <div className={styles.wsRow}>
                     <input
                       className={styles.input}
-                      placeholder={t('git.repoPathPlaceholder')}
-                      value={repo?.path ?? ''}
-                      onChange={(e) => setWs(ws.workspaceId, { path: e.target.value })}
+                      placeholder={t('git.urlPlaceholder')}
+                      value={repo?.remote ?? ''}
+                      onChange={(e) => setWs(ws.workspaceId, { remote: e.target.value })}
                     />
                     <input
                       className={styles.input}
@@ -265,20 +234,6 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
                       value={repo?.subpath ?? ''}
                       onChange={(e) => setWs(ws.workspaceId, { subpath: e.target.value })}
                     />
-                    <input
-                      className={styles.input}
-                      placeholder={t('git.remotePlaceholder')}
-                      value={repo?.remote ?? ''}
-                      onChange={(e) => setWs(ws.workspaceId, { remote: e.target.value })}
-                    />
-                    <button
-                      type="button"
-                      className={styles.authBtn}
-                      disabled={busy || !repo?.path}
-                      onClick={() => toggleWsAuth(ws.workspaceId)}
-                    >
-                      {repo?.authorized === true ? t('git.revoke') : t('git.authorize')}
-                    </button>
                   </div>
                   <div className={styles.hint}>{t('git.wsRowHint')}</div>
                 </div>

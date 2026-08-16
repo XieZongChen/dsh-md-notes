@@ -30,17 +30,15 @@ export interface GitStatusData {
 
 /** One repo record as configured (own-repo mode). */
 export interface RepoGitSettings {
-  path?: string
+  remote?: string
   branch?: string
   subpath?: string
-  remote?: string
-  authorized?: boolean
 }
 
 /** The user-level (L3) git settings surfaced to the config forms. */
 export interface GitSettingsData {
   gitMode?: 'off' | 'on' | 'shared' | 'own'
-  gitCentral?: { path?: string; remote?: string; authorized?: boolean }
+  gitCentral?: { remote?: string; branch?: string }
   gitRepos?: Record<string, RepoGitSettings>
   gitAutoPull?: boolean
   gitAuthorName?: string
@@ -117,20 +115,11 @@ export function gitConfigApi(patch: Record<string, unknown>): Promise<ApiResult>
   return api('gitConfig', patch)
 }
 
-/** Suggested repo paths from the host (per-workspace `.dsh-notes` + central). */
+/** Suggested repo paths from the host (per-workspace `.dsh-notes`). */
 export interface GitSuggestData {
   workspaces?: Array<{ workspaceId: string; path: string }>
-  centralPath?: string
 }
 
 export function gitSuggestApi(): Promise<ApiResult> {
   return api('gitSuggest')
-}
-
-/** Authorize (or revoke) a workspace repo — or the central repo when no id. */
-export function gitAuthorizeApi(workspaceId?: string): Promise<ApiResult> {
-  return api('gitAuthorize', workspaceId === undefined ? {} : { workspaceId })
-}
-export function gitRevokeApi(workspaceId?: string): Promise<ApiResult> {
-  return api('gitRevoke', workspaceId === undefined ? {} : { workspaceId })
 }

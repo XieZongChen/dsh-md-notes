@@ -32,14 +32,16 @@ import { MdNotesSettingsSchema, mergeSettings, MD_NOTES_NS, type MdNotesSettings
 
 /** Plugin row config. */
 export interface Config {
-  /** Notes directory for sessions with NO workspace (v3: workspaces always use `<ws>/.dsh-notes`). */
+  /** Notes directory for sessions with NO workspace (v3/v4: workspaces always use `<ws>/.dsh-notes`). */
   readonly root?: string
   /** API route prefix (default /plugins/md-notes). */
   readonly route?: string
   /** Git mode: 'off' | 'shared' | 'own' (legacy 'on' normalizes to shared/own). */
   readonly gitMode?: 'off' | 'on' | 'shared' | 'own'
-  /** Shared repo path — the deployment default for `gitCentral.path`. */
-  readonly gitCentralPath?: string
+  /** Shared repo remote URL — the deployment default for `gitCentral.remote`. */
+  readonly gitCentralRemote?: string
+  /** Shared repo branch — the deployment default for `gitCentral.branch`. */
+  readonly gitCentralBranch?: string
   /** Per-workspace repos (L2 defaults, keyed by workspace id); L3 overrides per key. */
   readonly gitRepos?: Record<string, import('./host/settings.ts').RepoSettings>
   /** Pull remote before opening a note (default true). */
@@ -56,13 +58,12 @@ export const Config: s<Config> = s.object({
   root: s.string().default('.dsh-notes'),
   route: s.string().default('/plugins/md-notes'),
   gitMode: s.union([s.const('off'), s.const('on'), s.const('shared'), s.const('own')]).default('off'),
-  gitCentralPath: s.string().default(''),
+  gitCentralRemote: s.string().default(''),
+  gitCentralBranch: s.string().default(''),
   gitRepos: s.dict(s.object({
-    path: s.string().required(false),
+    remote: s.string().required(false),
     branch: s.string().required(false),
     subpath: s.string().required(false),
-    remote: s.string().required(false),
-    authorized: s.boolean().required(false),
   })).default({}),
   gitAutoPull: s.boolean().default(true),
   gitAuthorName: s.string().default(''),
@@ -157,18 +158,6 @@ export function apply(ctx: Context, config: Config): void {
     return ws?.id
   }
 
-  const setAuthorized = async (workspaceId: string | undefined, authorized: boolean): Promise<void> => {
-    if (scope === undefined) throw new Error('settings service unavailable')
-    const current = scope.get()
-    if (workspaceId === undefined) {
-      await scope.update({ gitCentral: { ...(current?.gitCentral ?? {}), authorized } })
-    } else {
-      const repos = { ...(current?.gitRepos ?? {}) }
-      repos[workspaceId] = { ...(repos[workspaceId] ?? {}), authorized }
-      await scope.update({ gitRepos: repos })
-    }
-  }
-
   const updateSettings = async (patch: Record<string, unknown>): Promise<void> => {
     if (scope === undefined) throw new Error('settings service unavailable')
     await scope.update(patch)
@@ -188,10 +177,8 @@ export function apply(ctx: Context, config: Config): void {
   const suggest = (): Record<string, unknown> => {
     const registry = workspaces()
     const wsEntries = registry === undefined ? [] : registry.list()
-    const home = process.env.DSH_HOME ?? join(process.env.HOME ?? '', '.dsh')
     return {
       workspaces: wsEntries.map((ws) => ({ workspaceId: ws.id, path: join(ws.path, '.dsh-notes') })),
-      centralPath: join(home, 'notes-repo'),
     }
   }
 
@@ -209,7 +196,6 @@ export function apply(ctx: Context, config: Config): void {
       return registry !== undefined && registry.list().length > 0
     },
     git,
-    setAuthorized,
     sessionQuery: ctx.get('sessionQuery'),
   }
   const handler = notesApiHandler(deps)

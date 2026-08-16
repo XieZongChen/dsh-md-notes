@@ -1,16 +1,17 @@
 /**
  * dsh-md-notes settings namespace (`md-notes`): the durable user-level layer
  * (L3) of the plugin's three-layer configuration model. Registered host-side
- * via `ctx.settings`, written by the settings panel / sync-area UI, and merged
- * over the cordis Config (L2) at read time.
+ * via `ctx.settings`, written by the settings panel, and merged over the
+ * cordis Config (L2) at read time.
  *
- * Model (v3): notes ALWAYS live at `<workspace>/.dsh-notes` locally; the git
- * repo is an independent sync target chosen by the user. Two mutually
- * exclusive modes:
- *  - `gitMode: 'shared'` — one shared repo (`gitCentral`), all workspaces
- *    sync into its `main` branch under a per-workspace folder.
+ * Model (v4): notes ALWAYS live at `<workspace>/.dsh-notes` locally; the git
+ * repo is identified by its **URL only** — the plugin manages a local clone
+ * under `$DSH_HOME/md-notes-repos/<url-hash>/`, so the user never supplies a
+ * path (and no sandbox authorization is needed). Two mutually exclusive modes:
+ *  - `gitMode: 'shared'` — one shared repo (`gitCentral` = URL + optional
+ *    branch), all workspaces sync into that branch under a per-workspace folder.
  *  - `gitMode: 'own'` — no shared repo; each workspace configures its own
- *    repo `{ path, remote, branch, subpath }`.
+ *    repo `{ remote, branch?, subpath? }`.
  * @module dsh-md-notes/settings
  */
 
@@ -20,28 +21,22 @@ import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 /** The plugin's settings namespace id. */
 export const MD_NOTES_NS = settingsNamespace('md-notes')
 
-/** Per-repo record: path, branch, in-repo subpath, remote, authorization. */
+/** Per-repo record: URL + branch + in-repo subpath. */
 export interface RepoSettings {
-  /** Git repo directory (the sync target, not the notes location). */
-  path?: string
+  /** Git remote URL (the repo is identified by URL; plugin manages the local clone). */
+  remote?: string
   /** Branch to push/pull on (default 'main'). */
   branch?: string
   /** In-repo subpath holding this workspace's notes ('' = repo root). */
   subpath?: string
-  /** Remote URL; empty = local commits only. */
-  remote?: string
-  /** True when the user granted access to a sandbox-external repo (persisted, §2.3). */
-  authorized?: boolean
 }
 
 /** Shared (central) repo settings — `gitMode: 'shared'`. */
 export interface CentralSettings {
-  /** Shared repo path. */
-  path?: string
-  /** Shared repo remote. */
+  /** Git remote URL of the shared repo. */
   remote?: string
-  /** Authorization flag for the (sandbox-external) shared repo. */
-  authorized?: boolean
+  /** Branch to push/pull on (default 'main'). */
+  branch?: string
 }
 
 /** The user-level (L3) settings section. */
@@ -59,16 +54,13 @@ export interface MdNotesSettings {
 export const MdNotesSettingsSchema: s<MdNotesSettings> = s.object({
   gitMode: s.union([s.const('off'), s.const('on'), s.const('shared'), s.const('own')]).required(false),
   gitCentral: s.object({
-    path: s.string().required(false),
     remote: s.string().required(false),
-    authorized: s.boolean().required(false),
+    branch: s.string().required(false),
   }).required(false),
   gitRepos: s.dict(s.object({
-    path: s.string().required(false),
+    remote: s.string().required(false),
     branch: s.string().required(false),
     subpath: s.string().required(false),
-    remote: s.string().required(false),
-    authorized: s.boolean().required(false),
   })).required(false),
   gitAutoPull: s.boolean().required(false),
   gitAuthorName: s.string().required(false),
@@ -77,14 +69,15 @@ export const MdNotesSettingsSchema: s<MdNotesSettings> = s.object({
 
 /**
  * Merge the L2 cordis Config (deployment defaults) with the L3 user settings
- * into one effective view. Top-level L3 wins; per-workspace repos and the
- * central path merge key-wise. `gitMode: 'on'` (legacy) is normalized:
- * a configured shared repo → 'shared', otherwise → 'own'.
+ * into one effective view. Top-level L3 wins; per-workspace repos merge
+ * key-wise. `gitMode: 'on'` (legacy) is normalized: a configured shared repo
+ * → 'shared', otherwise → 'own'.
  */
 export function mergeSettings(
   config: {
     gitMode?: string
-    gitCentralPath?: string
+    gitCentralRemote?: string
+    gitCentralBranch?: string
     gitRepos?: Record<string, RepoSettings>
     gitAutoPull?: boolean
     gitAuthorName?: string
@@ -95,14 +88,13 @@ export function mergeSettings(
   const user = l3 ?? {}
   const mode = user.gitMode ?? (config.gitMode === 'on' ? 'on' : 'off')
   const normalized = mode === 'on'
-    ? (user.gitCentral?.path ?? config.gitCentralPath) ? 'shared' : 'own'
+    ? (user.gitCentral?.remote ?? config.gitCentralRemote) ? 'shared' : 'own'
     : mode
   return {
     gitMode: normalized,
     gitCentral: {
-      path: user.gitCentral?.path ?? config.gitCentralPath,
-      remote: user.gitCentral?.remote,
-      authorized: user.gitCentral?.authorized,
+      remote: user.gitCentral?.remote ?? config.gitCentralRemote,
+      branch: user.gitCentral?.branch ?? config.gitCentralBranch,
     },
     gitRepos: { ...(config.gitRepos ?? {}), ...(user.gitRepos ?? {}) },
     gitAutoPull: user.gitAutoPull ?? config.gitAutoPull ?? true,
