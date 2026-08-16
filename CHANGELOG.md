@@ -34,10 +34,21 @@ Only user-visible functional changes are recorded (no documentation, code refact
   localized text (`gitErrorText`); note-append section labels follow the UI language.
 - dsh-styled form controls (DshInput / DshSelect) and a full-screen notes manager restyle (title-bar
   settings button, per-workspace grouping/collapse, status line).
-- Notes are workspace-bound: the `root` config was removed; without a workspace the UI prompts to create
-  one first (notes manager and note picker).
+- Notes are workspace-bound: without a workspace the UI prompts to create one first
+  (notes manager and note picker).
 - **Update notifications**: the plugin checks npm for a newer version on load (cached 10 min); a yellow
   "Update available" tag appears on the sidebar notes entry and next to the manager's settings button.
+
+### Breaking
+
+- **`root` config removed** — notes are now bound to workspaces (`<workspace>/.dsh-notes`); the old
+  `root`-configured notes directory is ignored and existing notes there are **not auto-migrated**
+  (copy them into the workspace's `.dsh-notes` manually). Without a workspace, notes can't be
+  read/written (the UI prompts to create one).
+- **`list` API response restructured** — previously `{ ok, notes, dir }` for a single fixed directory,
+  now `{ ok, workspaces: [{ workspaceId, name, notes }], noWorkspaces }` grouped per workspace.
+- **`notesApiHandler` signature changed** — from a fixed `dir` to a deps object resolving the directory
+  per workspace (internal host API; the bundled client was updated in lockstep).
 
 ### Fixed
 
