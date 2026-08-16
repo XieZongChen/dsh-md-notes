@@ -3,6 +3,8 @@
  * @module dsh-md-notes/client/api
  */
 
+import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+
 export interface NoteSummary {
   name: string
   title: string
@@ -135,4 +137,25 @@ export interface GitSuggestData {
 
 export function gitSuggestApi(): Promise<ApiResult> {
   return api('gitSuggest')
+}
+
+/**
+ * Map a host git error to localized UI text. The host returns a machine
+ * `code` plus a raw `detail`; the client renders the right copy per locale.
+ * Unknown codes fall back to a generic failure with the raw detail.
+ */
+export function gitErrorText(t: TranslateNS<'md-notes'>, code: string | undefined, detail: string | undefined): string {
+  switch (code) {
+    case 'no-repo': return t('git.errNoRepo')
+    case 'sync-branch': return t('git.errSyncBranch', { detail: detail ?? '' })
+    case 'sync-notes': return t('git.errSyncNotes', { detail: detail ?? '' })
+    case 'git-failed': return t('git.errGitFailed', { detail: detail ?? '' })
+    case 'push-failed': return t('git.errPushFailed', { detail: detail ?? '' })
+    case 'clone-failed': return t('git.errCloneFailed', { detail: detail ?? '' })
+    case 'identity': return t('git.errIdentity')
+    case 'remote-changed': return t('git.errRemoteChanged', { names: detail ?? '' })
+    case 'non-fast-forward': return t('git.errNonFastForward')
+    case 'merge-unrelated': return t('git.errMergeUnrelated', { detail: detail ?? '' })
+    default: return t('git.failed', { error: detail ?? code ?? '' })
+  }
 }

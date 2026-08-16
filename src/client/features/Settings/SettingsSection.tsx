@@ -133,7 +133,7 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
         <div className={styles.tipTitle}>{t('git.tipTitle')}</div>
         <div className={styles.tipBody}>
           {t('git.tipWherePrefix')}
-          <code className={styles.tipCode}>{'<工作区>/.dsh-notes'}</code>
+          <code className={styles.tipCode}>{t('git.workspaceDirLabel')}</code>
           {t('git.tipWhereSuffix')}
         </div>
       </div>

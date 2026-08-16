@@ -12,7 +12,7 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSettingsOutline16, IconTriangleRightFill14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData, WorkspaceNotes } from '../api.ts'
-import { api, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
+import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
 import { fmtTime, renderMd } from '../markdown.ts'
 import type { NotesStore } from '../store.ts'
 import type { MdNotesKey } from '../locales/index.ts'
@@ -220,7 +220,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         setFlash('manager.updated')
         window.setTimeout(() => setFlash(''), 1200)
       } else {
-        setGitMsg(res.error)
+        setGitMsg(gitErrorText(t, res.code, res.error))
       }
     })
   }
@@ -234,7 +234,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     void gitPullApi(wsId, false).then((res) => {
       setUpdating(false)
       if (!res.ok) {
-        setGitMsg(res.error)
+        setGitMsg(gitErrorText(t, res.code, res.error))
         return
       }
       const skipped = res.skipped ?? 0
@@ -274,7 +274,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       } else if (res.code === 'remote-changed') {
         // The remote has notes newer/different from the local ones — ask the
         // user whether to overwrite them with the local version before pushing.
-        const names = (res.changed ?? []).join('、')
+        const names = (res.changed ?? []).join(', ')
         setConfirmState({
           title: t('git.pushRemoteChangedTitle'),
           description: t('git.pushRemoteChanged', { names }),
@@ -287,15 +287,18 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         // offer an in-app merge-and-retry instead of a bare error.
         setPushOpen(false)
         setPushMsg('')
-        setPushConflict({ wsId, message, error: res.error ?? '' })
+        setPushConflict({ wsId, message, error: gitErrorText(t, res.code, res.error) })
       } else {
-        setGitMsg(res.error ?? t('git.failed', { error: '' }))
+        setGitMsg(gitErrorText(t, res.code, res.error))
       }
     })
   }
 
   const doPush = (wsId: string): void => {
-    runPush(wsId, pushMsg.trim() || '')
+    // Default commit message is localized client-side (host fallback exists
+    // for direct API calls but the UI always sends an explicit message).
+    const message = pushMsg.trim() !== '' ? pushMsg.trim() : t('git.commitDefault', { time: new Date().toLocaleString() })
+    runPush(wsId, message)
   }
 
   const resolveAndRetry = (): void => {
@@ -308,7 +311,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         runPush(pushConflict.wsId, pushConflict.message)
       } else {
         setPushing(false)
-        setGitMsg(res.error ?? t('git.failed', { error: '' }))
+        setGitMsg(gitErrorText(t, res.code, res.error))
       }
     })
   }

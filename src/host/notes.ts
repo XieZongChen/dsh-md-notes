@@ -121,7 +121,9 @@ export async function writeNote(dir: string, rawName: string, content: string): 
 
 /** Create one note with a `# title` stub, deduping the basename. */
 export async function createNote(dir: string, rawTitle: string): Promise<{ ok: true; name: string }> {
-  const title = String(rawTitle ?? '').trim() || '未命名笔记'
+  // Client always passes a localized title; this neutral fallback only guards
+  // direct API calls without a title.
+  const title = String(rawTitle ?? '').trim() || 'Untitled note'
   const base = sanitizeName(title)
   await mkdir(dir, { recursive: true })
   let name = base

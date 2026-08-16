@@ -221,11 +221,13 @@ export async function syncNotes(
   return { copied, skipped }
 }
 
-/** A convenience error type carrying a user-facing message. */
+/** A convenience error type carrying a machine code + user-facing message. */
 export class GitError extends Error {
-  constructor(message: string) {
+  readonly code: string
+  constructor(code: string, message: string) {
     super(message)
     this.name = 'GitError'
+    this.code = code
   }
 }
 
@@ -237,7 +239,7 @@ export async function gitInit(ctx: Context, repo: ResolvedRepo, _branch: string)
   if (existsSync(join(repo.repoDir, '.git'))) return
   mkdirSync(join(repo.repoDir, '..'), { recursive: true })
   const clone = await runGit(ctx, join(repo.repoDir, '..'), ['clone', repo.remote, repo.repoDir])
-  if (clone.code !== 0) throw new GitError(`git clone 失败: ${clone.stderr || clone.stdout}`)
+  if (clone.code !== 0) throw new GitError('clone-failed', `git clone failed: ${clone.stderr || clone.stdout}`)
   const ignorePath = join(repo.repoDir, '.gitignore')
   if (!existsSync(ignorePath)) {
     try {
@@ -305,7 +307,7 @@ async function resolveIdentity(
   if (args.length === 0) {
     return {
       args,
-      error: 'git 提交身份未配置：请在仓库中设置 git config user.name / user.email（本地或全局），或在插件配置中设置 gitAuthorName / gitAuthorEmail',
+      error: 'Git commit identity not configured: set git config user.name / user.email (local or global) in the repo, or set gitAuthorName / gitAuthorEmail in plugin config',
     }
   }
   return { args }
@@ -416,7 +418,7 @@ export async function gitPush(
 ): Promise<{ ok: boolean; error?: string; code?: string; changed?: string[] }> {
   await gitInit(ctx, repo, repo.branch)
   const branch = await ensureBranch(ctx, repo)
-  if (branch.code !== 0) return { ok: false, error: `同步仓库分支失败: ${branch.stderr || branch.stdout}` }
+  if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
   // Detect remote-vs-local conflicts before touching anything.
   const target = repoTargetDir(repo)
   if (!overwrite) {
@@ -430,7 +432,7 @@ export async function gitPush(
         ok: false,
         code: 'remote-changed',
         changed: affected,
-        error: `远端有以下笔记与本地不同或本地已删除：${affected.join('、')}，是否用本地版本覆盖/删除远端？`,
+        error: `Remote notes differ from or are missing locally: ${affected.join(', ')}. Overwrite/delete the remote with your local state?`,
       }
     }
   }
@@ -439,22 +441,22 @@ export async function gitPush(
     await syncNotes(notesDir, target, true)
     await deleteMissingNotes(target, notesDir)
   } catch (error) {
-    return { ok: false, error: `同步笔记到仓库失败: ${error instanceof Error ? error.message : String(error)}` }
+    return { ok: false, code: 'sync-notes', error: `Sync notes to repo failed: ${error instanceof Error ? error.message : String(error)}` }
   }
 
   const addScope = repo.subdir === '' ? '.' : repo.subdir.replace(/\\/g, '/')
   // `-A` so deletions staged as well.
   const add = await runGit(ctx, repo.repoDir, ['add', '-A', '--', addScope])
-  if (add.code !== 0) return { ok: false, error: `git add 失败: ${add.stderr || add.stdout}` }
+  if (add.code !== 0) return { ok: false, code: 'git-failed', error: `git add failed: ${add.stderr || add.stdout}` }
 
   const identity = await resolveIdentity(ctx, repo, author)
-  if (identity.error !== undefined) return { ok: false, error: identity.error }
+  if (identity.error !== undefined) return { ok: false, code: 'identity', error: identity.error }
 
   const porcelain = await runGit(ctx, repo.repoDir, ['status', '--porcelain'])
   const hasChanges = porcelain.code === 0 && porcelain.stdout.trim() !== ''
   if (hasChanges) {
     const commit = await runGit(ctx, repo.repoDir, [...identity.args, 'commit', '-m', message])
-    if (commit.code !== 0) return { ok: false, error: `git commit 失败: ${commit.stderr || commit.stdout}` }
+    if (commit.code !== 0) return { ok: false, code: 'git-failed', error: `git commit failed: ${commit.stderr || commit.stdout}` }
   }
 
   const push = await runGit(ctx, repo.repoDir, [...identity.args, 'push', '-u', 'origin', repo.branch])
@@ -464,10 +466,10 @@ export async function gitPush(
       return {
         ok: false,
         code: 'non-fast-forward',
-        error: 'git push 失败：远端领先或历史不相关，需先合并远端再推送（可在界面点「合并远端并重试」）',
+        error: 'git push failed: the remote is ahead or histories are unrelated; merge the remote first then push again (use the in-app "merge remote & retry" button)',
       }
     }
-    return { ok: false, error: `git push 失败: ${push.stderr || push.stdout}` }
+    return { ok: false, code: 'git-failed', error: `git push failed: ${push.stderr || push.stdout}` }
   }
   return { ok: true }
 }
@@ -484,10 +486,10 @@ export async function gitPush(
  */
 export async function gitPull(
   ctx: Context, repo: ResolvedRepo, notesDir: string, force: boolean,
-): Promise<{ ok: boolean; error?: string; skipped?: number; changed?: string[] }> {
+): Promise<{ ok: boolean; code?: string; error?: string; skipped?: number; changed?: string[] }> {
   await gitInit(ctx, repo, repo.branch)
   const branch = await ensureBranch(ctx, repo)
-  if (branch.code !== 0) return { ok: false, error: `同步仓库分支失败: ${branch.stderr || branch.stdout}` }
+  if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
   const target = repoTargetDir(repo)
   const { skipped } = await syncNotes(target, notesDir, force)
   // In the conservative (auto-pull) path, notes differing on both sides were
@@ -502,17 +504,17 @@ export async function gitPull(
  * for a first push against a non-empty remote. Never runs automatically — the
  * caller (the client's "merge remote & retry" button) is the user's decision.
  */
-export async function gitSync(ctx: Context, repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }> {
+export async function gitSync(ctx: Context, repo: ResolvedRepo): Promise<{ ok: boolean; code?: string; error?: string }> {
   await gitInit(ctx, repo, repo.branch)
   const branch = await ensureBranch(ctx, repo)
-  if (branch.code !== 0) return { ok: false, error: `同步仓库分支失败: ${branch.stderr || branch.stdout}` }
+  if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
   const merge = await runGit(ctx, repo.repoDir, ['pull', '--no-rebase', '--no-edit'])
   if (merge.code === 0) return { ok: true }
   const out = `${merge.stderr || ''} ${merge.stdout || ''}`
   if (/unrelated histories/i.test(out)) {
     const merge2 = await runGit(ctx, repo.repoDir, ['pull', '--allow-unrelated-histories', '--no-rebase', '--no-edit'])
     if (merge2.code === 0) return { ok: true }
-    return { ok: false, error: merge2.stderr || merge2.stdout || 'git pull 失败（历史不相关）' }
+    return { ok: false, code: 'git-failed', error: merge2.stderr || merge2.stdout || 'git pull failed (unrelated histories)' }
   }
-  return { ok: false, error: merge.stderr || merge.stdout || 'git pull 失败' }
+  return { ok: false, code: 'git-failed', error: merge.stderr || merge.stdout || 'git pull failed' }
 }

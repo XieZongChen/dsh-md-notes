@@ -136,33 +136,34 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     // ---- git domain ----
     case 'gitStatus': {
       const repo = deps.resolveRepo(workspaceId)
-      if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
+      if (repo === undefined) return { ok: false, code: 'no-repo', error: 'No git repo configured' }
       const view = await deps.git.status(repo)
       return { ok: true, status: view }
     }
     case 'gitInit': {
       const repo = deps.resolveRepo(workspaceId)
-      if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
+      if (repo === undefined) return { ok: false, code: 'no-repo', error: 'No git repo configured' }
       try {
         await deps.git.init(repo)
         return { ok: true }
       } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : String(error) }
+        const code = error instanceof GitError ? error.code : undefined
+        return { ok: false, code, error: error instanceof Error ? error.message : String(error) }
       }
     }
     case 'gitPush': {
       const repo = deps.resolveRepo(workspaceId)
-      if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
+      if (repo === undefined) return { ok: false, code: 'no-repo', error: 'No git repo configured' }
       const message = typeof req.message === 'string' && req.message.trim() !== ''
         ? req.message.trim()
-        : `笔记更新 ${new Date().toLocaleString()}`
+        : `Notes update ${new Date().toLocaleString()}`
       // overwrite=true = the user confirmed overwriting the remote's newer
       // version (the first push without it blocks on remote-changed).
       return deps.git.push(repo, deps.resolveDir(workspaceId), message, req.overwrite === true)
     }
     case 'gitPull': {
       const repo = deps.resolveRepo(workspaceId)
-      if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
+      if (repo === undefined) return { ok: false, code: 'no-repo', error: 'No git repo configured' }
       // Manual "Update" (force=true) pulls the remote version over local files;
       // the auto-pull on open omits force → conservative (never overwrites).
       return deps.git.pull(repo, deps.resolveDir(workspaceId), req.force === true)
@@ -170,7 +171,7 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'gitSync': {
       // User-initiated conflict resolution after a rejected push.
       const repo = deps.resolveRepo(workspaceId)
-      if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
+      if (repo === undefined) return { ok: false, code: 'no-repo', error: 'No git repo configured' }
       return deps.git.sync(repo)
     }
     case 'gitSettings': {
@@ -193,7 +194,8 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
         await deps.updateSettings(patch)
         return { ok: true }
       } catch (error) {
-        return { ok: false, error: error instanceof Error ? error.message : String(error) }
+        const code = error instanceof GitError ? error.code : undefined
+        return { ok: false, code, error: error instanceof Error ? error.message : String(error) }
       }
     }
 
@@ -220,7 +222,8 @@ export function notesApiHandler(deps: NotesApiDeps): (req: IncomingMessage, res:
       const result = await handleApi(deps, method, body)
       sendJson(res, 200, result)
     } catch (error) {
-      sendJson(res, 500, { ok: false, error: error instanceof GitError ? error.message : (error instanceof Error ? error.message : String(error)) })
+      const code = error instanceof GitError ? error.code : undefined
+      sendJson(res, 500, { ok: false, code, error: error instanceof GitError ? error.message : (error instanceof Error ? error.message : String(error)) })
     }
   }
 }
