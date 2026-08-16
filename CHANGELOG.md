@@ -12,7 +12,7 @@ Only user-visible functional changes are recorded (no documentation, code refact
   (they are part of building the feature, not repairs of a shipped behavior).
 - **Fixed** only records fixes to features from **earlier versions**.
 
-## [Unreleased]
+## [0.3.0] - 2026-08-16
 
 ### Added
 
