@@ -137,12 +137,18 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'appendConversation': {
       const dir = deps.resolveDir(workspaceId)
       if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
+      // The client localizes the section labels (User/DSH/empty) so note
+      // content follows the UI language.
+      const labels = typeof req.labels === 'object' && req.labels !== null
+        ? (req.labels as { user?: string; assistant?: string; empty?: string; image?: string })
+        : undefined
       return appendConversation(
         dir,
         String(req.noteName ?? ''),
         String(req.sessionId ?? ''),
         String(req.messageId ?? ''),
         deps.sessionQuery,
+        labels,
       )
     }
 

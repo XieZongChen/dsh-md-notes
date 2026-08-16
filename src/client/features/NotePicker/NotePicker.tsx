@@ -72,7 +72,17 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
     if (!selected) { setStatus({ key: 'picker.needSelect' }); return }
     setBusy(true)
     setStatus({ key: 'picker.writing' })
-    void api('appendConversation', { noteName: selected, sessionId, messageId }).then((res) => {
+    void api('appendConversation', {
+      noteName: selected,
+      sessionId,
+      messageId,
+      labels: {
+        user: t('picker.labelUser'),
+        assistant: t('picker.labelAssistant'),
+        empty: t('picker.labelEmpty'),
+        image: t('picker.labelImage'),
+      },
+    }).then((res) => {
       setBusy(false)
       if (res.ok) {
         setStatus({ key: 'picker.written' })

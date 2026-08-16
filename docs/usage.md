@@ -62,10 +62,10 @@ A picker opens:
 
    ## <timestamp> · <session title>
 
-   **User**:
+   **<user label>**:
    <question>
 
-   **DSH**:
+   **<assistant label>**:
    <answer>
    ```
 

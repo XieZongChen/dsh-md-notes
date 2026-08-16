@@ -38,14 +38,14 @@ export function titleOf(content: string | undefined, fallback: string): string {
 }
 
 /** Render message content blocks to plain markdown text. */
-export function blocksToText(blocks: readonly unknown[] | undefined): string {
+export function blocksToText(blocks: readonly unknown[] | undefined, imageLabel = '[image]'): string {
   const parts: string[] = []
   for (const b of blocks ?? []) {
     if (b === null || typeof b !== 'object') continue
     const block = b as { type?: string; text?: string }
     if (block.type === 'text' && typeof block.text === 'string') parts.push(block.text)
     else if (block.type === 'reasoning' && typeof block.text === 'string') parts.push(`> ${block.text}`)
-    else if (block.type === 'image') parts.push('[图片]')
+    else if (block.type === 'image') parts.push(imageLabel)
   }
   return parts.join('\n\n').trim()
 }
@@ -154,13 +154,19 @@ export async function deleteNote(dir: string, rawName: string): Promise<{ ok: tr
   return { ok: true, name }
 }
 
-/** Append the user question + assistant answer for one message to a note. */
+/**
+ * Append the user question + assistant answer for one message to a note.
+ * Section labels (`userLabel` / `assistantLabel` / `emptyText`) come from the
+ * caller (the client localizes them) so the note content follows the UI
+ * language; default to neutral English when omitted.
+ */
 export async function appendConversation(
   dir: string,
   noteName: string,
   sessionId: string,
   messageId: string,
   sessionQuery: SessionQueryEngine | undefined,
+  labels?: { user?: string; assistant?: string; empty?: string; image?: string },
 ): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
   if (!sessionId || !messageId) return { ok: false, error: 'missing session/message id' }
   if (sessionQuery === undefined) return { ok: false, error: 'sessionQuery unavailable' }
@@ -191,10 +197,10 @@ export async function appendConversation(
     } | undefined
     if (data === undefined) continue
     if (ev.type === 'user/message') {
-      if (data.source?.kind === 'user') userText = blocksToText(data.content)
+      if (data.source?.kind === 'user') userText = blocksToText(data.content, labels?.image)
     } else if (ev.type === 'assistant/message') {
       if (data.message?.id === messageId) {
-        assistantText = blocksToText(data.message.content)
+        assistantText = blocksToText(data.message.content, labels?.image)
         break
       }
     }
@@ -202,7 +208,10 @@ export async function appendConversation(
   if (assistantText === '') return { ok: false, error: 'assistant message not found' }
 
   const stamp = new Date().toLocaleString()
-  const section = `\n\n---\n\n## ${stamp}${sessionTitle ? ` · ${sessionTitle}` : ''}\n\n**用户**：\n\n${userText || '（无）'}\n\n**DSH**：\n\n${assistantText}\n`
+  const userLabel = labels?.user ?? 'User'
+  const assistantLabel = labels?.assistant ?? 'DSH'
+  const emptyText = labels?.empty ?? '(none)'
+  const section = `\n\n---\n\n## ${stamp}${sessionTitle ? ` · ${sessionTitle}` : ''}\n\n**${userLabel}**：\n\n${userText || emptyText}\n\n**${assistantLabel}**：\n\n${assistantText}\n`
 
   await mkdir(dir, { recursive: true })
   let content = ''
