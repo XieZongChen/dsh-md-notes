@@ -56,6 +56,8 @@ export type ApiResult =
     status?: GitStatusData
     settings?: GitSettingsData
     suggestions?: GitSuggestData
+    /** Number of files skipped during a conservative pull (differed from remote). */
+    skipped?: number
   }
   | { ok: false; error: string; code?: string }
 

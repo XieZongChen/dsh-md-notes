@@ -55,6 +55,8 @@ export const zh = {
   'git.failed': '失败：{error}',
   'git.pushing': '推送中…',
   'git.mergeRetry': '合并远端并重试',
+  'git.updateConfirm': '远端有 {count} 个笔记与本地不同，是否用远端版本覆盖本地？',
+  'git.updateCancelled': '已取消，本地笔记保持不变',
   'git.settingsNav': 'MD 笔记',
   'git.loading': '加载中…',
   'git.mode': 'Git 同步',

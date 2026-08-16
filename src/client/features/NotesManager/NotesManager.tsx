@@ -168,12 +168,10 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     }
   }
 
-  const doUpdate = (wsId: string): void => {
+  const doUpdate = (wsId: string, force: boolean): void => {
     setUpdating(true)
     setGitMsg('')
-    // Manual update: the remote version wins (force = true), replacing local
-    // files so pulling actually brings the remote notes down.
-    void gitPullApi(wsId, true).then((res) => {
+    void gitPullApi(wsId, force).then((res) => {
       setUpdating(false)
       if (res.ok) {
         refreshStatus(wsId)
@@ -191,9 +189,35 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   }
 
   const updateClick = (wsId: string): void => {
-    // Manual update is the user's explicit request to pull the remote version
-    // down (force = true in doUpdate), so no extra confirmation is needed.
-    doUpdate(wsId)
+    // First run a conservative pull (never overwrites). If the remote has
+    // files that differ from the local ones (skipped > 0), ask the user
+    // whether to replace the local versions — never overwrite silently.
+    setUpdating(true)
+    setGitMsg('')
+    void gitPullApi(wsId, false).then((res) => {
+      setUpdating(false)
+      if (!res.ok) {
+        setGitMsg(res.error)
+        return
+      }
+      const skipped = res.skipped ?? 0
+      if (skipped === 0) {
+        // Nothing differed → the conservative pull already brought everything.
+        if (selected && isCurrent(wsId, selected)) {
+          void api('read', { name: selected, workspaceId: wsId }).then((r) => {
+            if (r.ok && isCurrent(wsId, selected)) setContent(r.content ?? '')
+          })
+        }
+        setFlash('manager.updated')
+        window.setTimeout(() => setFlash(''), 1200)
+        return
+      }
+      if (window.confirm(t('git.updateConfirm', { count: skipped }))) {
+        doUpdate(wsId, true)
+      } else {
+        setGitMsg(t('git.updateCancelled'))
+      }
+    })
   }
 
   const runPush = (wsId: string, message: string): void => {

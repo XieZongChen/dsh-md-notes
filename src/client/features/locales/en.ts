@@ -58,6 +58,8 @@ export const en: { [K in keyof typeof zh]: string } = {
   'git.failed': 'Failed: {error}',
   'git.pushing': 'Pushing…',
   'git.mergeRetry': 'Merge remote & retry',
+  'git.updateConfirm': 'The remote has {count} notes different from local ones. Replace local with the remote version?',
+  'git.updateCancelled': 'Cancelled — local notes unchanged',
   'git.settingsNav': 'MD Notes',
   'git.loading': 'Loading…',
   'git.mode': 'Git sync',
