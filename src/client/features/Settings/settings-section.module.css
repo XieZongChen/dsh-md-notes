@@ -63,17 +63,8 @@
   color: var(--dsw-alias-label-secondary, #888);
 }
 
-.input,
-.field select {
-  height: 30px;
-  padding: 0 8px;
-  border: 1px solid var(--dsw-alias-border-l2, #ddd);
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-primary, #fff);
-  color: var(--dsw-alias-label-primary, #222);
-  font: inherit;
-  font-size: 13px;
-}
+/* Inputs/selects use the dsh-styled DshInput/DshSelect components; only
+   layout (sizing within rows) is adjusted here. */
 
 .check {
   display: flex;
@@ -127,7 +118,7 @@
   color: var(--dsw-alias-label-primary, #222);
 }
 
-.wsRow .input {
+.wsRow input {
   flex: 1;
   min-width: 120px;
 }

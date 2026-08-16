@@ -12,6 +12,8 @@ import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { GitSettingsData, WorkspaceNotes } from '../api.ts'
 import { api, gitConfigApi, gitSettingsApi } from '../api.ts'
+import { DshInput } from '../components/DshInput/DshInput.tsx'
+import { DshSelect } from '../components/DshSelect/DshSelect.tsx'
 import styles from './settings-section.module.css'
 
 export interface SettingsSectionProps {
@@ -140,15 +142,14 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
       <div className={styles.row}>
         <label className={styles.field}>
           <span className={styles.label}>{t('git.mode')}</span>
-          <select
-            className={styles.input}
+          <DshSelect
             value={mode}
             onChange={(e) => set({ gitMode: e.target.value as 'off' | 'shared' | 'own' })}
           >
             <option value="off">{t('git.modeOff')}</option>
             <option value="shared">{t('git.modeShared')}</option>
             <option value="own">{t('git.modeOwn')}</option>
-          </select>
+          </DshSelect>
         </label>
       </div>
       <div className={styles.hint}>{mode === 'off' ? t('git.modeOffHint') : mode === 'shared' ? t('git.modeSharedHint') : t('git.modeOwnHint')}</div>
@@ -165,16 +166,14 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
       <div className={styles.row}>
         <label className={styles.field}>
           <span className={styles.label}>{t('git.authorName')}</span>
-          <input
-            className={styles.input}
+          <DshInput
             value={settings.gitAuthorName ?? ''}
             onChange={(e) => set({ gitAuthorName: e.target.value })}
           />
         </label>
         <label className={styles.field}>
           <span className={styles.label}>{t('git.authorEmail')}</span>
-          <input
-            className={styles.input}
+          <DshInput
             value={settings.gitAuthorEmail ?? ''}
             onChange={(e) => set({ gitAuthorEmail: e.target.value })}
           />
@@ -187,8 +186,7 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
           <div className={styles.row}>
             <label className={styles.field}>
               <span className={styles.label}>{t('git.url')}</span>
-              <input
-                className={styles.input}
+              <DshInput
                 placeholder={t('git.urlPlaceholder')}
                 value={settings.gitCentral?.remote ?? ''}
                 onChange={(e) => setCentral({ remote: e.target.value })}
@@ -196,8 +194,7 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
             </label>
             <label className={styles.field}>
               <span className={styles.label}>{t('git.branch')}</span>
-              <input
-                className={styles.input}
+              <DshInput
                 placeholder={t('git.branchPlaceholder')}
                 value={settings.gitCentral?.branch ?? ''}
                 onChange={(e) => setCentral({ branch: e.target.value.trim() === '' ? undefined : e.target.value })}
@@ -218,20 +215,17 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
                 <div key={ws.workspaceId} className={styles.wsBlock}>
                   <div className={styles.wsName}>{ws.name}</div>
                   <div className={styles.wsRow}>
-                    <input
-                      className={styles.input}
+                    <DshInput
                       placeholder={t('git.urlPlaceholder')}
                       value={repo?.remote ?? ''}
                       onChange={(e) => setWs(ws.workspaceId, { remote: e.target.value })}
                     />
-                    <input
-                      className={styles.input}
+                    <DshInput
                       placeholder={t('git.branchPlaceholder')}
                       value={repo?.branch ?? ''}
                       onChange={(e) => setWs(ws.workspaceId, { branch: e.target.value.trim() === '' ? undefined : e.target.value })}
                     />
-                    <input
-                      className={styles.input}
+                    <DshInput
                       placeholder={t('git.subpathPlaceholder')}
                       value={repo?.subpath ?? ''}
                       onChange={(e) => setWs(ws.workspaceId, { subpath: e.target.value })}
