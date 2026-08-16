@@ -5,6 +5,46 @@
 This project follows [Semantic Versioning](https://semver.org/).
 Only user-visible functional changes are recorded (no documentation, code refactoring, or build/toolchain adjustments).
 
+**Recording rules**:
+
+- A feature that lands in the current version is recorded once, under **Added**;
+  fixes to that same feature **within the same version** are **not** recorded
+  (they are part of building the feature, not repairs of a shipped behavior).
+- **Fixed** only records fixes to features from **earlier versions**.
+
+## [Unreleased]
+
+### Added
+
+- **Git sync** (URL-driven): the plugin manages a local clone automatically — configure a repo URL,
+  no path or authorization needed. Two mutually exclusive modes:
+  - **Shared repo** — one repo for all workspaces, each workspace syncing into its branch under a
+    per-workspace folder;
+  - **Own repos** — per workspace: repo URL + branch (default `main`) + in-repo subpath (default repo root).
+- Push = mirror-sync: local notes are copied into the repo target directory **and local deletions are
+  synced to the remote** (after confirmation when the remote differs); Update pulls the remote branch and
+  copies notes back without overwriting locally-modified files.
+- Remote-change detection before push (`remote-changed`) and on open (`changed`): conflicts are surfaced
+  with in-app confirmation dialogs (overwrite remote with local / use remote version), plus a
+  "merge remote & retry" action for rejected pushes.
+- Auto-pull on open (configurable, default on); the left list refreshes after a successful update so
+  newly-pulled notes appear immediately.
+- Git settings panel (dsh Settings → MD Notes): mode, repo URL/branch/subpath, auto-pull, commit author.
+- Interface copy fully internationalized: host errors return machine codes + detail, the client renders
+  localized text (`gitErrorText`); note-append section labels follow the UI language.
+- dsh-styled form controls (DshInput / DshSelect) and a full-screen notes manager restyle (title-bar
+  settings button, per-workspace grouping/collapse, status line).
+- Notes are workspace-bound: the `root` config was removed; without a workspace the UI prompts to create
+  one first (notes manager and note picker).
+
+### Fixed
+
+- Notes appended from an English UI previously wrote Chinese section labels ("用户"/"DSH") — now
+  localized ("User"/"DSH").
+- Primary buttons (save/confirm) were white-on-white in dark mode — now use theme tokens.
+- Note-picker "New" button wrapped to its own line (input field consumed the row) — fixed.
+- Punctuation normalized across locales (Chinese copy drops trailing periods; English sentences gain them).
+
 ## [0.2.0] - 2026-08-16
 
 ### Added
