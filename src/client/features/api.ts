@@ -58,6 +58,8 @@ export type ApiResult =
     suggestions?: GitSuggestData
     /** Number of files skipped during a conservative pull (differed from remote). */
     skipped?: number
+    /** Notes that differ on both sides after a conservative pull (conflict hint). */
+    changed?: string[]
   }
   | { ok: false; error: string; code?: string; changed?: string[] }
 

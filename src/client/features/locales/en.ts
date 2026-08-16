@@ -49,6 +49,7 @@ export const en: { [K in keyof typeof zh]: string } = {
   'git.lastCommit': 'Last commit {time}',
   'git.remoteSaved': 'Remote saved ✓',
   'git.update': 'Update',
+  'git.remoteUpdated': 'Remote has updates — update manually',
   'git.push': 'Push',
   'git.commitPlaceholder': 'Commit message (optional)',
   'git.confirmPush': 'Commit & push',

@@ -433,17 +433,21 @@ export async function gitPush(
  * - manual "Update" button → force = true: the remote version wins, replacing
  *   a locally-different file (the user explicitly asked to pull remote notes);
  * - auto-pull on open → force = false: conservative, never overwrites a
- *   locally-modified file (conflicts stay with the user).
+ *   locally-modified file; `changed` reports notes that exist on BOTH sides
+ *   with different content (a conflict the user should resolve manually).
  */
 export async function gitPull(
   ctx: Context, repo: ResolvedRepo, notesDir: string, force: boolean,
-): Promise<{ ok: boolean; error?: string; skipped?: number }> {
+): Promise<{ ok: boolean; error?: string; skipped?: number; changed?: string[] }> {
   await gitInit(ctx, repo, repo.branch)
   const branch = await ensureBranch(ctx, repo)
   if (branch.code !== 0) return { ok: false, error: `同步仓库分支失败: ${branch.stderr || branch.stdout}` }
   const target = repoTargetDir(repo)
   const { skipped } = await syncNotes(target, notesDir, force)
-  return { ok: true, skipped }
+  // In the conservative (auto-pull) path, notes differing on both sides were
+  // skipped — surface them so the UI can hint that a manual update is needed.
+  const changed = force ? undefined : await changedNotes(target, notesDir)
+  return { ok: true, skipped, changed }
 }
 
 /**

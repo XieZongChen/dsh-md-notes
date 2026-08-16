@@ -46,6 +46,7 @@ export const zh = {
   'git.lastCommit': '最近提交 {time}',
   'git.remoteSaved': '远程已保存 ✓',
   'git.update': '更新',
+  'git.remoteUpdated': '远端有更新，需手动更新',
   'git.push': '推送',
   'git.commitPlaceholder': '提交信息（可留空）',
   'git.confirmPush': '提交并推送',

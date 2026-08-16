@@ -49,6 +49,8 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const [pushing, setPushing] = React.useState(false)
   const [pushConflict, setPushConflict] = React.useState<{ wsId: string; message: string; error: string } | null>(null)
   const [autoPull, setAutoPull] = React.useState(true)
+  /** Names of notes the remote updated but local differs — hint to manually update. */
+  const [remoteChanged, setRemoteChanged] = React.useState<string[] | null>(null)
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
   const selectionRef = React.useRef<{ wsId: string; name: string } | null>(null)
   const isCurrent = (wsId: string, name: string): boolean =>
@@ -93,6 +95,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     setContent('')
     setCollapsed((prev) => ({ ...prev, [wsId]: !prev[wsId] }))
     setGitMsg('')
+    setRemoteChanged(null)
     refreshStatus(wsId)
   }
 
@@ -107,6 +110,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     setMode('edit')
     setContent('') // clear the previous note's content so switching never flashes it
     setGitMsg('')
+    setRemoteChanged(null)
     setContentLoading(true)
     refreshStatus(wsId)
     void api('read', { name, workspaceId: wsId }).then((res) => {
@@ -118,6 +122,15 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     void gitPullApi(wsId).then((res) => {
       refreshStatus(wsId)
       if (res.ok) {
+        // Conservative pull: notes differing on both sides were left as-is.
+        // Surface them as a hint (a manual Update is needed) instead of
+        // silently keeping the local version.
+        if ((res.changed ?? []).length > 0) {
+          setRemoteChanged(res.changed ?? [])
+          setContentLoading(false)
+          return
+        }
+        setRemoteChanged(null)
         void api('read', { name, workspaceId: wsId }).then((r2) => {
           if (r2.ok && isCurrent(wsId, name)) setContent(r2.content ?? '')
           setContentLoading(false)
@@ -174,6 +187,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     void gitPullApi(wsId, force).then((res) => {
       setUpdating(false)
       if (res.ok) {
+        setRemoteChanged(null)
         refreshStatus(wsId)
         if (selected && isCurrent(wsId, selected)) {
           void api('read', { name: selected, workspaceId: wsId }).then((r) => {
@@ -394,6 +408,11 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     >{t('manager.tabPreview')}</button>
                     <span className={styles.editorName}>{selected}</span>
                     <span className={styles.flash}>{flash === '' ? '' : t(flash)}</span>
+                    {showEditorGit && remoteChanged !== null && remoteChanged.length > 0 && (
+                      <span className={styles.remoteHint} title={remoteChanged.join('、')}>
+                        {t('git.remoteUpdated')}
+                      </span>
+                    )}
                     {showEditorGit && (
                       <button type="button" className={styles.gitBtn} disabled={busy} onClick={() => { const id = currentWsId(); if (id !== null) updateClick(id) }}>
                         {updating && <LoadingIndicator size={12} />}{t('git.update')}

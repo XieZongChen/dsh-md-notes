@@ -50,7 +50,7 @@ export interface GitApi {
   status(repo: ResolvedRepo): Promise<GitStatusView>
   init(repo: ResolvedRepo): Promise<void>
   push(repo: ResolvedRepo, notesDir: string, message: string, overwrite: boolean): Promise<{ ok: boolean; error?: string; code?: string; changed?: string[] }>
-  pull(repo: ResolvedRepo, notesDir: string, force: boolean): Promise<{ ok: boolean; error?: string; skipped?: number }>
+  pull(repo: ResolvedRepo, notesDir: string, force: boolean): Promise<{ ok: boolean; error?: string; skipped?: number; changed?: string[] }>
   sync(repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }>
 }
 
