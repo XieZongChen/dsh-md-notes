@@ -1,5 +1,5 @@
 /**
- * HTTP API client for the dsh-md-notes host route.
+ * HTTP API client for the dsh-md-notes host route (notes + git).
  * @module dsh-md-notes/client/api
  */
 
@@ -9,9 +9,33 @@ export interface NoteSummary {
   updatedAt: number
 }
 
+/** One workspace's note group (the grouped `list` result). */
+export interface WorkspaceNotes {
+  workspaceId: string
+  name: string
+  notes: NoteSummary[]
+}
+
+/** One repo's git status view. */
+export interface GitStatusData {
+  repoDir?: string
+  branch?: string
+  uncommitted?: number
+  lastCommit?: string
+  remote?: string
+  error?: string
+}
+
 export type ApiResult =
-  | { ok: true; notes?: NoteSummary[]; content?: string; name?: string; dir?: string }
-  | { ok: false; error: string }
+  | {
+    ok: true
+    workspaces?: WorkspaceNotes[]
+    content?: string
+    name?: string
+    dir?: string
+    status?: GitStatusData
+  }
+  | { ok: false; error: string; code?: string }
 
 /** Host API route prefix; mirrors the host plugin's default. */
 export const API = '/plugins/md-notes'
@@ -21,7 +45,7 @@ export const ICON_URL = `${API}/icon.svg`
 
 /**
  * Call one host API method.
- * @param method - endpoint name (list/read/write/create/delete/appendConversation).
+ * @param method - endpoint name (list/read/write/create/delete/appendConversation/git*).
  * @param body - endpoint arguments.
  * @returns the parsed result, or a failure branch on transport/HTTP errors.
  */
@@ -37,4 +61,24 @@ export async function api(method: string, body: Record<string, unknown> = {}): P
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
+}
+
+/** Git status of a workspace repo (or the central repo when `workspaceId` is omitted). */
+export function gitStatusApi(workspaceId?: string): Promise<ApiResult> {
+  return api('gitStatus', workspaceId === undefined ? {} : { workspaceId })
+}
+
+/** Stage + commit + push a workspace repo (or the whole central repo), then pull back. */
+export function gitPushApi(workspaceId: string | undefined, message: string): Promise<ApiResult> {
+  return api('gitPush', workspaceId === undefined ? { message } : { workspaceId, message })
+}
+
+/** Pull a workspace repo (or the whole central repo). */
+export function gitPullApi(workspaceId?: string): Promise<ApiResult> {
+  return api('gitPull', workspaceId === undefined ? {} : { workspaceId })
+}
+
+/** User-initiated conflict resolution: merge the remote into the local branch. */
+export function gitSyncApi(workspaceId?: string): Promise<ApiResult> {
+  return api('gitSync', workspaceId === undefined ? {} : { workspaceId })
 }

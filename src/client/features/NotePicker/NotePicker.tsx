@@ -38,27 +38,28 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
   const [status, setStatus] = React.useState<Status>('')
 
   React.useEffect(() => {
-    void api('list').then((res) => {
-      if (res.ok && res.notes) {
-        setNotes(res.notes)
-        if (res.notes.length > 0) setSelected(res.notes[0]!.name)
+    void api('list', { sessionId }).then((res) => {
+      if (res.ok && res.workspaces) {
+        const notes = res.workspaces.flatMap((w) => w.notes)
+        setNotes(notes)
+        if (notes.length > 0) setSelected(notes[0]!.name)
       }
     })
-  }, [])
+  }, [sessionId])
 
   const createAndPick = (): void => {
     const title = newTitle.trim()
     setBusy(true)
-    void api('create', { title }).then((res) => {
+    void api('create', { title, sessionId }).then((res) => {
       setBusy(false)
       if (res.ok && res.name) {
         setSelected(res.name)
         setNewTitle('')
-        return api('list')
+        return api('list', { sessionId })
       }
       setStatus({ key: 'picker.createFailed' })
       return null
-    }).then((res) => { if (res?.ok && res.notes) setNotes(res.notes) })
+    }).then((res) => { if (res?.ok && res.workspaces) setNotes(res.workspaces.flatMap((w) => w.notes)) })
   }
 
   const send = (): void => {

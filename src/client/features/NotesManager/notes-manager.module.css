@@ -206,3 +206,98 @@
   color: var(--dsw-alias-label-secondary, #666);
 }
 .preview a { color: var(--dsw-alias-brand-primary, #4a7bff); }
+
+/* Workspace grouping in the left list (central mode). */
+.wsGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.wsGroupHead {
+  padding: 6px 10px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-secondary, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.wsEmpty {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+/* Git sync buttons (editor head + manager head). */
+.gitBtn {
+  flex: none;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--dsw-alias-border-l2, #ddd);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary, #222);
+  font-size: 12px;
+  cursor: pointer;
+}
+.gitBtn:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.gitBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.headGit {
+  display: inline-flex;
+  gap: 6px;
+  margin-right: 4px;
+}
+
+/* Commit popover panel (anchored under the editor head). */
+.pushPanel {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1, #eee);
+  background: var(--dsw-alias-bg-layer-1, #fafafa);
+}
+.pushPanel input {
+  flex: 1;
+}
+
+/* Bottom sync status line. */
+.syncLine {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 26px;
+  padding: 4px 14px;
+  border-top: 1px solid var(--dsw-alias-border-l1, #eee);
+  background: var(--dsw-alias-bg-layer-1, #fafafa);
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary, #888);
+}
+
+.gitError {
+  color: var(--dsw-alias-danger, #d9534f);
+}
+
+.gitRetry {
+  margin-left: 8px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--dsw-alias-danger, #d9534f);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-danger, #d9534f);
+  font-size: 11px;
+  cursor: pointer;
+}
+.gitRetry:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+.gitRetry:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

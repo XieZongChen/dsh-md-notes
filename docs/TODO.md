@@ -5,25 +5,16 @@
 
 ## 1. 接入 Git：笔记可提交到仓库，方便多端同步
 
-**目标**：让笔记目录成为一个可同步的 Git 仓库——支持一键提交、推送到远程（GitHub/GitLab 等），
-换机器 clone 后继续用同一份笔记。
+**状态**：设计已完成，见 [git.md](git.md)（设置项三层模型、工作区/总仓库双模式、API/UI、实现步骤）。
 
-**思路**：
+**实现要点回顾**：
 
-- Host 侧新增 `git` 相关 API method（沿用现有 `POST /plugins/md-notes` 分发）：
-  - `gitInit`：若笔记目录还不是仓库则 `git init`（生成默认 `.gitignore`，如忽略 `meta.json` 或按需保留）
-  - `gitStatus`：返回未提交改动数（供 UI 显示"有 N 处未提交"）
-  - `gitCommit`：`git add -A && git commit`，提交信息默认「笔记更新」+ 时间戳
-  - `gitPush` / `gitPull`：推送到 / 拉取远程（需配置 remote URL，如 `git remote add origin ...`）
-- UI 侧：笔记管理面板顶部/底部加一个同步区——远程地址输入、提交/推送/拉取按钮、最近提交状态展示。
-- 配置：Config 增加可选 `gitRemote`（默认空 = 不启用 Git 功能，避免非 Git 用户被干扰）。
-
-**待定问题**：
-
-- 提交时机：手动提交 vs 保存后自动提交（自动提交可能产生噪音，倾向手动 + 状态提示）。
-- 沙箱与权限：host 执行 git 命令依赖 `subprocess`/`shell` 服务与文件沙箱策略，需确认插件上下文可用性。
-- `meta.json`（标题/更新时间缓存）是否入库：入库可跨机同步标题，但可能造成提交噪音。
-- 多端冲突：并发编辑冲突由 git 自身处理，UI 只需透出冲突提示。
+- 三层配置：cordis Config（部署默认）→ settings 命名空间 `md-notes`（用户 UI）→ 生效值合并。
+- 两种模式：`gitMode: workspace`（每工作区独立仓库）/ `central`（总仓库 `<gitCentralPath>/<ws>/`）。
+- Host：`ctx.settings.register('md-notes', schema)` + git 命令经 `subprocess`/`shell` 执行。
+- UI：笔记管理面板「同步区」（gitStatus/提交/推送/拉取 + 远程输入）+ dsh 设置面板「MD 笔记」分区。
+- 待确认：git 命令沙箱/网络权限、central 模式下笔记请求的 `workspaceId` 路由、`meta.json` 是否入库、
+  自动提交防抖。
 
 ## 2. Markdown 解析测试
 

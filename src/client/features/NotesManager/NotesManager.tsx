@@ -1,13 +1,16 @@
 /**
- * Notes manager panel: left note list + right editor/preview.
+ * Notes manager panel: left note list (grouped by workspace) + right
+ * editor/preview, plus the git sync surface — per-workspace update/push on the
+ * editor header, global update/push on the manager head when a central repo is
+ * in use, a commit popover, and best-effort auto-pull when opening a note.
  * All UI copy comes from the `md-notes` locale namespace via `t`.
  * @module dsh-md-notes/client/NotesManager
  */
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NoteSummary } from '../api.ts'
-import { api, ICON_URL } from '../api.ts'
+import type { GitStatusData, WorkspaceNotes } from '../api.ts'
+import { api, gitPullApi, gitPushApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
 import { fmtTime, renderMd } from '../markdown.ts'
 import type { NotesStore } from '../store.ts'
 import type { MdNotesKey } from '../locales/index.ts'
@@ -26,31 +29,81 @@ export interface NotesManagerProps {
  */
 export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const { store, t } = props
-  const [notes, setNotes] = React.useState<NoteSummary[]>([])
+  const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
+  const [selectedWsId, setSelectedWsId] = React.useState<string | null>(null)
   const [selected, setSelected] = React.useState<string | null>(null)
   const [content, setContent] = React.useState('')
   const [mode, setMode] = React.useState<'edit' | 'preview'>('edit')
   const [newTitle, setNewTitle] = React.useState('')
-  const [busy, setBusy] = React.useState(false)
+  const [creating, setCreating] = React.useState(false)
+  const [saving, setSaving] = React.useState(false)
   const [flash, setFlash] = React.useState<'' | MdNotesKey>('')
+  const [status, setStatus] = React.useState<GitStatusData | null>(null)
+  const [central, setCentral] = React.useState<GitStatusData | null>(null)
+  const [gitMsg, setGitMsg] = React.useState('')
+  const [pushOpen, setPushOpen] = React.useState(false)
+  const [pushMsg, setPushMsg] = React.useState('')
+  const [gitBusy, setGitBusy] = React.useState(false)
+  const [pushConflict, setPushConflict] = React.useState<{ wsId: string | null; message: string; error: string } | null>(null)
+
+  const refreshStatus = (wsId: string | null): void => {
+    if (wsId === null) return
+    void gitStatusApi(wsId).then((res) => {
+      setStatus(res.ok && res.status ? res.status : null)
+    })
+  }
+
+  const refreshCentral = (): void => {
+    void gitStatusApi().then((res) => {
+      setCentral(res.ok && res.status ? res.status : null)
+    })
+  }
 
   const refresh = (): void => {
-    void api('list').then((res) => { if (res.ok && res.notes) setNotes(res.notes) })
+    void api('list').then((res) => {
+      if (res.ok && res.workspaces) {
+        setWorkspaces(res.workspaces)
+        const first = res.workspaces[0]
+        if (first !== undefined) {
+          setSelectedWsId((prev) => prev ?? first.workspaceId)
+          refreshStatus(first.workspaceId)
+        }
+      }
+    })
+    refreshCentral()
   }
 
   React.useEffect(() => { refresh() }, [])
 
-  const open = (name: string): void => {
+  const currentWsId = (): string | null => selectedWsId ?? workspaces[0]?.workspaceId ?? null
+  const showEditorGit = !!status?.repoDir
+  const showGlobalGit = !!central?.repoDir
+
+  const open = (name: string, wsId: string): void => {
+    setSelectedWsId(wsId)
     setSelected(name)
     setMode('edit')
-    void api('read', { name }).then((res) => { if (res.ok) setContent(res.content ?? '') })
+    setGitMsg('')
+    void api('read', { name, workspaceId: wsId }).then((res) => {
+      if (res.ok) setContent(res.content ?? '')
+    })
+    // Auto-pull on open (best effort): refresh the repo, then re-read the note.
+    void gitPullApi(wsId).then((res) => {
+      refreshStatus(wsId)
+      if (res.ok) {
+        void api('read', { name, workspaceId: wsId }).then((r2) => {
+          if (r2.ok) setContent(r2.content ?? '')
+        })
+      }
+    })
   }
 
   const save = (): void => {
-    if (!selected) return
-    setBusy(true)
-    void api('write', { name: selected, content }).then((res) => {
-      setBusy(false)
+    const wsId = currentWsId()
+    if (!selected || wsId === null) return
+    setSaving(true)
+    void api('write', { name: selected, content, workspaceId: wsId }).then((res) => {
+      setSaving(false)
       if (res.ok) {
         setFlash('manager.saved')
         refresh()
@@ -62,17 +115,18 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   }
 
   const create = (): void => {
+    const wsId = currentWsId()
     const title = newTitle.trim()
       || t('manager.untitled', { date: new Date().toLocaleDateString() })
-    setBusy(true)
+    setCreating(true)
     setFlash('manager.creating')
-    void api('create', { title }).then((res) => {
-      setBusy(false)
+    void api('create', { title, workspaceId: wsId ?? undefined }).then((res) => {
+      setCreating(false)
       if (res.ok && res.name) {
         setNewTitle('')
         setFlash('manager.created')
         refresh()
-        open(res.name)
+        open(res.name, wsId ?? workspaces[0]!.workspaceId)
         window.setTimeout(() => setFlash(''), 1500)
       } else {
         setFlash('manager.createFailed')
@@ -80,9 +134,9 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     })
   }
 
-  const remove = (name: string): void => {
+  const remove = (name: string, wsId: string): void => {
     if (window.confirm(t('manager.deleteConfirm', { name }))) {
-      void api('delete', { name }).then((res) => {
+      void api('delete', { name, workspaceId: wsId }).then((res) => {
         if (res.ok) {
           if (selected === name) { setSelected(null); setContent('') }
           refresh()
@@ -91,8 +145,84 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     }
   }
 
+  const doUpdate = (wsId: string | null): void => {
+    setGitBusy(true)
+    setGitMsg('')
+    void gitPullApi(wsId ?? undefined).then((res) => {
+      setGitBusy(false)
+      if (res.ok) {
+        if (wsId !== null) {
+          refreshStatus(wsId)
+          if (selected) {
+            void api('read', { name: selected, workspaceId: wsId }).then((r) => {
+              if (r.ok) setContent(r.content ?? '')
+            })
+          }
+        } else {
+          refreshCentral()
+          refresh()
+        }
+      } else {
+        setGitMsg(res.error)
+      }
+    })
+  }
+
+  const updateClick = (wsId: string | null): void => {
+    if (wsId === null) {
+      doUpdate(null)
+      return
+    }
+    refreshStatus(wsId)
+    if (status && (status.uncommitted ?? 0) > 0 && !window.confirm(t('git.updateConfirm'))) return
+    doUpdate(wsId)
+  }
+
+  const runPush = (wsId: string | null, message: string): void => {
+    setGitBusy(true)
+    setGitMsg('')
+    void gitPushApi(wsId ?? undefined, message).then((res) => {
+      setGitBusy(false)
+      if (res.ok) {
+        setPushOpen(false)
+        setPushMsg('')
+        setPushConflict(null)
+        if (wsId !== null) refreshStatus(wsId)
+        else { refreshCentral(); refresh() }
+      } else if (res.code === 'non-fast-forward') {
+        // Rejected because the remote is ahead / histories are unrelated:
+        // offer an in-app merge-and-retry instead of a bare error.
+        setPushOpen(false)
+        setPushMsg('')
+        setPushConflict({ wsId, message, error: res.error ?? '' })
+      } else {
+        setGitMsg(res.error ?? t('git.failed', { error: '' }))
+      }
+    })
+  }
+
+  const doPush = (wsId: string | null): void => {
+    runPush(wsId, pushMsg.trim() || '')
+  }
+
+  const resolveAndRetry = (): void => {
+    if (pushConflict === null) return
+    setGitBusy(true)
+    setGitMsg('')
+    void gitSyncApi(pushConflict.wsId ?? undefined).then((res) => {
+      if (res.ok) {
+        setPushConflict(null)
+        runPush(pushConflict.wsId, pushConflict.message)
+      } else {
+        setGitBusy(false)
+        setGitMsg(res.error ?? t('git.failed', { error: '' }))
+      }
+    })
+  }
+
   const close = (): void => store.set({ managerOpen: false })
   const previewHtml = mode === 'preview' ? renderMd(content) : ''
+  const grouped = workspaces.length > 1
 
   return (
     <div className={shared.mask} onClick={(e) => { if (e.target === e.currentTarget) close() }}>
@@ -101,6 +231,16 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
           <img src={ICON_URL} width={16} height={16} alt="" className={styles.managerIcon} />
           <span className={styles.managerTitle}>{t('manager.title')}</span>
           <span className={styles.managerSub}>{t('manager.subtitle')}</span>
+          {showGlobalGit && (
+            <span className={styles.headGit}>
+              <button type="button" className={styles.gitBtn} disabled={gitBusy} onClick={() => updateClick(null)}>
+                {t('git.update')}
+              </button>
+              <button type="button" className={styles.gitBtn} disabled={gitBusy} onClick={() => setPushOpen(true)}>
+                {t('git.push')}
+              </button>
+            </span>
+          )}
           <button type="button" className={shared.iconBtn} onClick={close} title={t('manager.close')}>✕</button>
         </div>
         <div className={styles.managerBody}>
@@ -113,29 +253,36 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                 onChange={(e) => setNewTitle(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') create() }}
               />
-              <button type="button" className={shared.btn} onClick={create} disabled={busy}>
-                {busy ? t('manager.creating') : t('manager.new')}
+              <button type="button" className={shared.btn} onClick={create} disabled={creating}>
+                {creating ? t('manager.creating') : t('manager.new')}
               </button>
             </div>
             <div className={styles.listItems}>
-              {notes.length === 0
+              {workspaces.length === 0
                 ? <div className={shared.empty}>{t('manager.empty')}</div>
-                : notes.map((n) => (
-                  <div
-                    key={n.name}
-                    className={selected === n.name ? `${styles.noteItem} ${styles.noteItemActive}` : styles.noteItem}
-                    onClick={() => open(n.name)}
-                  >
-                    <div className={styles.noteMain}>
-                      <div className={styles.noteTitle}>{n.title}</div>
-                      <div className={styles.noteTime}>{fmtTime(n.updatedAt)}</div>
-                    </div>
-                    <button
-                      type="button"
-                      className={styles.noteDel}
-                      title={t('manager.delete')}
-                      onClick={(e) => { e.stopPropagation(); remove(n.name) }}
-                    >🗑</button>
+                : workspaces.map((ws) => (
+                  <div key={ws.workspaceId} className={styles.wsGroup}>
+                    {grouped && <div className={styles.wsGroupHead}>{ws.name}</div>}
+                    {ws.notes.length === 0 && grouped
+                      ? <div className={`${shared.empty} ${styles.wsEmpty}`}>{t('manager.empty')}</div>
+                      : ws.notes.map((n) => (
+                        <div
+                          key={n.name}
+                          className={selected === n.name ? `${styles.noteItem} ${styles.noteItemActive}` : styles.noteItem}
+                          onClick={() => open(n.name, ws.workspaceId)}
+                        >
+                          <div className={styles.noteMain}>
+                            <div className={styles.noteTitle}>{n.title}</div>
+                            <div className={styles.noteTime}>{fmtTime(n.updatedAt)}</div>
+                          </div>
+                          <button
+                            type="button"
+                            className={styles.noteDel}
+                            title={t('manager.delete')}
+                            onClick={(e) => { e.stopPropagation(); remove(n.name, ws.workspaceId) }}
+                          >🗑</button>
+                        </div>
+                      ))}
                   </div>
                 ))}
             </div>
@@ -158,14 +305,61 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     >{t('manager.tabPreview')}</button>
                     <span className={styles.editorName}>{selected}</span>
                     <span className={styles.flash}>{flash === '' ? '' : t(flash)}</span>
-                    <button type="button" className={`${shared.btn} ${shared.btnPrimary}`} onClick={save} disabled={busy}>{t('manager.save')}</button>
+                    {showEditorGit && (
+                      <button type="button" className={styles.gitBtn} disabled={gitBusy} onClick={() => updateClick(currentWsId())}>
+                        {t('git.update')}
+                      </button>
+                    )}
+                    <button type="button" className={`${shared.btn} ${shared.btnPrimary}`} onClick={save} disabled={saving}>{t('manager.save')}</button>
+                    {showEditorGit && (
+                      <button type="button" className={styles.gitBtn} disabled={gitBusy} onClick={() => setPushOpen(true)}>
+                        {gitBusy ? t('git.pushing') : t('git.push')}
+                      </button>
+                    )}
                   </div>
+                  {pushOpen && (
+                    <div className={styles.pushPanel}>
+                      <input
+                        className={shared.input}
+                        placeholder={t('git.commitPlaceholder')}
+                        value={pushMsg}
+                        onChange={(e) => setPushMsg(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') doPush(currentWsId()) }}
+                      />
+                      <button
+                        type="button"
+                        className={`${shared.btn} ${shared.btnPrimary}`}
+                        disabled={gitBusy}
+                        onClick={() => doPush(currentWsId())}
+                      >{t('git.confirmPush')}</button>
+                      <button type="button" className={shared.btn} disabled={gitBusy} onClick={() => setPushOpen(false)}>
+                        {t('git.cancel')}
+                      </button>
+                    </div>
+                  )}
                   {mode === 'edit'
                     ? <textarea className={styles.textarea} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
                     : <div className={styles.preview} dangerouslySetInnerHTML={{ __html: previewHtml }} />}
                 </>
               )}
           </div>
+        </div>
+        <div className={styles.syncLine}>
+          {(!!status?.repoDir) && (
+            <span>
+              {t('git.title')} · {t('git.branch')}: {status.branch} · {t('git.uncommitted', { count: status.uncommitted ?? 0 })}
+              {status.lastCommit ? ` · ${t('git.lastCommit', { time: status.lastCommit })}` : ''}
+            </span>
+          )}
+          {pushConflict !== null && (
+            <span className={styles.gitError}>
+              {pushConflict.error}
+              <button type="button" className={styles.gitRetry} disabled={gitBusy} onClick={resolveAndRetry}>
+                {t('git.mergeRetry')}
+              </button>
+            </span>
+          )}
+          {gitMsg !== '' && pushConflict === null && <span className={styles.gitError}>{gitMsg}</span>}
         </div>
       </div>
     </div>
