@@ -287,7 +287,12 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       <div className={styles.manager}>
         <div className={styles.managerHead}>
           <img src={ICON_URL} width={16} height={16} alt="" className={styles.managerIcon} />
-          <span className={styles.managerTitle}>{t('manager.title')}</span>
+          <span className={styles.headTitle}>
+            <span className={styles.managerTitle}>{t('manager.title')}</span>
+            <button type="button" className={shared.iconBtn} onClick={openDshSettings} title={t('manager.settings')}>
+              <IconSettingsOutline16 />
+            </button>
+          </span>
           {showGlobalGit && (
             <span className={styles.headGit}>
               <button type="button" className={styles.gitBtn} disabled={busy} onClick={() => updateClick(null)}>
@@ -298,9 +303,6 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
               </button>
             </span>
           )}
-          <button type="button" className={shared.iconBtn} onClick={openDshSettings} title={t('manager.settings')}>
-            <IconSettingsOutline16 />
-          </button>
           <button type="button" className={shared.iconBtn} onClick={close} title={t('manager.close')}>
             <IconCloseOutline16 />
           </button>

@@ -26,8 +26,15 @@
   display: block;
 }
 
-.managerTitle {
+.headTitle {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.managerTitle {
   font-weight: 700;
   font-size: 15px;
   color: var(--dsw-alias-label-primary, #222);
