@@ -73,6 +73,14 @@
   gap: 8px;
 }
 
+/* The DshInput inside is width:100% by default; in a flex row it must shrink
+   so the New button stays on the same line. */
+.newRow input {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+}
+
 .status {
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);
