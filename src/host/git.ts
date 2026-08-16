@@ -171,9 +171,9 @@ export function resolveSharedRepo(settings: MdNotesSettings): ResolvedRepo | und
 
 /**
  * Notes directory for a workspace: ALWAYS `<ws>/.dsh-notes` (v3/v4 — the git
- * repo never determines where notes live).
+ * repo never determines where notes live; notes are workspace-bound).
  */
-export function resolveNotesDir(_settings: MdNotesSettings, ws: WorkspaceInfo, _fallbackRoot: string): string {
+export function resolveNotesDir(_settings: MdNotesSettings, ws: WorkspaceInfo): string {
   return join(resolve(ws.path), '.dsh-notes')
 }
 

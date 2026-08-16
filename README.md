@@ -80,7 +80,6 @@ All options are plugin Config keys, overridable in the profile's `cordis.patch.y
 ```yaml
 - id: md-notes
   config:
-    root: '/abs/path/to/notes'   # notes dir for sessions without a workspace; default <cwd>/.dsh-notes
     route: '/plugins/md-notes'   # HTTP API prefix; default is fine
     gitMode: 'off'               # 'off' | 'shared' | 'own'
     gitAutoPull: true            # pull remote before opening a note
@@ -88,14 +87,13 @@ All options are plugin Config keys, overridable in the profile's `cordis.patch.y
 
 | Key | Default | Meaning |
 |---|---|---|
-| `root` | `<cwd>/.dsh-notes` | Notes dir for sessions **without a workspace** (workspaces always use `<workspace>/.dsh-notes`). |
 | `route` | `/plugins/md-notes` | HTTP API prefix served by the plugin; also hosts the icon at `<route>/icon.svg`. |
 
 There are **no environment variables and no secrets** in this plugin's configuration.
 
 ## Permissions & data
 
-- **Filesystem**: reads and writes notes as plain `.md` files (plus a `meta.json` sidecar) under each workspace's `.dsh-notes` directory (`root` only for sessions without a workspace); git operations touch only the plugin-managed clones under `$DSH_HOME/md-notes-repos/`.
+- **Filesystem**: reads and writes notes as plain `.md` files (plus a `meta.json` sidecar) under each workspace's `.dsh-notes` directory (notes are workspace-bound); git operations touch only the plugin-managed clones under `$DSH_HOME/md-notes-repos/`.
 - **Network**: a loopback HTTP API (`POST <route>`, browser ↔ local dsh server) and the icon served from the same origin. **No external network calls, no telemetry.**
 - **Credentials**: none collected or transmitted.
 
@@ -107,7 +105,7 @@ There are **no environment variables and no secrets** in this plugin's configura
 | Icon looks stale | Hard-refresh the page; the icon is served with `no-cache` and reflects `assets/dsh-md-notes.svg` on every request. |
 | Plugin doesn't load | Verify the layer: `dsh --profile web --dump-config` and look for the `md-notes` row. |
 | Installed from git and `add` failed | pnpm ≥10 blocks build scripts by default; add the printed package key under `allowBuilds` in the profile's `pnpm-workspace.yaml`, then re-run `add`. |
-| Notes can't be created/saved | Make sure the workspace's `.dsh-notes` (or the configured `root`) points to an existing writable directory. |
+| Notes can't be created/saved | Make sure the workspace's `.dsh-notes` points to an existing writable directory (create a workspace in the dsh sidebar first). |
 
 Rollback: `dsh plugin --profile web remove dsh-md-notes` restores the previous state (notes files are untouched).
 

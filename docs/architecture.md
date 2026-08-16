@@ -10,7 +10,7 @@ DSH 第三方插件（bundle）"MD 笔记管理"的架构设计：架构、目�
 - **Host 半**（`lib/index.js`）：函数插件（`name` / `inject` / `Config` / `apply`），
   通过 `ctx.webServer` 暴露一个 JSON API 路由 `POST /plugins/md-notes`（body 携带 `method`：
   `list` / `read` / `write` / `create` / `delete` / `appendConversation` + `git*` 系列）。
-  笔记以 `.md` 文件存储（各工作区 `<工作区>/.dsh-notes`，无工作区会话用 `config.root`），
+  笔记以 `.md` 文件存储（**深度绑定工作区**：各工作区 `<工作区>/.dsh-notes`，无工作区时无法读写），
   `meta.json` 记录每篇笔记的标题与更新时间；Git 仓库由 URL 驱动，插件在
   `$DSH_HOME/md-notes-repos/<url-hash>/` 维护本地 clone。
 - **Client 半**（`lib/client.js`）：通过 `dsh.client` 声明 + `exports["./client"]` 被
@@ -68,7 +68,7 @@ dsh-md-notes/
 ## 3. Host 半（src/）
 
 - 插件入口 `index.ts`：导出 `name`（`md-notes`）、`inject`（`webServer`, `settings`）、
-  `Config`（schemastery schema：`root`、`route`、`gitMode`、`gitCentralRemote/Branch`、
+  `Config`（schemastery schema：`route`、`gitMode`、`gitCentralRemote/Branch`、
   `gitRepos`、`gitAutoPull`、`gitAuthorName/Email`）、`apply(ctx, config)`；
   `apply` 只做装配——解析目录、构建 handler、注册路由、注册 L3 settings 命名空间。
 - 领域逻辑 `host/notes.ts`：`notesDir` / `sanitizeName` / `titleOf` / `blocksToText` + 六个操作方法
@@ -164,7 +164,6 @@ npm run build
 # 在 profile 的 cordis.patch.yml 或更高层覆盖（会整体替换该行的 config）
 - id: md-notes
   config:
-    root: '/abs/path/to/notes'    # 无工作区会话的笔记目录；默认 <cwd>/.dsh-notes
     route: '/plugins/md-notes'    # HTTP API 前缀；默认即可
     gitMode: 'off'                # 'off' | 'shared' | 'own'（旧值 'on' 归一化）
     gitCentralRemote: ''          # 共享仓库 URL（L2 默认）

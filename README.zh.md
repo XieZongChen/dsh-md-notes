@@ -80,7 +80,6 @@ dsh plugin --profile web remove dsh-md-notes
 ```yaml
 - id: md-notes
   config:
-    root: '/abs/path/to/notes'   # 无工作区会话的笔记目录；默认 <cwd>/.dsh-notes
     route: '/plugins/md-notes'   # HTTP API 前缀；默认即可
     gitMode: 'off'               # 'off' | 'shared' | 'own'
     gitAutoPull: true            # 打开笔记时自动拉取远程
@@ -88,7 +87,6 @@ dsh plugin --profile web remove dsh-md-notes
 
 | 键 | 默认值 | 含义 |
 |---|---|---|
-| `root` | `<cwd>/.dsh-notes` | **无工作区**会话的笔记目录（有工作区一律用 `<工作区>/.dsh-notes`）。 |
 | `route` | `/plugins/md-notes` | 插件提供的 HTTP API 前缀；图标同时由 `<route>/icon.svg` 提供。 |
 | `gitMode` | `'off'` | Git 同步模式：`'off'` 关闭 / `'shared'` 共享仓库 / `'own'` 每工作区独立仓库。 |
 | `gitAutoPull` | `true` | 打开笔记时是否自动拉取远程版本。 |
@@ -97,7 +95,7 @@ dsh plugin --profile web remove dsh-md-notes
 
 ## 权限与数据（Permissions & data）
 
-- **文件系统**：只读写各工作区 `.dsh-notes` 目录下的笔记（普通 `.md` 文件 + `meta.json` 缓存；`root` 仅用于无工作区会话）；git 操作只触碰 `$DSH_HOME/md-notes-repos/` 下插件管理的 clone。
+- **文件系统**：只读写各工作区 `.dsh-notes` 目录下的笔记（普通 `.md` 文件 + `meta.json` 缓存；笔记深度绑定工作区）；git 操作只触碰 `$DSH_HOME/md-notes-repos/` 下插件管理的 clone。
 - **网络**：仅本机回环 HTTP API（`POST <route>`，浏览器 ↔ 本地 dsh 服务）与同源图标请求。**无外部网络调用、无遥测。**
 - **凭据**：不收集、不传输任何凭据。
 
@@ -109,7 +107,7 @@ dsh plugin --profile web remove dsh-md-notes
 | 图标没更新 | 强制刷新页面；图标以 `no-cache` 提供，每次请求都会反映 `assets/dsh-md-notes.svg` 的最新内容。 |
 | 插件没加载 | 验证层：`dsh --profile web --dump-config`，查找 `md-notes` 行。 |
 | 从 git 安装且 `add` 失败 | pnpm ≥10 默认拦截构建脚本；把打印出的包键加入 profile 的 `pnpm-workspace.yaml` 的 `allowBuilds`，然后重跑 `add`。 |
-| 笔记无法创建/保存 | 确认配置的 `root` 指向存在且可写的目录。 |
+| 笔记无法创建/保存 | 先在 dsh 侧边栏新建工作区，确认其 `.dsh-notes` 目录存在且可写。 |
 
 回滚：`dsh plugin --profile web remove dsh-md-notes` 即可恢复（笔记文件不受影响）。
 

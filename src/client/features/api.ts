@@ -147,6 +147,7 @@ export function gitSuggestApi(): Promise<ApiResult> {
 export function gitErrorText(t: TranslateNS<'md-notes'>, code: string | undefined, detail: string | undefined): string {
   switch (code) {
     case 'no-repo': return t('git.errNoRepo')
+    case 'no-workspace': return t('git.errNoWorkspace')
     case 'sync-branch': return t('git.errSyncBranch', { detail: detail ?? '' })
     case 'sync-notes': return t('git.errSyncNotes', { detail: detail ?? '' })
     case 'git-failed': return t('git.errGitFailed', { detail: detail ?? '' })

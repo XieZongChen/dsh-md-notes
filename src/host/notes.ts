@@ -21,12 +21,6 @@ export interface NoteSummary {
   updatedAt: number
 }
 
-/** The notes directory; an explicit `root` wins over the cwd default. */
-export function notesDir(root: string | undefined): string {
-  if (root !== undefined && root !== '') return root
-  return join(process.cwd(), '.dsh-notes')
-}
-
 /** Normalize a user-supplied note name into a safe `.md` basename. */
 export function sanitizeName(input: string | undefined): string {
   const base = String(input ?? '').trim().replace(/\.md$/i, '')

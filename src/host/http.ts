@@ -64,13 +64,11 @@ export interface WorkspaceEntry {
 
 /** Everything the handler needs beyond the notes domain. */
 export interface NotesApiDeps {
-  /** Notes dir when no workspace routing applies (git off / no workspace). */
-  defaultDir: string
-  /** Resolve the notes dir for a workspace (git-aware); undefined workspace → defaultDir. */
-  resolveDir(workspaceId?: string): string
+  /** Resolve the notes dir for a workspace; undefined when no workspace applies. */
+  resolveDir(workspaceId?: string): string | undefined
   /** Resolve the git repo for a workspace, or the central repo when no workspace id. */
   resolveRepo(workspaceId?: string): ResolvedRepo | undefined
-  /** The grouped note-list entries (multi-workspace view in central mode). */
+  /** The grouped note-list entries (multi-workspace view). */
   listWorkspaces(): WorkspaceEntry[]
   /** Resolve a session's workspace id (via its cwd); undefined when unresolvable. */
   workspaceIdForSession(sessionId: string | undefined): string | undefined
@@ -116,22 +114,37 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       }
       return { ok: true, workspaces, noWorkspaces: !deps.hasWorkspaces() }
     }
-    case 'read':
-      return readNote(deps.resolveDir(workspaceId), name)
-    case 'write':
-      return writeNote(deps.resolveDir(workspaceId), name, String(req.content ?? ''))
-    case 'create':
-      return createNote(deps.resolveDir(workspaceId), String(req.title ?? ''))
-    case 'delete':
-      return deleteNote(deps.resolveDir(workspaceId), name)
-    case 'appendConversation':
+    case 'read': {
+      const dir = deps.resolveDir(workspaceId)
+      if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
+      return readNote(dir, name)
+    }
+    case 'write': {
+      const dir = deps.resolveDir(workspaceId)
+      if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
+      return writeNote(dir, name, String(req.content ?? ''))
+    }
+    case 'create': {
+      const dir = deps.resolveDir(workspaceId)
+      if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
+      return createNote(dir, String(req.title ?? ''))
+    }
+    case 'delete': {
+      const dir = deps.resolveDir(workspaceId)
+      if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
+      return deleteNote(dir, name)
+    }
+    case 'appendConversation': {
+      const dir = deps.resolveDir(workspaceId)
+      if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
       return appendConversation(
-        deps.resolveDir(workspaceId),
+        dir,
         String(req.noteName ?? ''),
         String(req.sessionId ?? ''),
         String(req.messageId ?? ''),
         deps.sessionQuery,
       )
+    }
 
     // ---- git domain ----
     case 'gitStatus': {
@@ -154,19 +167,23 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'gitPush': {
       const repo = deps.resolveRepo(workspaceId)
       if (repo === undefined) return { ok: false, code: 'no-repo', error: 'No git repo configured' }
+      const notesDir = deps.resolveDir(workspaceId)
+      if (notesDir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
       const message = typeof req.message === 'string' && req.message.trim() !== ''
         ? req.message.trim()
         : `Notes update ${new Date().toLocaleString()}`
       // overwrite=true = the user confirmed overwriting the remote's newer
       // version (the first push without it blocks on remote-changed).
-      return deps.git.push(repo, deps.resolveDir(workspaceId), message, req.overwrite === true)
+      return deps.git.push(repo, notesDir, message, req.overwrite === true)
     }
     case 'gitPull': {
       const repo = deps.resolveRepo(workspaceId)
       if (repo === undefined) return { ok: false, code: 'no-repo', error: 'No git repo configured' }
+      const notesDir = deps.resolveDir(workspaceId)
+      if (notesDir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
       // Manual "Update" (force=true) pulls the remote version over local files;
       // the auto-pull on open omits force → conservative (never overwrites).
-      return deps.git.pull(repo, deps.resolveDir(workspaceId), req.force === true)
+      return deps.git.pull(repo, notesDir, req.force === true)
     }
     case 'gitSync': {
       // User-initiated conflict resolution after a rejected push.

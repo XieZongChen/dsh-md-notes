@@ -77,7 +77,7 @@
 
 | 设置项 | L2 Config 键 | L3 命名空间字段 | 默认 | 说明 |
 |---|---|---|---|---|
-| 无工作区会话的笔记目录 | `root` | —（部署级） | `<cwd>/.dsh-notes` | 仅"无工作区"会话使用；有工作区一律 `<ws>/.dsh-notes` |
+| —（笔记深度绑定工作区，无 `root` 配置） | — | — | — | 笔记只存在于各工作区 `<ws>/.dsh-notes`；无工作区时界面提示先新建工作区 |
 | API 前缀 | `route` | —（部署级） | `/plugins/md-notes` | HTTP API 前缀 |
 | Git 模式 | `gitMode` | `gitMode` | `'off'` | `'off'` / `'shared'` / `'own'`；旧值 `'on'` 归一化 |
 | 共享仓库 | `gitCentralRemote` | `gitCentral` | `{}` | shared：`{ remote?, branch? }`；所有工作区推送到该分支 + 工作区名子目录 |
@@ -144,8 +144,7 @@ $DSH_HOME/md-notes-repos/<url-hash>/      # git clone <url> 的结果
 （`resolveNotesDir` 恒为 `join(ws.path, '.dsh-notes')`）：
 
 ```
-resolveNotesDir(ws) = <ws.path>/.dsh-notes        // 有工作区：永远
-无工作区会话       = config.root ?? <cwd>/.dsh-notes  // 兜底
+resolveNotesDir(ws) = <ws.path>/.dsh-notes        // 永远（笔记深度绑定工作区，无兜底目录）
 ```
 
 - **git 目标解析**（`resolveWorkspaceRepo`）：按模式返回 `{ repoDir, subdir, branch, remote }`，

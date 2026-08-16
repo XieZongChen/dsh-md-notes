@@ -32,6 +32,7 @@ export interface NotePickerProps {
 export function NotePicker(props: NotePickerProps): React.ReactElement {
   const { sessionId, messageId, store, t } = props
   const [notes, setNotes] = React.useState<NoteSummary[]>([])
+  const [noWorkspaces, setNoWorkspaces] = React.useState(false)
   const [selected, setSelected] = React.useState<string | null>(null)
   const [newTitle, setNewTitle] = React.useState('')
   const [busy, setBusy] = React.useState(false)
@@ -39,6 +40,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
 
   React.useEffect(() => {
     void api('list', { sessionId }).then((res) => {
+      setNoWorkspaces(res.ok === true && res.noWorkspaces === true)
       if (res.ok && res.workspaces) {
         const notes = res.workspaces.flatMap((w) => w.notes)
         setNotes(notes)
@@ -48,6 +50,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
   }, [sessionId])
 
   const createAndPick = (): void => {
+    if (noWorkspaces) { setStatus({ key: 'picker.noWorkspaces' }); return }
     const title = newTitle.trim()
     setBusy(true)
     void api('create', { title, sessionId }).then((res) => {
@@ -63,6 +66,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
   }
 
   const send = (): void => {
+    if (noWorkspaces) { setStatus({ key: 'picker.noWorkspaces' }); return }
     if (!selected) { setStatus({ key: 'picker.needSelect' }); return }
     setBusy(true)
     setStatus({ key: 'picker.writing' })
@@ -88,34 +92,37 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
           <button type="button" className={shared.iconBtn} onClick={close} title={t('picker.close')}>✕</button>
         </div>
         <div className={styles.dialogBody}>
-          {notes.length === 0
-            ? <div className={shared.empty}>{t('picker.empty')}</div>
-            : <div className={styles.pickList}>
-              {notes.map((n) => (
-                <div
-                  key={n.name}
-                  className={selected === n.name ? `${styles.pickItem} ${styles.pickItemActive}` : styles.pickItem}
-                  onClick={() => setSelected(n.name)}
-                >
-                  <span className={styles.pickRadio}>{selected === n.name ? '●' : '○'}</span>
-                  <span>{n.title}</span>
-                </div>
-              ))}
-            </div>}
+          {noWorkspaces
+            ? <div className={shared.empty}>{t('picker.noWorkspaces')}</div>
+            : notes.length === 0
+              ? <div className={shared.empty}>{t('picker.empty')}</div>
+              : <div className={styles.pickList}>
+                {notes.map((n) => (
+                  <div
+                    key={n.name}
+                    className={selected === n.name ? `${styles.pickItem} ${styles.pickItemActive}` : styles.pickItem}
+                    onClick={() => setSelected(n.name)}
+                  >
+                    <span className={styles.pickRadio}>{selected === n.name ? '●' : '○'}</span>
+                    <span>{n.title}</span>
+                  </div>
+                ))}
+              </div>}
           <div className={styles.newRow}>
             <input
               className={shared.input}
               placeholder={t('picker.newPlaceholder')}
               value={newTitle}
+              disabled={noWorkspaces}
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') createAndPick() }}
             />
-            <button type="button" className={shared.btn} onClick={createAndPick} disabled={busy}>{t('picker.new')}</button>
+            <button type="button" className={shared.btn} onClick={createAndPick} disabled={busy || noWorkspaces}>{t('picker.new')}</button>
           </div>
           <div className={styles.status}>{status === '' ? '' : t(status.key, status.params)}</div>
         </div>
         <div className={styles.dialogFoot}>
-          <button type="button" className={`${shared.btn} ${shared.btnPrimary}`} onClick={send} disabled={busy || !selected}>
+          <button type="button" className={`${shared.btn} ${shared.btnPrimary}`} onClick={send} disabled={busy || !selected || noWorkspaces}>
             {busy ? t('picker.writing') : t('picker.write')}
           </button>
         </div>

@@ -18,8 +18,8 @@ them, and — optionally — back them up / sync them with a Git repository.
 - `meta.json` in the same folder is just a cache of titles/timestamps; ignore
   it (it's never committed to Git).
 
-> Sessions without a workspace fall back to the `root` config option
-> (default `<cwd>/.dsh-notes`).
+> Notes are **workspace-bound**: without a workspace there's nowhere to store
+> them — create a workspace in the dsh sidebar first.
 
 ## 2. Opening the notes manager
 

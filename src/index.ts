@@ -21,7 +21,6 @@ import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-settings'
 import type {} from '@deepseek-ai/dsh-workspace'
-import { notesDir } from './host/notes.ts'
 import {
   gitInit, gitPull, gitPush, gitStatus, gitSync, normPath, resolveNotesDir, resolveSharedRepo,
   resolveWorkspaceRepo,
@@ -32,8 +31,6 @@ import { MdNotesSettingsSchema, mergeSettings, MD_NOTES_NS, type MdNotesSettings
 
 /** Plugin row config. */
 export interface Config {
-  /** Notes directory for sessions with NO workspace (v3/v4: workspaces always use `<ws>/.dsh-notes`). */
-  readonly root?: string
   /** API route prefix (default /plugins/md-notes). */
   readonly route?: string
   /** Git mode: 'off' | 'shared' | 'own' (legacy 'on' normalizes to shared/own). */
@@ -55,7 +52,6 @@ export interface Config {
 export const name = 'md-notes'
 export const inject = ['webServer', 'settings']
 export const Config: s<Config> = s.object({
-  root: s.string().default('.dsh-notes'),
   route: s.string().default('/plugins/md-notes'),
   gitMode: s.union([s.const('off'), s.const('on'), s.const('shared'), s.const('own')]).default('off'),
   gitCentralRemote: s.string().default(''),
@@ -111,12 +107,10 @@ export function apply(ctx: Context, config: Config): void {
     return workspaces()?.get(workspaceId)
   }
 
-  const defaultDir = notesDir(config.root)
-
-  const resolveDir = (workspaceId?: string): string => {
+  const resolveDir = (workspaceId?: string): string | undefined => {
     const ws = getWorkspace(workspaceId)
-    if (ws === undefined) return defaultDir
-    return resolveNotesDir(readSettings(), ws, config.root ?? '.dsh-notes')
+    if (ws === undefined) return undefined
+    return resolveNotesDir(readSettings(), ws)
   }
 
   const resolveRepo = (workspaceId?: string): ResolvedRepo | undefined => {
@@ -131,13 +125,13 @@ export function apply(ctx: Context, config: Config): void {
     const settings = readSettings()
     const registry = workspaces()
     if (registry === undefined || registry.list().length === 0) {
-      // No workspace registry: single default group.
-      return [{ workspaceId: 'default', name: 'default', notesDir: defaultDir }]
+      // No workspaces yet — no default group (notes are workspace-bound).
+      return []
     }
     return registry.list().map((ws) => ({
       workspaceId: ws.id,
       name: ws.title,
-      notesDir: resolveNotesDir(settings, ws, config.root ?? '.dsh-notes'),
+      notesDir: resolveNotesDir(settings, ws),
       repo: resolveWorkspaceRepo(settings, ws),
     }))
   }
@@ -183,7 +177,6 @@ export function apply(ctx: Context, config: Config): void {
   }
 
   const deps: NotesApiDeps = {
-    defaultDir,
     resolveDir,
     resolveRepo,
     listWorkspaces,
