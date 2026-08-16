@@ -23,8 +23,8 @@ import type {} from '@deepseek-ai/dsh-settings'
 import type {} from '@deepseek-ai/dsh-workspace'
 import { notesDir } from './host/notes.ts'
 import {
-  gitInit, gitPull, gitPush, gitStatus, gitSync, normPath,
-  resolveCentralRepo, resolveNotesDir, resolveWorkspaceRepo,
+  gitInit, gitPull, gitPush, gitStatus, gitSync, normPath, resolveNotesDir, resolveSharedRepo,
+  resolveWorkspaceRepo,
   type ResolvedRepo, type WorkspaceInfo,
 } from './host/git.ts'
 import { iconHandler, notesApiHandler, type GitApi, type NotesApiDeps, type WorkspaceEntry } from './host/http.ts'
@@ -32,17 +32,17 @@ import { MdNotesSettingsSchema, mergeSettings, MD_NOTES_NS, type MdNotesSettings
 
 /** Plugin row config. */
 export interface Config {
-  /** Notes directory; an explicit root wins over the `<cwd>/.dsh-notes` default. */
+  /** Notes directory for sessions with NO workspace (v3: workspaces always use `<ws>/.dsh-notes`). */
   readonly root?: string
   /** API route prefix (default /plugins/md-notes). */
   readonly route?: string
-  /** Git master switch ('off' | 'on'); user settings may override. */
-  readonly gitMode?: 'off' | 'on'
-  /** Central (total) repo path — the deployment default for `gitCentral.path`. */
+  /** Git mode: 'off' | 'shared' | 'own' (legacy 'on' normalizes to shared/own). */
+  readonly gitMode?: 'off' | 'on' | 'shared' | 'own'
+  /** Shared repo path — the deployment default for `gitCentral.path`. */
   readonly gitCentralPath?: string
   /** Per-workspace repos (L2 defaults, keyed by workspace id); L3 overrides per key. */
   readonly gitRepos?: Record<string, import('./host/settings.ts').RepoSettings>
-  /** Default branch for `git init`. */
+  /** Default branch when a repo record omits `branch`. */
   readonly gitBranch?: string
   /** Pull remote before opening a note (default true). */
   readonly gitAutoPull?: boolean
@@ -57,10 +57,12 @@ export const inject = ['webServer', 'settings']
 export const Config: s<Config> = s.object({
   root: s.string().default('.dsh-notes'),
   route: s.string().default('/plugins/md-notes'),
-  gitMode: s.union([s.const('off'), s.const('on')]).default('off'),
+  gitMode: s.union([s.const('off'), s.const('on'), s.const('shared'), s.const('own')]).default('off'),
   gitCentralPath: s.string().default(''),
   gitRepos: s.dict(s.object({
     path: s.string().required(false),
+    branch: s.string().required(false),
+    subpath: s.string().required(false),
     remote: s.string().required(false),
     authorized: s.boolean().required(false),
   })).default({}),
@@ -121,17 +123,17 @@ export function apply(ctx: Context, config: Config): void {
 
   const resolveRepo = (workspaceId?: string): ResolvedRepo | undefined => {
     const settings = readSettings()
-    if (settings.gitMode !== 'on') return undefined
     const ws = getWorkspace(workspaceId)
     if (ws !== undefined) return resolveWorkspaceRepo(settings, ws)
-    return resolveCentralRepo(settings)
+    // No workspace id → the shared repo as a global target (shared mode only).
+    return resolveSharedRepo(settings)
   }
 
   const listWorkspaces = (): WorkspaceEntry[] => {
     const settings = readSettings()
     const registry = workspaces()
-    if (settings.gitMode !== 'on' || registry === undefined || registry.list().length === 0) {
-      // git off or no workspace registry: single default group, current behavior.
+    if (registry === undefined || registry.list().length === 0) {
+      // No workspace registry: single default group.
       return [{ workspaceId: 'default', name: 'default', notesDir: defaultDir }]
     }
     return registry.list().map((ws) => ({
@@ -176,14 +178,14 @@ export function apply(ctx: Context, config: Config): void {
   }
 
   const git: GitApi = {
-    status: (repo) => gitStatus(ctx, repo, readSettings().gitBranch ?? 'main'),
-    init: (repo) => gitInit(ctx, repo, readSettings().gitBranch ?? 'main'),
-    push: (repo, message) => gitPush(ctx, repo, readSettings().gitBranch ?? 'main', message, {
+    status: (repo) => gitStatus(ctx, repo, repo.branch),
+    init: (repo) => gitInit(ctx, repo, repo.branch),
+    push: (repo, notesDir, message) => gitPush(ctx, repo, notesDir, message, {
       name: readSettings().gitAuthorName ?? '',
       email: readSettings().gitAuthorEmail ?? '',
     }),
-    pull: (repo) => gitPull(ctx, repo, readSettings().gitBranch ?? 'main'),
-    sync: (repo) => gitSync(ctx, repo, readSettings().gitBranch ?? 'main'),
+    pull: (repo, notesDir) => gitPull(ctx, repo, notesDir),
+    sync: (repo) => gitSync(ctx, repo),
   }
 
   const suggest = (): Record<string, unknown> => {

@@ -362,12 +362,6 @@
   cursor: default;
 }
 
-.headGit {
-  display: inline-flex;
-  gap: 6px;
-  margin-right: 4px;
-}
-
 /* Primary action button (保存 / 提交并推送) — same geometry as .gitBtn so
    the editor-head trio reads as one row. */
 .saveBtn {

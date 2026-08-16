@@ -19,6 +19,8 @@ export interface WorkspaceNotes {
 /** One repo's git status view. */
 export interface GitStatusData {
   repoDir?: string
+  /** In-repo subdir for this workspace ('' = repo root). */
+  subdir?: string
   branch?: string
   uncommitted?: number
   lastCommit?: string
@@ -26,11 +28,20 @@ export interface GitStatusData {
   error?: string
 }
 
+/** One repo record as configured (own-repo mode). */
+export interface RepoGitSettings {
+  path?: string
+  branch?: string
+  subpath?: string
+  remote?: string
+  authorized?: boolean
+}
+
 /** The user-level (L3) git settings surfaced to the config forms. */
 export interface GitSettingsData {
-  gitMode?: 'off' | 'on'
+  gitMode?: 'off' | 'on' | 'shared' | 'own'
   gitCentral?: { path?: string; remote?: string; authorized?: boolean }
-  gitRepos?: Record<string, { path?: string; remote?: string; authorized?: boolean }>
+  gitRepos?: Record<string, RepoGitSettings>
   gitBranch?: string
   gitAutoPull?: boolean
   gitAuthorName?: string

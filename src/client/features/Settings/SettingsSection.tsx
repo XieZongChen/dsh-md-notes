@@ -106,12 +106,6 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
     })
   }
 
-  /** Normalize a picked directory into the notes dir: `<picked>/.dsh-notes`. */
-  const withNotesDir = (dir: string): string => {
-    const trimmed = dir.replace(/\/+$/, '')
-    return trimmed.endsWith('/.dsh-notes') ? trimmed : `${trimmed}/.dsh-notes`
-  }
-
   const toggleCentralAuth = (): void => {
     if (settings === null) return
     const authorized = !(settings.gitCentral?.authorized === true)
@@ -142,7 +136,7 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
     dirtyCentral.current = true
     setSettings((prev) => ({ ...(prev ?? {}), gitCentral: { ...(prev?.gitCentral ?? {}), ...patch } }))
   }
-  const setWs = (workspaceId: string, patch: { path?: string; remote?: string; authorized?: boolean }): void => {
+  const setWs = (workspaceId: string, patch: { path?: string; branch?: string; subpath?: string; remote?: string; authorized?: boolean }): void => {
     dirtyWs.current.add(workspaceId)
     setSettings((prev) => ({
       ...(prev ?? {}),
@@ -152,12 +146,14 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
 
   if (settings === null) return <div className={styles.loading}>{t('git.loading')}</div>
 
+  const mode = settings.gitMode === 'shared' || settings.gitMode === 'own' ? settings.gitMode : 'off'
+
   return (
     <div className={styles.section}>
       <div className={styles.tipPanel}>
         <div className={styles.tipTitle}>{t('git.tipTitle')}</div>
         <div className={styles.tipBody}>
-          {settings.gitMode === 'on' ? t('git.tipOn') : t('git.tipOff')}
+          {mode === 'shared' ? t('git.tipShared') : mode === 'own' ? t('git.tipOwn') : t('git.tipOff')}
         </div>
       </div>
       <div className={styles.row}>
@@ -165,22 +161,25 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
           <span className={styles.label}>{t('git.mode')}</span>
           <select
             className={styles.input}
-            value={settings.gitMode ?? 'off'}
-            onChange={(e) => set({ gitMode: e.target.value as 'off' | 'on' })}
+            value={mode}
+            onChange={(e) => set({ gitMode: e.target.value as 'off' | 'shared' | 'own' })}
           >
             <option value="off">{t('git.modeOff')}</option>
-            <option value="on">{t('git.modeOn')}</option>
+            <option value="shared">{t('git.modeShared')}</option>
+            <option value="own">{t('git.modeOwn')}</option>
           </select>
         </label>
         <label className={styles.field}>
           <span className={styles.label}>{t('git.branch')}</span>
           <input
             className={styles.input}
+            placeholder={t('git.branchPlaceholder')}
             value={settings.gitBranch ?? 'main'}
             onChange={(e) => set({ gitBranch: e.target.value })}
           />
         </label>
       </div>
+      <div className={styles.hint}>{mode === 'off' ? t('git.modeOffHint') : mode === 'shared' ? t('git.modeSharedHint') : t('git.modeOwnHint')}</div>
 
       <label className={styles.check}>
         <input
@@ -210,81 +209,103 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
         </label>
       </div>
 
-      <div className={styles.group}>
-        <div className={styles.groupTitle}>{t('git.centralTitle')}</div>
-        <div className={styles.row}>
-          <label className={styles.field}>
-            <span className={styles.label}>{t('git.path')}</span>
-            <PathPicker
-              value={settings.gitCentral?.path ?? ''}
-              placeholder={t('git.pickPath')}
-              disabled={busy}
-              onPick={() => {
-                void gitPickDirApi().then((res) => {
-                  if (res.ok && typeof res.dir === 'string') setCentral({ path: withNotesDir(res.dir) })
-                  else if (!res.ok) setMsg(t('git.failed', { error: res.error ?? '' }))
-                })
-              }}
-            />
-          </label>
-          <label className={styles.field}>
-            <span className={styles.label}>{t('git.remote')}</span>
-            <input
-              className={styles.input}
-              placeholder={t('git.remotePlaceholder')}
-              value={settings.gitCentral?.remote ?? ''}
-              onChange={(e) => setCentral({ remote: e.target.value })}
-            />
-          </label>
-          <button
-            type="button"
-            className={styles.authBtn}
-            disabled={busy || !settings.gitCentral?.path}
-            onClick={toggleCentralAuth}
-          >
-            {settings.gitCentral?.authorized === true ? t('git.revoke') : t('git.authorize')}
-          </button>
-        </div>
-        {settings.gitCentral?.path && settings.gitCentral?.authorized !== true && (
-          <div className={styles.hint}>{t('git.needAuthorize')}</div>
-        )}
-      </div>
-
-      <div className={styles.group}>
-        <div className={styles.groupTitle}>{t('git.workspacesTitle')}</div>
-        {workspaces.length === 0
-          ? <div className={styles.hint}>{t('git.noWorkspaces')}</div>
-          : workspaces.map((ws) => (
-            <div key={ws.workspaceId} className={styles.wsRow}>
-              <span className={styles.wsName}>{ws.name}</span>
+      {mode === 'shared' && (
+        <div className={styles.group}>
+          <div className={styles.groupTitle}>{t('git.centralTitle')}</div>
+          <div className={styles.row}>
+            <label className={styles.field}>
+              <span className={styles.label}>{t('git.repoPath')}</span>
               <PathPicker
-                value={settings.gitRepos?.[ws.workspaceId]?.path ?? ''}
+                value={settings.gitCentral?.path ?? ''}
                 placeholder={t('git.pickPath')}
                 disabled={busy}
                 onPick={() => {
                   void gitPickDirApi().then((res) => {
-                    if (res.ok && typeof res.dir === 'string') setWs(ws.workspaceId, { path: withNotesDir(res.dir) })
+                    if (res.ok && typeof res.dir === 'string') setCentral({ path: res.dir })
                     else if (!res.ok) setMsg(t('git.failed', { error: res.error ?? '' }))
                   })
                 }}
               />
+            </label>
+            <label className={styles.field}>
+              <span className={styles.label}>{t('git.remote')}</span>
               <input
                 className={styles.input}
                 placeholder={t('git.remotePlaceholder')}
-                value={settings.gitRepos?.[ws.workspaceId]?.remote ?? ''}
-                onChange={(e) => setWs(ws.workspaceId, { remote: e.target.value })}
+                value={settings.gitCentral?.remote ?? ''}
+                onChange={(e) => setCentral({ remote: e.target.value })}
               />
-              <button
-                type="button"
-                className={styles.authBtn}
-                disabled={busy || !settings.gitRepos?.[ws.workspaceId]?.path}
-                onClick={() => toggleWsAuth(ws.workspaceId)}
-              >
-                {settings.gitRepos?.[ws.workspaceId]?.authorized === true ? t('git.revoke') : t('git.authorize')}
-              </button>
-            </div>
-          ))}
-      </div>
+            </label>
+            <button
+              type="button"
+              className={styles.authBtn}
+              disabled={busy || !settings.gitCentral?.path}
+              onClick={toggleCentralAuth}
+            >
+              {settings.gitCentral?.authorized === true ? t('git.revoke') : t('git.authorize')}
+            </button>
+          </div>
+          {settings.gitCentral?.path && settings.gitCentral?.authorized !== true && (
+            <div className={styles.hint}>{t('git.needAuthorize')}</div>
+          )}
+        </div>
+      )}
+
+      {mode === 'own' && (
+        <div className={styles.group}>
+          <div className={styles.groupTitle}>{t('git.workspacesTitle')}</div>
+          {workspaces.length === 0
+            ? <div className={styles.hint}>{t('git.noWorkspaces')}</div>
+            : workspaces.map((ws) => {
+              const repo = settings.gitRepos?.[ws.workspaceId]
+              return (
+                <div key={ws.workspaceId} className={styles.wsBlock}>
+                  <div className={styles.wsName}>{ws.name}</div>
+                  <div className={styles.wsRow}>
+                    <PathPicker
+                      value={repo?.path ?? ''}
+                      placeholder={t('git.pickPath')}
+                      disabled={busy}
+                      onPick={() => {
+                        void gitPickDirApi().then((res) => {
+                          if (res.ok && typeof res.dir === 'string') setWs(ws.workspaceId, { path: res.dir })
+                          else if (!res.ok) setMsg(t('git.failed', { error: res.error ?? '' }))
+                        })
+                      }}
+                    />
+                    <input
+                      className={styles.input}
+                      placeholder={t('git.branchPlaceholder')}
+                      value={repo?.branch ?? ''}
+                      onChange={(e) => setWs(ws.workspaceId, { branch: e.target.value })}
+                    />
+                    <input
+                      className={styles.input}
+                      placeholder={t('git.subpathPlaceholder')}
+                      value={repo?.subpath ?? ''}
+                      onChange={(e) => setWs(ws.workspaceId, { subpath: e.target.value })}
+                    />
+                    <input
+                      className={styles.input}
+                      placeholder={t('git.remotePlaceholder')}
+                      value={repo?.remote ?? ''}
+                      onChange={(e) => setWs(ws.workspaceId, { remote: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      className={styles.authBtn}
+                      disabled={busy || !repo?.path}
+                      onClick={() => toggleWsAuth(ws.workspaceId)}
+                    >
+                      {repo?.authorized === true ? t('git.revoke') : t('git.authorize')}
+                    </button>
+                  </div>
+                  <div className={styles.hint}>{t('git.wsRowHint')}</div>
+                </div>
+              )
+            })}
+        </div>
+      )}
 
       <div className={styles.foot}>
         <span className={styles.msg}>{msg}</span>

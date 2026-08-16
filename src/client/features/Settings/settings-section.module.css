@@ -90,10 +90,21 @@
   color: var(--dsw-alias-label-primary, #222);
 }
 
+.wsBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--dsw-alias-border-l1, #eee);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-base, #fff);
+}
+
 .wsRow {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .wsName {
@@ -103,6 +114,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
+  font-weight: 600;
   color: var(--dsw-alias-label-primary, #222);
 }
 

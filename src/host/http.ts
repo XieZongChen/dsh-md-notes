@@ -49,8 +49,8 @@ export function sendJson(res: ServerResponse, status: number, value: unknown): v
 export interface GitApi {
   status(repo: ResolvedRepo): Promise<GitStatusView>
   init(repo: ResolvedRepo): Promise<void>
-  push(repo: ResolvedRepo, message: string): Promise<{ ok: boolean; error?: string; code?: string }>
-  pull(repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }>
+  push(repo: ResolvedRepo, notesDir: string, message: string): Promise<{ ok: boolean; error?: string; code?: string }>
+  pull(repo: ResolvedRepo, notesDir: string): Promise<{ ok: boolean; error?: string; skipped?: number }>
   sync(repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }>
 }
 
@@ -163,13 +163,13 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       const message = typeof req.message === 'string' && req.message.trim() !== ''
         ? req.message.trim()
         : `笔记更新 ${new Date().toLocaleString()}`
-      return deps.git.push(repo, message)
+      return deps.git.push(repo, deps.resolveDir(workspaceId), message)
     }
     case 'gitPull': {
       const repo = deps.resolveRepo(workspaceId)
       if (repo === undefined) return { ok: false, error: '未配置 git 仓库' }
       if (!isAuthorized(repo)) return { ok: false, error: '仓库未授权，请先在设置中授权' }
-      return deps.git.pull(repo)
+      return deps.git.pull(repo, deps.resolveDir(workspaceId))
     }
     case 'gitSync': {
       // User-initiated conflict resolution after a rejected push.
