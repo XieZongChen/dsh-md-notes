@@ -18,7 +18,7 @@
 
 ## Overview
 
-A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). It brings a full **MD notes manager** into the web UI and a **"Add to note"** action to every assistant answer — notes are plain `.md` files under each workspace's `.dsh-notes/`, so they stay editable in any editor, and optionally sync to Git.
+A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). It brings a full **MD notes manager** into the web UI, letting you quickly capture conversation content into notes. Notes can be maintained by syncing to a Git repository.
 
 **Who it's for**: DSH web users who want local, file-based notes (no database, no cloud) — capture a conversation into a note with one click, keep editing the `.md` anywhere, and back up / sync with a Git repository.
 
