@@ -9,7 +9,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSettingsOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSettingsOutline16, IconTriangleRightFill14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData, WorkspaceNotes } from '../api.ts'
 import { api, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
@@ -51,6 +51,14 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const [autoPull, setAutoPull] = React.useState(true)
   /** Names of notes the remote updated but local differs — hint to manually update. */
   const [remoteChanged, setRemoteChanged] = React.useState<string[] | null>(null)
+  /** In-page confirmation dialog (replaces window.confirm, reliable in overlay). */
+  const [confirmState, setConfirmState] = React.useState<{
+    title: string
+    description: string
+    confirmLabel: string
+    cancelLabel: string
+    onConfirm: () => void
+  } | null>(null)
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
   const selectionRef = React.useRef<{ wsId: string; name: string } | null>(null)
   const isCurrent = (wsId: string, name: string): boolean =>
@@ -226,14 +234,15 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         window.setTimeout(() => setFlash(''), 1200)
         return
       }
-      if (window.confirm(t('git.updateConfirm', { count: skipped }))) {
-        doUpdate(wsId, true)
-      } else {
-        setGitMsg(t('git.updateCancelled'))
-      }
+      setConfirmState({
+        title: t('git.updateConfirmTitle'),
+        description: t('git.updateConfirm', { count: skipped }),
+        confirmLabel: t('git.overwriteRemote'),
+        cancelLabel: t('git.cancel'),
+        onConfirm: () => { setConfirmState(null); doUpdate(wsId, true) },
+      })
     })
   }
-
   const runPush = (wsId: string, message: string, overwrite = false): void => {
     setPushing(true)
     setGitMsg('')
@@ -248,11 +257,13 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         // The remote has notes newer/different from the local ones — ask the
         // user whether to overwrite them with the local version before pushing.
         const names = (res.changed ?? []).join('、')
-        if (window.confirm(t('git.pushRemoteChanged', { names }))) {
-          runPush(wsId, message, true)
-        } else {
-          setGitMsg(t('git.pushCancelled'))
-        }
+        setConfirmState({
+          title: t('git.pushRemoteChangedTitle'),
+          description: t('git.pushRemoteChanged', { names }),
+          confirmLabel: t('git.overwriteRemote'),
+          cancelLabel: t('git.cancel'),
+          onConfirm: () => { setConfirmState(null); runPush(wsId, message, true) },
+        })
       } else if (res.code === 'non-fast-forward') {
         // Rejected because the remote is ahead / histories are unrelated:
         // offer an in-app merge-and-retry instead of a bare error.
@@ -477,6 +488,26 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
           {gitMsg !== '' && pushConflict === null && <span className={styles.gitError}>{gitMsg}</span>}
         </div>
       </div>
+      {confirmState !== null && (
+        <Modal
+          open
+          title={confirmState.title}
+          closeLabel={t('git.cancel')}
+          onClose={() => setConfirmState(null)}
+          footer={(
+            <>
+              <button type="button" className={shared.btn} onClick={() => setConfirmState(null)}>
+                {confirmState.cancelLabel}
+              </button>
+              <button type="button" className={styles.confirmBtn} onClick={confirmState.onConfirm}>
+                {confirmState.confirmLabel}
+              </button>
+            </>
+          )}
+        >
+          <div className={styles.confirmBody}>{confirmState.description}</div>
+        </Modal>
+      )}
     </div>
   )
 }

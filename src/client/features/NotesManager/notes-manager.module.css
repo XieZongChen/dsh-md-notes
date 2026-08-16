@@ -446,3 +446,25 @@
   opacity: 0.5;
   cursor: default;
 }
+
+/* In-page confirmation modal (replaces window.confirm). */
+.confirmBody {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--dsw-alias-label-primary, #222);
+  white-space: pre-line;
+}
+
+.confirmBtn {
+  height: 30px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dsw-alias-brand-primary, #4a7bff);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+.confirmBtn:hover {
+  filter: brightness(1.08);
+}
