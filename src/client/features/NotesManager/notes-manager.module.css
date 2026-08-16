@@ -27,15 +27,10 @@
 }
 
 .managerTitle {
+  flex: 1;
   font-weight: 700;
   font-size: 15px;
   color: var(--dsw-alias-label-primary, #222);
-}
-
-.managerSub {
-  font-size: 11px;
-  color: var(--dsw-alias-label-secondary, #888);
-  flex: 1;
 }
 
 .managerBody {

@@ -44,7 +44,7 @@ export type ApiResult =
     noWorkspaces?: boolean
     content?: string
     name?: string
-    dir?: string
+    dir?: string | null
     status?: GitStatusData
     settings?: GitSettingsData
     suggestions?: GitSuggestData
@@ -115,6 +115,11 @@ export interface GitSuggestData {
 
 export function gitSuggestApi(): Promise<ApiResult> {
   return api('gitSuggest')
+}
+
+/** Open the host directory picker (null when the user cancelled). */
+export function gitPickDirApi(): Promise<ApiResult> {
+  return api('gitPickDir')
 }
 
 /** Authorize (or revoke) a workspace repo — or the central repo when no id. */

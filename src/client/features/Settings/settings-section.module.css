@@ -7,6 +7,28 @@
   max-width: 640px;
 }
 
+/* Prominent storage tip above the git config. */
+.tipPanel {
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2, #ddd);
+  border-left: 3px solid var(--dsw-alias-brand-primary, #4a7bff);
+  border-radius: 8px;
+  background: var(--dsw-alias-bg-layer-1, #fafafa);
+}
+
+.tipTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #222);
+  margin-bottom: 4px;
+}
+
+.tipBody {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-secondary, #888);
+}
+
 .loading {
   padding: 12px 0;
   color: var(--dsw-alias-label-secondary, #888);

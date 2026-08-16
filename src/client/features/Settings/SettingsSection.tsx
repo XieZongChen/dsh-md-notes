@@ -9,7 +9,8 @@
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { GitSettingsData, WorkspaceNotes } from '../api.ts'
-import { api, gitAuthorizeApi, gitConfigApi, gitRevokeApi, gitSettingsApi, gitSuggestApi, type GitSuggestData } from '../api.ts'
+import { api, gitAuthorizeApi, gitConfigApi, gitPickDirApi, gitRevokeApi, gitSettingsApi } from '../api.ts'
+import { PathPicker } from '../components/PathPicker/PathPicker.tsx'
 import styles from './settings-section.module.css'
 
 export interface SettingsSectionProps {
@@ -28,19 +29,36 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
   const { t } = props
   const [settings, setSettings] = React.useState<GitSettingsData | null>(null)
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
-  const [suggestions, setSuggestions] = React.useState<GitSuggestData | null>(null)
   const [msg, setMsg] = React.useState('')
   const [busy, setBusy] = React.useState(false)
+  const dirtyScalar = React.useRef<Set<string>>(new Set())
+  const dirtyCentral = React.useRef(false)
+  const dirtyWs = React.useRef<Set<string>>(new Set())
+
+  const overlayDirty = (fresh: GitSettingsData, local: GitSettingsData | null): GitSettingsData => {
+    const next: GitSettingsData = { ...fresh }
+    if (dirtyCentral.current && local?.gitCentral !== undefined) {
+      (next as Record<string, unknown>).gitCentral = local.gitCentral
+    }
+    if (dirtyWs.current.size > 0 && local?.gitRepos !== undefined) {
+      next.gitRepos = { ...(fresh.gitRepos ?? {}) }
+      for (const id of dirtyWs.current) {
+        const entry = local.gitRepos[id]
+        if (entry !== undefined) (next.gitRepos as Record<string, unknown>)[id] = entry
+      }
+    }
+    for (const key of dirtyScalar.current) {
+      (next as Record<string, unknown>)[key] = (local as Record<string, unknown> | null)?.[key]
+    }
+    return next
+  }
 
   const load = (): void => {
     void gitSettingsApi().then((res) => {
-      if (res.ok && res.settings) setSettings(res.settings)
+      if (res.ok && res.settings) setSettings((prev) => overlayDirty(res.settings ?? {}, prev))
     })
     void api('list').then((res) => {
       if (res.ok && res.workspaces) setWorkspaces(res.workspaces)
-    })
-    void gitSuggestApi().then((res) => {
-      if (res.ok && res.suggestions) setSuggestions(res.suggestions)
     })
   }
 
@@ -50,23 +68,48 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
     if (settings === null) return
     setBusy(true)
     setMsg('')
-    void gitConfigApi({
-      gitMode: settings.gitMode ?? 'off',
-      gitAutoPull: settings.gitAutoPull ?? true,
-      gitBranch: settings.gitBranch ?? 'main',
-      gitAuthorName: settings.gitAuthorName ?? '',
-      gitAuthorEmail: settings.gitAuthorEmail ?? '',
-      gitCentral: settings.gitCentral ?? {},
-      gitRepos: settings.gitRepos ?? {},
-    }).then((res) => {
-      setBusy(false)
-      if (res.ok) {
-        setMsg(t('git.saved'))
-        window.setTimeout(() => setMsg(''), 1500)
-      } else {
-        setMsg(t('git.failed', { error: res.error ?? '' }))
+    void gitSettingsApi().then((res) => {
+      if (!res.ok || !res.settings) {
+        setBusy(false)
+        setMsg(t('git.failed', { error: res.ok ? '' : res.error ?? '' }))
+        return
       }
+      // Merge the user's edits over the LATEST settings so an external change
+      // (e.g. an authorization toggle elsewhere) is never clobbered.
+      const merged = overlayDirty(res.settings, settings)
+      setSettings(merged)
+      const patch: Record<string, unknown> = {}
+      for (const key of dirtyScalar.current) patch[key] = (merged as Record<string, unknown>)[key]
+      if (dirtyCentral.current) patch.gitCentral = merged.gitCentral
+      if (dirtyWs.current.size > 0 && merged.gitRepos !== undefined) {
+        const repos: Record<string, unknown> = {}
+        for (const id of dirtyWs.current) repos[id] = merged.gitRepos[id]
+        patch.gitRepos = repos
+      }
+      if (Object.keys(patch).length === 0) {
+        setBusy(false)
+        setMsg(t('git.saved'))
+        return
+      }
+      void gitConfigApi(patch).then((r) => {
+        setBusy(false)
+        if (r.ok) {
+          dirtyScalar.current = new Set()
+          dirtyCentral.current = false
+          dirtyWs.current = new Set()
+          setMsg(t('git.saved'))
+          window.setTimeout(() => setMsg(''), 1500)
+        } else {
+          setMsg(t('git.failed', { error: r.error ?? '' }))
+        }
+      })
     })
+  }
+
+  /** Normalize a picked directory into the notes dir: `<picked>/.dsh-notes`. */
+  const withNotesDir = (dir: string): string => {
+    const trimmed = dir.replace(/\/+$/, '')
+    return trimmed.endsWith('/.dsh-notes') ? trimmed : `${trimmed}/.dsh-notes`
   }
 
   const toggleCentralAuth = (): void => {
@@ -92,12 +135,15 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
   }
 
   const set = (patch: Partial<GitSettingsData>): void => {
+    for (const key of Object.keys(patch)) dirtyScalar.current.add(key)
     setSettings((prev) => ({ ...(prev ?? {}), ...patch }))
   }
   const setCentral = (patch: { path?: string; remote?: string; authorized?: boolean }): void => {
+    dirtyCentral.current = true
     setSettings((prev) => ({ ...(prev ?? {}), gitCentral: { ...(prev?.gitCentral ?? {}), ...patch } }))
   }
   const setWs = (workspaceId: string, patch: { path?: string; remote?: string; authorized?: boolean }): void => {
+    dirtyWs.current.add(workspaceId)
     setSettings((prev) => ({
       ...(prev ?? {}),
       gitRepos: { ...(prev?.gitRepos ?? {}), [workspaceId]: { ...(prev?.gitRepos?.[workspaceId] ?? {}), ...patch } },
@@ -108,6 +154,12 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
 
   return (
     <div className={styles.section}>
+      <div className={styles.tipPanel}>
+        <div className={styles.tipTitle}>{t('git.tipTitle')}</div>
+        <div className={styles.tipBody}>
+          {settings.gitMode === 'on' ? t('git.tipOn') : t('git.tipOff')}
+        </div>
+      </div>
       <div className={styles.row}>
         <label className={styles.field}>
           <span className={styles.label}>{t('git.mode')}</span>
@@ -163,11 +215,16 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
         <div className={styles.row}>
           <label className={styles.field}>
             <span className={styles.label}>{t('git.path')}</span>
-            <input
-              className={styles.input}
-              placeholder={t('git.centralPathPlaceholder')}
+            <PathPicker
               value={settings.gitCentral?.path ?? ''}
-              onChange={(e) => setCentral({ path: e.target.value })}
+              placeholder={t('git.pickPath')}
+              disabled={busy}
+              onPick={() => {
+                void gitPickDirApi().then((res) => {
+                  if (res.ok && typeof res.dir === 'string') setCentral({ path: withNotesDir(res.dir) })
+                  else if (!res.ok) setMsg(t('git.failed', { error: res.error ?? '' }))
+                })
+              }}
             />
           </label>
           <label className={styles.field}>
@@ -179,11 +236,6 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
               onChange={(e) => setCentral({ remote: e.target.value })}
             />
           </label>
-          {suggestions?.centralPath && (
-            <button type="button" className={styles.suggestBtn} onClick={() => setCentral({ path: suggestions.centralPath ?? '' })}>
-              {t('git.suggest')}
-            </button>
-          )}
           <button
             type="button"
             className={styles.authBtn}
@@ -205,11 +257,16 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
           : workspaces.map((ws) => (
             <div key={ws.workspaceId} className={styles.wsRow}>
               <span className={styles.wsName}>{ws.name}</span>
-              <input
-                className={styles.input}
-                placeholder={t('git.path')}
+              <PathPicker
                 value={settings.gitRepos?.[ws.workspaceId]?.path ?? ''}
-                onChange={(e) => setWs(ws.workspaceId, { path: e.target.value })}
+                placeholder={t('git.pickPath')}
+                disabled={busy}
+                onPick={() => {
+                  void gitPickDirApi().then((res) => {
+                    if (res.ok && typeof res.dir === 'string') setWs(ws.workspaceId, { path: withNotesDir(res.dir) })
+                    else if (!res.ok) setMsg(t('git.failed', { error: res.error ?? '' }))
+                  })
+                }}
               />
               <input
                 className={styles.input}
@@ -217,18 +274,6 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
                 value={settings.gitRepos?.[ws.workspaceId]?.remote ?? ''}
                 onChange={(e) => setWs(ws.workspaceId, { remote: e.target.value })}
               />
-              {suggestions?.workspaces?.some((sg) => sg.workspaceId === ws.workspaceId) && (
-                <button
-                  type="button"
-                  className={styles.suggestBtn}
-                  onClick={() => {
-                    const sg = suggestions.workspaces?.find((x) => x.workspaceId === ws.workspaceId)
-                    if (sg) setWs(ws.workspaceId, { path: sg.path })
-                  }}
-                >
-                  {t('git.suggest')}
-                </button>
-              )}
               <button
                 type="button"
                 className={styles.authBtn}

@@ -9,7 +9,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSettingsOutline16, IconTriangleRightFill14 } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData, WorkspaceNotes } from '../api.ts'
 import { api, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
@@ -255,6 +255,23 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const busy = updating || saving || pushing
 
   const close = (): void => store.set({ managerOpen: false })
+  /**
+   * Open dsh's own settings panel and jump to the "MD 笔记" section. The
+   * settings shell owns its open state locally and exposes no external API,
+   * so this simulates the two clicks a user would make: the sidebar
+   * settings trigger, then the section's nav cell. The trigger is the only
+   * `button[aria-haspopup="dialog"]` without an aria-label on the page; the
+   * nav cell is matched by the section's localized label.
+   */
+  const openDshSettings = (): void => {
+    const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]:not([aria-label])')
+    trigger?.click()
+    window.setTimeout(() => {
+      const cells = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="dialog"] nav button'))
+      const cell = cells.find((b) => b.textContent?.trim() === t('git.settingsNav'))
+      cell?.click()
+    }, 60)
+  }
   const previewHtml = mode === 'preview' ? renderMd(content) : ''
   const grouped = workspaces.length > 1
 
@@ -264,7 +281,6 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         <div className={styles.managerHead}>
           <img src={ICON_URL} width={16} height={16} alt="" className={styles.managerIcon} />
           <span className={styles.managerTitle}>{t('manager.title')}</span>
-          <span className={styles.managerSub}>{t('manager.subtitle')}</span>
           {showGlobalGit && (
             <span className={styles.headGit}>
               <button type="button" className={styles.gitBtn} disabled={busy} onClick={() => updateClick(null)}>
@@ -275,7 +291,12 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
               </button>
             </span>
           )}
-          <button type="button" className={shared.iconBtn} onClick={close} title={t('manager.close')}>✕</button>
+          <button type="button" className={shared.iconBtn} onClick={openDshSettings} title={t('manager.settings')}>
+            <IconSettingsOutline16 />
+          </button>
+          <button type="button" className={shared.iconBtn} onClick={close} title={t('manager.close')}>
+            <IconCloseOutline16 />
+          </button>
         </div>
         <div className={styles.managerBody}>
           <div className={styles.list}>

@@ -82,6 +82,8 @@ export interface NotesApiDeps {
   suggest(): Record<string, unknown>
   /** Whether the workspace registry has at least one real workspace. */
   hasWorkspaces(): boolean
+  /** Open the host directory picker; null = user cancelled. */
+  pickDir(): Promise<{ ok: boolean; dir?: string | null; error?: string }>
   /** Bound git operations. */
   git: GitApi
   /** Persist the authorization flag for a workspace repo (or the central repo). */
@@ -101,8 +103,18 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
   switch (method) {
     // ---- notes domain ----
     case 'list': {
+      // A session-scoped request (note picker) sees only its own workspace's
+      // notes; the manager (no sessionId) sees every workspace. Without this
+      // the picker would list all workspaces yet append into only the
+      // session's workspace — mismatched notes.
+      const sessionWsId = typeof req.sessionId === 'string'
+        ? deps.workspaceIdForSession(req.sessionId)
+        : undefined
+      const entries = sessionWsId !== undefined
+        ? deps.listWorkspaces().filter((ws) => ws.workspaceId === sessionWsId)
+        : deps.listWorkspaces()
       const workspaces: Array<{ workspaceId: string; name: string; notes: import('./notes.ts').NoteSummary[] }> = []
-      for (const ws of deps.listWorkspaces()) {
+      for (const ws of entries) {
         const result = await listNotes(ws.notesDir)
         workspaces.push({ workspaceId: ws.workspaceId, name: ws.name, notes: result.ok ? result.notes : [] })
       }
@@ -185,6 +197,9 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     }
     case 'gitSuggest': {
       return { ok: true, suggestions: deps.suggest() }
+    }
+    case 'gitPickDir': {
+      return deps.pickDir()
     }
     case 'gitConfig': {
       // Whitelist the settings keys this API may write (L3), dropping anything else.

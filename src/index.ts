@@ -11,7 +11,7 @@
  */
 
 import { fileURLToPath } from 'node:url'
-import path, { join, resolve } from 'node:path'
+import path, { join } from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
@@ -23,7 +23,7 @@ import type {} from '@deepseek-ai/dsh-settings'
 import type {} from '@deepseek-ai/dsh-workspace'
 import { notesDir } from './host/notes.ts'
 import {
-  gitInit, gitPull, gitPush, gitStatus, gitSync,
+  gitInit, gitPull, gitPush, gitStatus, gitSync, normPath,
   resolveCentralRepo, resolveNotesDir, resolveWorkspaceRepo,
   type ResolvedRepo, type WorkspaceInfo,
 } from './host/git.ts'
@@ -150,7 +150,7 @@ export function apply(ctx: Context, config: Config): void {
     const registry = workspaces()
     const ws = registry?.list().find((candidate) => {
       try {
-        return resolve(candidate.path) === resolve(cwd)
+        return normPath(candidate.path) === normPath(cwd)
       } catch {
         return false
       }
@@ -182,7 +182,7 @@ export function apply(ctx: Context, config: Config): void {
       name: readSettings().gitAuthorName ?? '',
       email: readSettings().gitAuthorEmail ?? '',
     }),
-    pull: (repo) => gitPull(ctx, repo),
+    pull: (repo) => gitPull(ctx, repo, readSettings().gitBranch ?? 'main'),
     sync: (repo) => gitSync(ctx, repo, readSettings().gitBranch ?? 'main'),
   }
 
@@ -193,6 +193,23 @@ export function apply(ctx: Context, config: Config): void {
     return {
       workspaces: wsEntries.map((ws) => ({ workspaceId: ws.id, path: join(ws.path, '.dsh-notes') })),
       centralPath: join(home, 'notes-repo'),
+    }
+  }
+
+  const pickDir = async (): Promise<{ ok: boolean; dir?: string | null; error?: string }> => {
+    const picker = ctx.get('directoryPicker') as
+      | { capability(): { kind: string; pick(signal: AbortSignal): Promise<string | null> } }
+      | undefined
+    if (picker === undefined) return { ok: false, error: '目录选择器不可用' }
+    const capability = picker.capability()
+    if (capability.kind !== 'native') return { ok: false, error: '当前环境的目录选择器不支持直接选择' }
+    const ac = new AbortController()
+    const timer = setTimeout(() => ac.abort(), 30_000)
+    try {
+      const dir = await capability.pick(ac.signal)
+      return { ok: true, dir }
+    } finally {
+      clearTimeout(timer)
     }
   }
 
@@ -209,6 +226,7 @@ export function apply(ctx: Context, config: Config): void {
       const registry = workspaces()
       return registry !== undefined && registry.list().length > 0
     },
+    pickDir,
     git,
     setAuthorized,
     sessionQuery: ctx.get('sessionQuery'),

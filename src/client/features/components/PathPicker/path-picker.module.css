@@ -1,0 +1,52 @@
+/* Click-to-choose directory field: one region for both the empty prompt and
+   the chosen-path display; the whole region opens the picker. */
+
+.pathPicker {
+  flex: 1;
+  min-width: 120px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border: 1px dashed var(--dsw-alias-border-l2, #bbb);
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.pathPicker:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.pathPicker:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pathText,
+.pathPlaceholder {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font-size: 13px;
+}
+
+.pathText {
+  color: var(--dsw-alias-label-primary, #222);
+}
+
+.pathPlaceholder {
+  color: var(--dsw-alias-label-tertiary, #aaa);
+}
+
+.editIcon {
+  flex: none;
+  color: var(--dsw-alias-label-tertiary);
+}

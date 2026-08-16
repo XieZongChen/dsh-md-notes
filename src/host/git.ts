@@ -12,7 +12,7 @@
  */
 
 import { isAbsolute, join, relative, resolve } from 'node:path'
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync, existsSync, realpathSync } from 'node:fs'
 import type { Context } from '@deepseek-ai/cordis'
 import type { MdNotesSettings } from './settings.ts'
 
@@ -97,9 +97,18 @@ export async function runGit(ctx: Context, cwd: string, args: readonly string[])
   }
 }
 
+/** Realpath-normalize a path for comparison (symlinks, case-insensitive FS). */
+export function normPath(p: string): string {
+  try {
+    return realpathSync(p)
+  } catch {
+    return resolve(p)
+  }
+}
+
 /** True when `child` is inside or equal to `parent`. */
 function isInside(parent: string, child: string): boolean {
-  const rel = relative(parent, child)
+  const rel = relative(normPath(parent), normPath(child))
   return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
 }
 
@@ -194,13 +203,17 @@ export function resolveCentralRepo(settings: MdNotesSettings): ResolvedRepo | un
 
 /**
  * Notes directory for a workspace under the current settings (git-aware).
- * git off → `config.root` (an absolute override applies as-is; a relative
- * root resolves per workspace). git on with a usable repo → the repo's note
- * dir; git on with NO repo → the workspace's OWN `.dsh-notes` (isolated from
- * other workspaces, never the shared absolute root).
+ * Workspaces are ALWAYS isolated: git off resolves a relative root inside the
+ * workspace (an absolute root override is treated as the legacy
+ * single-workspace default and ignored — notes stay in `<ws>/.dsh-notes`);
+ * git on uses the workspace's repo, or its own `.dsh-notes` when no repo.
  */
 export function resolveNotesDir(settings: MdNotesSettings, ws: WorkspaceInfo, fallbackRoot: string): string {
-  if (settings.gitMode !== 'on') return resolveInside(ws.path, fallbackRoot)
+  if (settings.gitMode !== 'on') {
+    return isAbsolute(fallbackRoot)
+      ? join(resolve(ws.path), '.dsh-notes')
+      : resolveInside(ws.path, fallbackRoot)
+  }
   const repo = resolveWorkspaceRepo(settings, ws)
   if (repo !== undefined) return repo.noteDir
   return join(resolve(ws.path), '.dsh-notes')
@@ -333,8 +346,8 @@ export async function gitPush(
 }
 
 /** Pull the repo (whole-repo). Conflicts are surfaced, never auto-resolved. */
-export async function gitPull(ctx: Context, repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }> {
-  await gitInit(ctx, repo, 'main')
+export async function gitPull(ctx: Context, repo: ResolvedRepo, branch: string): Promise<{ ok: boolean; error?: string }> {
+  await gitInit(ctx, repo, branch)
   if (!repo.remote) return { ok: false, error: '未配置远程，无法拉取' }
   const pull = await runGit(ctx, repo.repoDir, ['pull', '--no-edit'])
   if (pull.code !== 0) return { ok: false, error: pull.stderr || pull.stdout || 'git pull 失败' }
