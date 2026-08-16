@@ -312,21 +312,25 @@ async function resolveIdentity(
 }
 
 /**
- * Ensure the target branch exists locally and tracks the remote: try
- * `git checkout <branch>` then `git pull`, falling back to creating the
- * branch from the remote (`origin/<branch>`) or from HEAD when absent.
+ * Ensure the local clone is on `repo.branch` and up to date with the remote:
+ * first `git fetch origin` (so the remote-tracking ref actually moves — the
+ * previous code relied on `git pull`, which failed on the freshly-created
+ * branch because it had no upstream, and the error was silently swallowed),
+ * then check the branch out from `origin/<branch>` (or create it locally).
+ * Returns the git run result; callers must check `.code`.
  */
 async function ensureBranch(ctx: Context, repo: ResolvedRepo): Promise<GitRunResult> {
+  // Explicit fetch first: moves refs/remotes/origin/<branch> to the remote tip.
+  const fetch = await runGit(ctx, repo.repoDir, ['fetch', 'origin'])
+  if (fetch.code !== 0) return fetch
   const remoteBranch = `origin/${repo.branch}`
   const hasRemoteBranch = await runGit(ctx, repo.repoDir, ['show-ref', '--verify', `refs/remotes/${remoteBranch}`])
   if (hasRemoteBranch.code === 0) {
-    await runGit(ctx, repo.repoDir, ['checkout', '-B', repo.branch, remoteBranch])
-    return runGit(ctx, repo.repoDir, ['pull', '--no-edit'])
+    return runGit(ctx, repo.repoDir, ['checkout', '-B', repo.branch, remoteBranch])
   }
   const hasLocal = await runGit(ctx, repo.repoDir, ['show-ref', '--verify', `refs/heads/${repo.branch}`])
   if (hasLocal.code === 0) {
-    await runGit(ctx, repo.repoDir, ['checkout', repo.branch])
-    return runGit(ctx, repo.repoDir, ['pull', '--no-edit'])
+    return runGit(ctx, repo.repoDir, ['checkout', repo.branch])
   }
   return runGit(ctx, repo.repoDir, ['checkout', '-b', repo.branch])
 }
@@ -340,7 +344,8 @@ export async function gitPush(
   ctx: Context, repo: ResolvedRepo, notesDir: string, message: string, author: { name: string; email: string },
 ): Promise<{ ok: boolean; error?: string; code?: string }> {
   await gitInit(ctx, repo, repo.branch)
-  await ensureBranch(ctx, repo)
+  const branch = await ensureBranch(ctx, repo)
+  if (branch.code !== 0) return { ok: false, error: `同步仓库分支失败: ${branch.stderr || branch.stdout}` }
   // Copy the workspace's notes into the repo target directory.
   const target = repoTargetDir(repo)
   try {
@@ -391,7 +396,8 @@ export async function gitPull(
   ctx: Context, repo: ResolvedRepo, notesDir: string, force: boolean,
 ): Promise<{ ok: boolean; error?: string; skipped?: number }> {
   await gitInit(ctx, repo, repo.branch)
-  await ensureBranch(ctx, repo)
+  const branch = await ensureBranch(ctx, repo)
+  if (branch.code !== 0) return { ok: false, error: `同步仓库分支失败: ${branch.stderr || branch.stdout}` }
   const target = repoTargetDir(repo)
   const { skipped } = await syncNotes(target, notesDir, force)
   return { ok: true, skipped }
@@ -405,13 +411,8 @@ export async function gitPull(
  */
 export async function gitSync(ctx: Context, repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }> {
   await gitInit(ctx, repo, repo.branch)
-  const remoteBranch = `origin/${repo.branch}`
-  const hasRemoteBranch = await runGit(ctx, repo.repoDir, ['show-ref', '--verify', `refs/remotes/${remoteBranch}`])
-  if (hasRemoteBranch.code === 0) {
-    await runGit(ctx, repo.repoDir, ['checkout', '-B', repo.branch, remoteBranch])
-  } else {
-    await runGit(ctx, repo.repoDir, ['checkout', '-b', repo.branch])
-  }
+  const branch = await ensureBranch(ctx, repo)
+  if (branch.code !== 0) return { ok: false, error: `同步仓库分支失败: ${branch.stderr || branch.stdout}` }
   const merge = await runGit(ctx, repo.repoDir, ['pull', '--no-rebase', '--no-edit'])
   if (merge.code === 0) return { ok: true }
   const out = `${merge.stderr || ''} ${merge.stdout || ''}`
