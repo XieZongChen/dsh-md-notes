@@ -134,7 +134,7 @@ export function resolveWorkspaceRepo(settings: MdNotesSettings, ws: WorkspaceInf
       kind: 'shared',
       repoDir: cloneDirFor(remote),
       subdir: sanitizeFolder(ws.title),
-      branch: settings.gitCentral?.branch ?? 'main',
+      branch: settings.gitCentral?.branch?.trim() ? settings.gitCentral.branch : 'main',
       remote,
     }
   }
@@ -145,7 +145,7 @@ export function resolveWorkspaceRepo(settings: MdNotesSettings, ws: WorkspaceInf
       kind: 'own',
       repoDir: cloneDirFor(own.remote),
       subdir: own.subpath ?? '',
-      branch: own.branch ?? 'main',
+      branch: own.branch?.trim() ? own.branch : 'main',
       remote: own.remote,
     }
   }
@@ -164,7 +164,7 @@ export function resolveSharedRepo(settings: MdNotesSettings): ResolvedRepo | und
     kind: 'shared',
     repoDir: cloneDirFor(remote),
     subdir: '',
-    branch: settings.gitCentral?.branch ?? 'main',
+    branch: settings.gitCentral?.branch?.trim() ? settings.gitCentral.branch : 'main',
     remote,
   }
 }

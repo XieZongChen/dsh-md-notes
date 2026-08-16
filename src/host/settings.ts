@@ -94,7 +94,7 @@ export function mergeSettings(
     gitMode: normalized,
     gitCentral: {
       remote: user.gitCentral?.remote ?? config.gitCentralRemote,
-      branch: user.gitCentral?.branch ?? config.gitCentralBranch,
+      branch: user.gitCentral?.branch?.trim() ? user.gitCentral.branch : config.gitCentralBranch,
     },
     gitRepos: { ...(config.gitRepos ?? {}), ...(user.gitRepos ?? {}) },
     gitAutoPull: user.gitAutoPull ?? config.gitAutoPull ?? true,

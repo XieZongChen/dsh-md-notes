@@ -198,7 +198,7 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
                 className={styles.input}
                 placeholder={t('git.branchPlaceholder')}
                 value={settings.gitCentral?.branch ?? ''}
-                onChange={(e) => setCentral({ branch: e.target.value })}
+                onChange={(e) => setCentral({ branch: e.target.value.trim() === '' ? undefined : e.target.value })}
               />
             </label>
           </div>
@@ -226,7 +226,7 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
                       className={styles.input}
                       placeholder={t('git.branchPlaceholder')}
                       value={repo?.branch ?? ''}
-                      onChange={(e) => setWs(ws.workspaceId, { branch: e.target.value })}
+                      onChange={(e) => setWs(ws.workspaceId, { branch: e.target.value.trim() === '' ? undefined : e.target.value })}
                     />
                     <input
                       className={styles.input}
