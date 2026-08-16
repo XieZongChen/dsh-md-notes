@@ -59,7 +59,7 @@ export type ApiResult =
     /** Number of files skipped during a conservative pull (differed from remote). */
     skipped?: number
   }
-  | { ok: false; error: string; code?: string }
+  | { ok: false; error: string; code?: string; changed?: string[] }
 
 /** Host API route prefix; mirrors the host plugin's default. */
 export const API = '/plugins/md-notes'
@@ -92,9 +92,14 @@ export function gitStatusApi(workspaceId?: string): Promise<ApiResult> {
   return api('gitStatus', workspaceId === undefined ? {} : { workspaceId })
 }
 
-/** Stage + commit + push a workspace repo (or the whole central repo), then pull back. */
-export function gitPushApi(workspaceId: string | undefined, message: string): Promise<ApiResult> {
-  return api('gitPush', workspaceId === undefined ? { message } : { workspaceId, message })
+/**
+ * Stage + commit + push a workspace repo. `overwrite = true` means the user
+ * confirmed overwriting the remote's newer version (the first push without it
+ * blocks with `code: 'remote-changed'` when remote notes differ).
+ */
+export function gitPushApi(workspaceId: string | undefined, message: string, overwrite?: boolean): Promise<ApiResult> {
+  const body = { message, overwrite: overwrite === true }
+  return api('gitPush', workspaceId === undefined ? body : { workspaceId, ...body })
 }
 
 /**

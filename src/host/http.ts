@@ -49,7 +49,7 @@ export function sendJson(res: ServerResponse, status: number, value: unknown): v
 export interface GitApi {
   status(repo: ResolvedRepo): Promise<GitStatusView>
   init(repo: ResolvedRepo): Promise<void>
-  push(repo: ResolvedRepo, notesDir: string, message: string): Promise<{ ok: boolean; error?: string; code?: string }>
+  push(repo: ResolvedRepo, notesDir: string, message: string, overwrite: boolean): Promise<{ ok: boolean; error?: string; code?: string; changed?: string[] }>
   pull(repo: ResolvedRepo, notesDir: string, force: boolean): Promise<{ ok: boolean; error?: string; skipped?: number }>
   sync(repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }>
 }
@@ -156,7 +156,9 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       const message = typeof req.message === 'string' && req.message.trim() !== ''
         ? req.message.trim()
         : `笔记更新 ${new Date().toLocaleString()}`
-      return deps.git.push(repo, deps.resolveDir(workspaceId), message)
+      // overwrite=true = the user confirmed overwriting the remote's newer
+      // version (the first push without it blocks on remote-changed).
+      return deps.git.push(repo, deps.resolveDir(workspaceId), message, req.overwrite === true)
     }
     case 'gitPull': {
       const repo = deps.resolveRepo(workspaceId)

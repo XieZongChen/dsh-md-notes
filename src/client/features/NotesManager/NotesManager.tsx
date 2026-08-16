@@ -220,16 +220,25 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     })
   }
 
-  const runPush = (wsId: string, message: string): void => {
+  const runPush = (wsId: string, message: string, overwrite = false): void => {
     setPushing(true)
     setGitMsg('')
-    void gitPushApi(wsId, message).then((res) => {
+    void gitPushApi(wsId, message, overwrite).then((res) => {
       setPushing(false)
       if (res.ok) {
         setPushOpen(false)
         setPushMsg('')
         setPushConflict(null)
         refreshStatus(wsId)
+      } else if (res.code === 'remote-changed') {
+        // The remote has notes newer/different from the local ones — ask the
+        // user whether to overwrite them with the local version before pushing.
+        const names = (res.changed ?? []).join('、')
+        if (window.confirm(t('git.pushRemoteChanged', { names }))) {
+          runPush(wsId, message, true)
+        } else {
+          setGitMsg(t('git.pushCancelled'))
+        }
       } else if (res.code === 'non-fast-forward') {
         // Rejected because the remote is ahead / histories are unrelated:
         // offer an in-app merge-and-retry instead of a bare error.

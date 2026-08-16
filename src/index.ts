@@ -166,10 +166,10 @@ export function apply(ctx: Context, config: Config): void {
   const git: GitApi = {
     status: (repo) => gitStatus(ctx, repo, repo.branch),
     init: (repo) => gitInit(ctx, repo, repo.branch),
-    push: (repo, notesDir, message) => gitPush(ctx, repo, notesDir, message, {
+    push: (repo, notesDir, message, overwrite) => gitPush(ctx, repo, notesDir, message, {
       name: readSettings().gitAuthorName ?? '',
       email: readSettings().gitAuthorEmail ?? '',
-    }),
+    }, overwrite),
     pull: (repo, notesDir, force) => gitPull(ctx, repo, notesDir, force),
     sync: (repo) => gitSync(ctx, repo),
   }

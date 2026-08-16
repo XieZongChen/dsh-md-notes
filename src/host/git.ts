@@ -336,18 +336,61 @@ async function ensureBranch(ctx: Context, repo: ResolvedRepo): Promise<GitRunRes
 }
 
 /**
+ * Compare the remote's notes (clone target dir, already fetched) against the
+ * local notes dir: returns names of notes that exist on BOTH sides with
+ * different content — pushing would overwrite the remote's newer version.
+ */
+export async function changedNotes(remoteDir: string, localDir: string): Promise<string[]> {
+  let names: string[] = []
+  try {
+    names = (await readdir(remoteDir)).filter((n) => n.endsWith('.md'))
+  } catch {
+    return []
+  }
+  const changed: string[] = []
+  for (const name of names) {
+    const localPath = join(localDir, name)
+    if (!existsSync(localPath)) continue // local lacks it → no overwrite conflict
+    try {
+      const [a, b] = await Promise.all([readFile(join(remoteDir, name), 'utf8'), readFile(localPath, 'utf8')])
+      if (a !== b) changed.push(name)
+    } catch {
+      // unreadable → ignore
+    }
+  }
+  return changed
+}
+
+/**
  * Push a workspace's notes into the repo target directory: copy the local
  * `.md` notes into `<repo>/<subdir>` (overwrite), stage that subdir, commit,
- * and push `branch`. Conflicts surface to the caller.
+ * and push `branch`. Before copying, when `overwrite` is false, any note that
+ * exists on the remote (fetched clone) with different content blocks the push
+ * and returns `code: 'remote-changed'` with the changed names — the caller
+ * (the UI) then asks the user whether to overwrite and retries with
+ * `overwrite: true`.
  */
 export async function gitPush(
-  ctx: Context, repo: ResolvedRepo, notesDir: string, message: string, author: { name: string; email: string },
-): Promise<{ ok: boolean; error?: string; code?: string }> {
+  ctx: Context, repo: ResolvedRepo, notesDir: string, message: string,
+  author: { name: string; email: string }, overwrite = false,
+): Promise<{ ok: boolean; error?: string; code?: string; changed?: string[] }> {
   await gitInit(ctx, repo, repo.branch)
   const branch = await ensureBranch(ctx, repo)
   if (branch.code !== 0) return { ok: false, error: `同步仓库分支失败: ${branch.stderr || branch.stdout}` }
-  // Copy the workspace's notes into the repo target directory.
+  // Detect remote-vs-local conflicts before touching anything.
   const target = repoTargetDir(repo)
+  if (!overwrite) {
+    const changed = await changedNotes(target, notesDir)
+    if (changed.length > 0) {
+      return {
+        ok: false,
+        code: 'remote-changed',
+        changed,
+        error: `远端有更新：${changed.join('、')}，是否用本地版本覆盖？`,
+      }
+    }
+  }
+  // Copy the workspace's notes into the repo target directory.
   try {
     await syncNotes(notesDir, target, true)
   } catch (error) {
