@@ -5,6 +5,13 @@
 本项目版本遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 仅记录用户可见的功能性改动（不记录文档、代码重构、构建/工具链调整）。
 
+## [0.2.0] - 2026-08-16
+
+### Added
+
+- UI 文案接入 dsh 的 locale 机制：全部界面文案（侧边栏入口、操作栏 tooltip、两个弹窗、按钮）抽成
+  `md-notes` 命名空间字典，跟随宿主应用语言设置在中/英之间自动切换。
+
 ## [0.1.1] - 2026-08-16
 
 仅文档发布，无功能性改动。README 与 CHANGELOG 默认语言切换为英文（中文版见 `README.zh.md` / `CHANGELOG.zh.md`）。

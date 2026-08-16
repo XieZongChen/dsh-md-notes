@@ -8,6 +8,7 @@
  */
 
 import * as React from 'react'
+import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NotesStore } from '../store.ts'
 import { ICON_URL } from '../api.ts'
 import styles from './notes-entry.module.css'
@@ -17,13 +18,15 @@ export interface NotesEntryProps {
   wide: boolean
   /** Shared store; opening the manager sets `managerOpen`. */
   store: NotesStore
+  /** Framework-injected locale seat (`md-notes` namespace). */
+  t: TranslateNS<'md-notes'>
 }
 
 /**
  * The sidebar entry button.
  */
 export function NotesEntry(props: NotesEntryProps): React.ReactElement {
-  const { wide, store } = props
+  const { wide, store, t } = props
   const rowRef = React.useRef<HTMLDivElement | null>(null)
 
   React.useEffect(() => {
@@ -49,8 +52,8 @@ export function NotesEntry(props: NotesEntryProps): React.ReactElement {
       <button
         type="button"
         className={wide ? styles.entry : `${styles.entry} ${styles.entryRail}`}
-        title="MD 笔记"
-        aria-label="MD 笔记"
+        title={t('sidebar.entry')}
+        aria-label={t('sidebar.entry')}
         onClick={() => store.set({ managerOpen: true })}
       >
         <img
@@ -60,7 +63,7 @@ export function NotesEntry(props: NotesEntryProps): React.ReactElement {
           alt=""
           className={styles.entrySvg}
         />
-        {wide ? <span className={styles.entryLabel}>笔记</span> : null}
+        {wide ? <span className={styles.entryLabel}>{t('sidebar.label')}</span> : null}
       </button>
     </div>
   )

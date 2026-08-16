@@ -47,6 +47,7 @@ dsh-md-notes/
             ├── api.ts            # Host HTTP API 封装
             ├── store.ts          # NotesStore（pub/sub 共享状态）
             ├── markdown.ts       # markdown 渲染器（纯函数）
+            ├── locales/          # i18n：zh.ts（源字典）/ en.ts（同键映射）+ LocaleNamespaceMap 合并
             ├── styles.module.css # 共享样式（mask/dialog/btn/input 等）
             ├── NotesEntry/       # 侧边栏入口（NotesEntry.tsx + notes-entry.module.css）
             ├── NoteAction/       # 记入笔记图标（NoteAction.tsx + note-action.module.css）
@@ -84,11 +85,16 @@ dsh-md-notes/
 
 ## 4. Client 半（src/client/）
 
-- 入口 `index.ts`（无 JSX，用 `React.createElement`）：`inject: ['slots']`；`apply` 里创建共享
-  `NotesStore` 并注册三个 slot：
+- 入口 `index.ts`（无 JSX，用 `React.createElement`）：`inject: ['slots', 'locale']`；`apply` 里
+  注册 `md-notes` locale 字典（`ctx.locale.register`），创建共享 `NotesStore` 并注册三个 slot
+  （每个注册带 `locale: 'md-notes'`，组件 props 自动注入 `t`）：
   - `sidebar.footer.action` → 侧边栏入口（独占一行、位于底部区域最上一行，JS 强制父 flex 换行）；
   - `conversation.chat.assistant-actions` → 记入笔记图标；
   - `shell.overlay` → 笔记管理器（列表 + 编辑/预览）与记入笔记选择弹窗。
+- **i18n**：所有 UI 文案放在 `features/locales/`（`zh.ts` 为源字典、`en.ts` 用映射类型强制同键，
+  在 `@deepseek-ai/dsh-client-ui-slots` 的 `LocaleNamespaceMap` 里合并 `md-notes` 命名空间）；
+  组件从 slot 注入的 `t(key, params)` 读取文案，随 dsh 语言设置（`locale/change`）自动重渲染；
+  flash/status 等状态只存 key，渲染时才翻译。占位符用 `{name}` 模板。
 - 图标：`<img src="/plugins/md-notes/icon.svg">` 直接引用 host serve 的 SVG 文件（`api.ts` 导出
   `ICON_URL`），不内联任何 path —— 单一事实来源，改 `assets/dsh-md-notes.svg` 即生效。
 - 目录约定：功能模块放在 `features/` 下，**每个功能一个子目录**，`index.tsx` 与 `styles.module.css` 成对；

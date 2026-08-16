@@ -5,6 +5,13 @@
 This project follows [Semantic Versioning](https://semver.org/).
 Only user-visible functional changes are recorded (no documentation, code refactoring, or build/toolchain adjustments).
 
+## [0.2.0] - 2026-08-16
+
+### Added
+
+- UI copy now follows dsh's locale: all interface texts (sidebar entry, action tooltip, both popups, buttons)
+  moved to the `md-notes` dictionary namespace — they switch between Chinese/English together with the host app's language.
+
 ## [0.1.1] - 2026-08-16
 
 Docs-only release — no functional changes. README and CHANGELOG now default to English, with Chinese versions available via `README.zh.md` / `CHANGELOG.zh.md`.

@@ -22,6 +22,7 @@ const targets = [
   'packages/client/ui-sidebar',
   'packages/client/ui-layout',
   'packages/client/ui-primitives',
+  'packages/client/locale',
   'packages/core/session',
   'packages/session-query/session-query',
   'packages/sandbox/sandbox-policy',
