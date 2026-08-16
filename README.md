@@ -11,21 +11,26 @@
 <p align="center">
   DSH third-party plugin (bundle): <b>MD Notes Manager</b>
   <br />
-  <a href="docs/usage.md">User Guide</a> · <a href="docs/features.md">Features</a> · <a href="docs/architecture.md">Architecture</a> · <a href="CHANGELOG.md">Changelog</a>
+  <a href="docs/usage.md">User Guide</a> · <a href="docs/features.md">Features</a> · <a href="docs/architecture.md">Architecture</a> · <a href="docs/TODO.md">Roadmap</a> · <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 ---
 
 ## Overview
 
-A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). It adds an **MD Notes** entry to the web sidebar and a **"Add to note"** action to every assistant answer, so you can capture conversations into plain `.md` files that stay editable anywhere.
+A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). It brings a full **MD notes manager** into the web UI and a **"Add to note"** action to every assistant answer — notes are plain `.md` files under each workspace's `.dsh-notes/`, so they stay editable in any editor, and optionally sync to Git.
 
-**Who it's for**: DSH web users who want local, file-based notes (no database, no cloud) — copy a conversation into a note with one click, then keep editing the `.md` file in any editor.
+**Who it's for**: DSH web users who want local, file-based notes (no database, no cloud) — capture a conversation into a note with one click, keep editing the `.md` anywhere, and back up / sync with a Git repository.
 
-- **Sidebar notes entry** → notes manager (list + edit/preview)
-- **Assistant-message action** (next to the copy button) → append that conversation to a note
-- Notes are stored as plain `.md` files, editable directly on the filesystem
-- UI copy follows dsh's language setting (Chinese / English)
+**Current features**:
+
+- **Sidebar notes entry** → full-screen notes manager: per-workspace note list (grouped, collapsible), markdown edit/preview, save, delete (in-page confirm), create with one click.
+- **Assistant-message action** (next to copy) → pick or create a note and append that conversation (user question + answer) to it, with localized section labels.
+- **Git sync** (optional, URL-driven): **shared repo** mode (one repo for all workspaces, per-workspace folders) or **own repos** mode (per workspace: URL + branch + subpath). Push = mirror-sync (deletions included), Update = pull with conflict confirmation, auto-pull on open, merge-remote-and-retry.
+- **Settings panel** (dsh Settings → MD Notes): mode, repo URL/branch/subpath, auto-pull, commit author — with dsh-styled form controls.
+- **Theme & i18n**: token-based colors (light/dark), UI copy follows dsh's language (Chinese / English), error messages localized.
+
+**On the roadmap** (see [docs/TODO.md](docs/TODO.md)): restyle the note picker with cross-workspace capture, reference notes as conversation context, and visual Git conflict rendering & resolution.
 
 ## Compatibility
 

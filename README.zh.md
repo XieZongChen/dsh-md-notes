@@ -11,21 +11,26 @@
 <p align="center">
   DSH 第三方插件（bundle）：<b>MD 笔记管理</b>
   <br />
-  <a href="docs/usage.zh.md">使用文档</a> · <a href="docs/features.md">功能设计</a> · <a href="docs/architecture.md">架构设计</a> · <a href="CHANGELOG.zh.md">变更记录</a>
+  <a href="docs/usage.zh.md">使用文档</a> · <a href="docs/features.md">功能设计</a> · <a href="docs/architecture.md">架构设计</a> · <a href="docs/TODO.md">路线规划</a> · <a href="CHANGELOG.zh.md">变更记录</a>
 </p>
 
 ---
 
 ## 概述（Overview）
 
-一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的笔记插件：在 Web 侧边栏增加 **MD 笔记** 入口，并在每条回答下方提供「发送到笔记」操作，把对话一键记入普通 `.md` 文件，随时可用任意编辑器打开修改。
+一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的笔记插件：在 Web 侧边栏提供完整的 **MD 笔记管理器**，并在每条回答下方提供「发送到笔记」操作。笔记是各工作区 `.dsh-notes/` 目录下的普通 `.md` 文件——任何编辑器都能打开修改，还可选同步到 Git 仓库。
 
-**适合谁**：DSH Web 用户，想要本地、基于文件的笔记（无数据库、无云）——一键把对话存进笔记，之后在任意编辑器里继续编辑。
+**适合谁**：DSH Web 用户，想要本地、基于文件的笔记（无数据库、无云）——一键把对话存进笔记，之后在任意编辑器里继续编辑，并可用 Git 仓库备份 / 多端同步。
 
-- **侧边栏笔记入口** → 笔记管理界面（列表 + 编辑/预览）
-- **回答操作栏**（复制按钮旁）→ 把该段对话记入指定笔记
-- 笔记以普通 `.md` 文件存储，可直接在文件系统编辑
-- UI 文案跟随 dsh 语言设置（中 / 英）
+**当前功能**：
+
+- **侧边栏笔记入口** → 全屏笔记管理器：按工作区分组的笔记列表（可折叠）、markdown 编辑/预览、保存、删除（页面内确认）、一键新建。
+- **回答操作栏**（复制按钮旁）→ 选择或新建一篇笔记，把该段对话（用户提问 + 回答）追加进去，分段标签跟随界面语言。
+- **Git 同步**（可选，URL 驱动）：**共享仓库**模式（一个仓库管所有工作区，按工作区分子目录）或**独立仓库**模式（每工作区：URL + 分支 + 子路径）。推送 = 镜像同步（含删除）；更新 = 拉取 + 冲突确认；打开笔记自动拉取；推送被拒可「合并远端并重试」。
+- **设置面板**（dsh 设置 → MD 笔记）：模式、仓库 URL / 分支 / 子路径、自动拉取、提交作者——表单控件与 dsh 原生一致。
+- **主题与国际化**：token 化配色适配明暗主题；UI 文案跟随 dsh 语言（中 / 英）；错误信息本地化。
+
+**规划中**（见 [docs/TODO.md](docs/TODO.md)）：记入笔记弹窗样式改版并支持跨工作区记入、笔记作为对话上下文可被引用、Git 冲突渲染与可视化解决。
 
 ## 兼容性（Compatibility）
 
