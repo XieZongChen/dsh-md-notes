@@ -63,9 +63,9 @@
   flex: none;
   font-size: 10px;
   line-height: 14px;
-  padding: 1px 6px;
+  padding: 2px 6px;
   border-radius: 999px;
   color: var(--dsw-alias-state-warn-label, #7a5c00);
-  background: var(--dsw-alias-state-warn-primary, #f0b429);
+  background: color-mix(in srgb, var(--dsw-alias-state-warn-primary, #f0b429) 20%, transparent);
   white-space: nowrap;
 }
