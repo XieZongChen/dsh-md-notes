@@ -57,6 +57,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     description: string
     confirmLabel: string
     cancelLabel: string
+    danger?: boolean
     onConfirm: () => void
   } | null>(null)
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
@@ -179,14 +180,22 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   }
 
   const remove = (name: string, wsId: string): void => {
-    if (window.confirm(t('manager.deleteConfirm', { name }))) {
-      void api('delete', { name, workspaceId: wsId }).then((res) => {
-        if (res.ok) {
-          if (selected === name && selectedWsId === wsId) { setSelected(null); setContent('') }
-          refresh()
-        }
-      })
-    }
+    setConfirmState({
+      title: t('manager.deleteTitle'),
+      description: t('manager.deleteConfirm', { name }),
+      confirmLabel: t('manager.delete'),
+      cancelLabel: t('git.cancel'),
+      danger: true,
+      onConfirm: () => {
+        setConfirmState(null)
+        void api('delete', { name, workspaceId: wsId }).then((res) => {
+          if (res.ok) {
+            if (selected === name && selectedWsId === wsId) { setSelected(null); setContent('') }
+            refresh()
+          }
+        })
+      },
+    })
   }
 
   const doUpdate = (wsId: string, force: boolean): void => {
@@ -237,7 +246,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       setConfirmState({
         title: t('git.updateConfirmTitle'),
         description: t('git.updateConfirm', { count: skipped }),
-        confirmLabel: t('git.overwriteRemote'),
+        confirmLabel: t('git.overwriteLocal'),
         cancelLabel: t('git.cancel'),
         onConfirm: () => { setConfirmState(null); doUpdate(wsId, true) },
       })
@@ -499,7 +508,11 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
               <button type="button" className={shared.btn} onClick={() => setConfirmState(null)}>
                 {confirmState.cancelLabel}
               </button>
-              <button type="button" className={styles.confirmBtn} onClick={confirmState.onConfirm}>
+              <button
+                type="button"
+                className={confirmState.danger === true ? styles.confirmBtnDanger : styles.confirmBtn}
+                onClick={confirmState.onConfirm}
+              >
                 {confirmState.confirmLabel}
               </button>
             </>

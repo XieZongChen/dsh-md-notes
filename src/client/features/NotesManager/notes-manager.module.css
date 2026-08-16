@@ -468,3 +468,17 @@
 .confirmBtn:hover {
   filter: brightness(1.08);
 }
+
+.confirmBtnDanger {
+  height: 30px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dsw-alias-danger, #d9534f);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+.confirmBtnDanger:hover {
+  filter: brightness(1.08);
+}
