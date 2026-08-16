@@ -140,6 +140,9 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
           return
         }
         setRemoteChanged(null)
+        // The pull may have brought new notes down — re-list so the left
+        // panel shows them without reopening the manager.
+        refresh()
         void api('read', { name, workspaceId: wsId }).then((r2) => {
           if (r2.ok && isCurrent(wsId, name)) setContent(r2.content ?? '')
           setContentLoading(false)
@@ -206,6 +209,9 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       if (res.ok) {
         setRemoteChanged(null)
         refreshStatus(wsId)
+        // The pull may have brought new notes down — re-list so the left
+        // panel shows them immediately.
+        refresh()
         if (selected && isCurrent(wsId, selected)) {
           void api('read', { name: selected, workspaceId: wsId }).then((r) => {
             if (r.ok && isCurrent(wsId, selected)) setContent(r.content ?? '')
@@ -234,6 +240,9 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       const skipped = res.skipped ?? 0
       if (skipped === 0) {
         // Nothing differed → the conservative pull already brought everything.
+        // Re-list so newly-pulled notes appear in the left panel.
+        setRemoteChanged(null)
+        refresh()
         if (selected && isCurrent(wsId, selected)) {
           void api('read', { name: selected, workspaceId: wsId }).then((r) => {
             if (r.ok && isCurrent(wsId, selected)) setContent(r.content ?? '')
