@@ -131,9 +131,7 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
     <div className={styles.section}>
       <div className={styles.tipPanel}>
         <div className={styles.tipTitle}>{t('git.tipTitle')}</div>
-        <div className={styles.tipBody}>
-          {mode === 'shared' ? t('git.tipShared') : mode === 'own' ? t('git.tipOwn') : t('git.tipOff')}
-        </div>
+        <div className={styles.tipBody}>{t('git.tipWhere')}</div>
       </div>
       <div className={styles.row}>
         <label className={styles.field}>

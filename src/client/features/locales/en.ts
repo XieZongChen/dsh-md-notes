@@ -93,8 +93,6 @@ export const en: { [K in keyof typeof zh]: string } = {
   'git.suggest': 'Suggest',
   'manager.noWorkspaces': 'Create a workspace in the dsh sidebar, or configure a repo in settings, to use notes',
   'git.tipTitle': 'Where notes are saved',
-  'git.tipOff': "Git sync off: notes are plain .md files under each workspace's `.dsh-notes` directory, editable with any editor.",
-  'git.tipShared': "Shared repo mode: notes still live in each workspace's `.dsh-notes`; pushing syncs them into the shared repo's main branch under a per-workspace folder.",
-  'git.tipOwn': "Own repo mode: notes still live in each workspace's `.dsh-notes`; pushing syncs them into the workspace's configured repo branch/subpath.",
+  'git.tipWhere': "Notes always live locally under each workspace's `<workspace>/.dsh-notes`; git sync only pushes them to / pulls them from a remote repo and never changes where notes are stored locally.",
 
 }
