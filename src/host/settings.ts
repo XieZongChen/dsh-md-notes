@@ -50,8 +50,6 @@ export interface MdNotesSettings {
   gitMode?: 'off' | 'on' | 'shared' | 'own'
   gitCentral?: CentralSettings
   gitRepos?: Record<string, RepoSettings>
-  /** Legacy default branch (used when a repo record omits `branch`). */
-  gitBranch?: string
   gitAutoPull?: boolean
   gitAuthorName?: string
   gitAuthorEmail?: string
@@ -72,7 +70,6 @@ export const MdNotesSettingsSchema: s<MdNotesSettings> = s.object({
     remote: s.string().required(false),
     authorized: s.boolean().required(false),
   })).required(false),
-  gitBranch: s.string().required(false),
   gitAutoPull: s.boolean().required(false),
   gitAuthorName: s.string().required(false),
   gitAuthorEmail: s.string().required(false),
@@ -89,7 +86,6 @@ export function mergeSettings(
     gitMode?: string
     gitCentralPath?: string
     gitRepos?: Record<string, RepoSettings>
-    gitBranch?: string
     gitAutoPull?: boolean
     gitAuthorName?: string
     gitAuthorEmail?: string
@@ -109,7 +105,6 @@ export function mergeSettings(
       authorized: user.gitCentral?.authorized,
     },
     gitRepos: { ...(config.gitRepos ?? {}), ...(user.gitRepos ?? {}) },
-    gitBranch: user.gitBranch ?? config.gitBranch ?? 'main',
     gitAutoPull: user.gitAutoPull ?? config.gitAutoPull ?? true,
     gitAuthorName: user.gitAuthorName ?? config.gitAuthorName ?? '',
     gitAuthorEmail: user.gitAuthorEmail ?? config.gitAuthorEmail ?? '',

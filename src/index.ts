@@ -42,8 +42,6 @@ export interface Config {
   readonly gitCentralPath?: string
   /** Per-workspace repos (L2 defaults, keyed by workspace id); L3 overrides per key. */
   readonly gitRepos?: Record<string, import('./host/settings.ts').RepoSettings>
-  /** Default branch when a repo record omits `branch`. */
-  readonly gitBranch?: string
   /** Pull remote before opening a note (default true). */
   readonly gitAutoPull?: boolean
   /** Commit author name; empty uses git's global config. */
@@ -66,7 +64,6 @@ export const Config: s<Config> = s.object({
     remote: s.string().required(false),
     authorized: s.boolean().required(false),
   })).default({}),
-  gitBranch: s.string().default('main'),
   gitAutoPull: s.boolean().default(true),
   gitAuthorName: s.string().default(''),
   gitAuthorEmail: s.string().default(''),
@@ -198,23 +195,6 @@ export function apply(ctx: Context, config: Config): void {
     }
   }
 
-  const pickDir = async (): Promise<{ ok: boolean; dir?: string | null; error?: string }> => {
-    const picker = ctx.get('directoryPicker') as
-      | { capability(): { kind: string; pick(signal: AbortSignal): Promise<string | null> } }
-      | undefined
-    if (picker === undefined) return { ok: false, error: '目录选择器不可用' }
-    const capability = picker.capability()
-    if (capability.kind !== 'native') return { ok: false, error: '当前环境的目录选择器不支持直接选择' }
-    const ac = new AbortController()
-    const timer = setTimeout(() => ac.abort(), 30_000)
-    try {
-      const dir = await capability.pick(ac.signal)
-      return { ok: true, dir }
-    } finally {
-      clearTimeout(timer)
-    }
-  }
-
   const deps: NotesApiDeps = {
     defaultDir,
     resolveDir,
@@ -228,7 +208,6 @@ export function apply(ctx: Context, config: Config): void {
       const registry = workspaces()
       return registry !== undefined && registry.list().length > 0
     },
-    pickDir,
     git,
     setAuthorized,
     sessionQuery: ctx.get('sessionQuery'),

@@ -135,7 +135,7 @@ export function sharedSubdir(ws: WorkspaceInfo): string {
  * - `gitMode: 'shared'` → the shared repo (`main` branch, per-workspace
  *   folder) when configured and authorized.
  * - `gitMode: 'own'` → the workspace's own repo (branch defaults to
- *   `settings.gitBranch`, subpath defaults to the repo root).
+ *   `main`, subpath defaults to the repo root).
  * - otherwise → undefined (git off / nothing configured).
  */
 export function resolveWorkspaceRepo(settings: MdNotesSettings, ws: WorkspaceInfo): ResolvedRepo | undefined {
@@ -162,7 +162,7 @@ export function resolveWorkspaceRepo(settings: MdNotesSettings, ws: WorkspaceInf
       kind: 'own',
       repoDir,
       subdir: own.subpath ?? '',
-      branch: own.branch ?? settings.gitBranch ?? 'main',
+      branch: own.branch ?? 'main',
       remote: own.remote ?? '',
       external,
       authorized: external ? own.authorized === true : true,

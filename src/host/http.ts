@@ -82,8 +82,6 @@ export interface NotesApiDeps {
   suggest(): Record<string, unknown>
   /** Whether the workspace registry has at least one real workspace. */
   hasWorkspaces(): boolean
-  /** Open the host directory picker; null = user cancelled. */
-  pickDir(): Promise<{ ok: boolean; dir?: string | null; error?: string }>
   /** Bound git operations. */
   git: GitApi
   /** Persist the authorization flag for a workspace repo (or the central repo). */
@@ -198,13 +196,10 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'gitSuggest': {
       return { ok: true, suggestions: deps.suggest() }
     }
-    case 'gitPickDir': {
-      return deps.pickDir()
-    }
     case 'gitConfig': {
       // Whitelist the settings keys this API may write (L3), dropping anything else.
       const allowed = [
-        'gitMode', 'gitCentral', 'gitRepos', 'gitBranch', 'gitAutoPull',
+        'gitMode', 'gitCentral', 'gitRepos', 'gitAutoPull',
         'gitAuthorName', 'gitAuthorEmail',
       ] as const
       const patch: Record<string, unknown> = {}

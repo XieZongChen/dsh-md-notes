@@ -17,14 +17,14 @@
   - 二选一且互斥；`gitMode: 'on'`（旧值）自动归一化：有共享仓库 → shared，否则 → own
 - ✅ 三层配置模型：schema 默认 → cordis Config（L2 yaml）→ settings 命名空间 `md-notes`（L3），host 侧逐层合并
 - ✅ git 执行（subprocess 收集输出）+ **授权门禁**：沙箱外仓库必须 `authorized=true`，持久化于每仓库记录
-- ✅ API：`gitStatus` / `gitInit` / `gitPush` / `gitPull` / `gitAuthorize` / `gitRevoke` / `gitConfig` / `gitSync` / `gitSettings` / `gitPickDir`
+- ✅ API：`gitStatus` / `gitInit` / `gitPush` / `gitPull` / `gitAuthorize` / `gitRevoke` / `gitConfig` / `gitSync` / `gitSettings`
 - ✅ **推送 = 同步**：把 `<ws>/.dsh-notes` 的 `.md` 复制到仓库目标目录（`<repo>/<subdir>`，subdir 空 = 仓库根），`git add <subdir>` → commit → push `branch` → 回拉
 - ✅ **更新 = 反向同步**：pull 仓库后把 `<repo>/<subdir>` 的 `.md` 复制回本地，**不覆盖本地已修改的文件**（保守，冲突交用户）
 - ✅ 提交身份解析：仓库自身 git 配置优先 → 插件 `gitAuthorName/Email` 兜底 → 都没有时明确报错
 - ✅ non-fast-forward 冲突：`gitPush` 返回错误码 + client「合并远端并重试」（`gitSync`，用户触发，不自动处理）
 - ✅ session→工作区路由、分组 `list`（多工作区视图）
 - ✅ Client 管理器：按工作区分组、编辑器头部 更新/推送、commit 弹层面板、打开笔记自动拉取（受 `gitAutoPull` 开关控制）、底部状态行（分支/子路径/未提交/最近提交）、冲突解决 UI、i18n 中英
-- ✅ **dsh 设置面板「MD 笔记」分区**（`settings.section`）：三态模式选择（off/shared/own）+ 各模式互斥的配置区（共享仓库区 / 每工作区三件套）+ 分支/自动拉取/作者 + PathPicker 选仓库路径（`gitPickDir`）+ 授权/撤销
+- ✅ **dsh 设置面板「MD 笔记」分区**（`settings.section`）：三态模式选择（off/shared/own）+ 各模式互斥的配置区（共享仓库区 / 每工作区三件套）+ 自动拉取/作者 + 仓库路径/分支/子路径文本输入 + 授权/撤销
 - ✅ **授权按钮 UI**（设置面板内，shared + 各工作区仓库）：`gitAuthorize` / `gitRevoke`，持久化
 
 ### 未实现（slice 3+）
@@ -37,7 +37,6 @@
 
 - ⏳ 设置面板三态模式在真实运行中的渲染与保存（待重启验证）
 - ⏳ 共享仓库模式下多工作区子目录的首次推送（`--allow-unrelated-histories` 兜底路径）
-- ⏳ `gitPickDir` 目录选择器在真实浏览器的表现
 
 ## 1. 目标
 
@@ -70,8 +69,7 @@
 | API 前缀 | `route` | —（部署级） | `/plugins/md-notes` | HTTP API 前缀；图标由 `<route>/icon.svg` 提供 |
 | Git 模式 | `gitMode` | `gitMode` | `'off'` | `'off'` 无 git；`'shared'` 共享仓库；`'own'` 独立仓库。旧值 `'on'` 归一化为 shared/own |
 | 共享仓库 | `gitCentralPath` | `gitCentral` | `{}` | shared 模式：`{ path?, remote, authorized }`；所有工作区推送到其 **main** 分支 + 工作区名子目录 |
-| 工作区独立仓库 | — | `gitRepos` | `{}` | own 模式：`{ [workspaceId]: { path, branch?, subpath?, remote, authorized } }`；分支默认 `gitBranch`（main）、子路径默认仓库根 |
-| 默认分支 | `gitBranch` | `gitBranch` | `'main'` | own 模式下工作区未显式设分支时的默认 |
+| 工作区独立仓库 | — | `gitRepos` | `{}` | own 模式：`{ [workspaceId]: { path, branch?, subpath?, remote, authorized } }`；分支默认 main、子路径默认仓库根 |
 | 自动拉取 | `gitAutoPull` | `gitAutoPull` | `true` | 打开笔记时先拉取远端版本（§5.4） |
 | 作者名 | `gitAuthorName` | `gitAuthorName` | `''` | 空 = 用 git 全局配置（`user.name`） |
 | 作者邮箱 | `gitAuthorEmail` | `gitAuthorEmail` | `''` | 空 = 用 git 全局配置（`user.email`） |
@@ -83,8 +81,8 @@
 
 1. **dsh 设置面板「MD 笔记」分区**（`settings.section`，主入口）：
    - 三态模式选择（关闭 / 共享仓库 / 独立仓库）；
-   - **共享仓库**模式：仓库路径（PathPicker）+ 远程 + 授权；
-   - **独立仓库**模式：每工作区 仓库路径（PathPicker）+ 分支 + 仓库内子路径 + 远程 + 授权；
+   - **共享仓库**模式：仓库路径（文本输入）+ 远程 + 授权；
+   - **独立仓库**模式：每工作区 仓库路径 + 分支 + 仓库内子路径 + 远程 + 授权（文本输入）；
    - 全局：默认分支、自动拉取、作者名/邮箱。
 2. **cordis Config（yaml）**：部署级默认与开关；设置面板未覆盖时生效。
 
@@ -131,7 +129,7 @@ dsh 的命令沙箱以**会话工作区（cwd）为边界**：工作区内的文
 | 字段 | 默认 | 说明 |
 |---|---|---|
 | `path` | —（必填才启用） | 该工作区的 git 仓库目录 |
-| `branch` | `gitBranch`（main） | 推送/拉取的分支 |
+| `branch` | `'main'` | 推送/拉取的分支 |
 | `subpath` | `''`（仓库根） | 仓库内子路径；笔记同步到 `<repo>/<subpath>/` |
 | `remote` | `''` | 远程 URL；空 = 仅本地提交 |
 | `authorized` | — | 沙箱外仓库的授权标记 |
@@ -184,7 +182,6 @@ v3 起笔记位置**恒定** `<ws>/.dsh-notes`：切换模式、配置/修改仓
 | `gitSync` | `{ workspaceId? }` | 用户触发：合并远端（`--allow-unrelated-histories` 兜底） |
 | `gitConfig` | 白名单 L3 keys | 保存设置（含 `gitMode`/`gitCentral`/`gitRepos` 三件套） |
 | `gitSettings` | — | 返回当前 L3 设置（设置表单用） |
-| `gitPickDir` | — | 打开 host 目录选择器（PathPicker 用，选**仓库路径**） |
 
 - **git 操作一律仓库级**：更新/推送作用于整个目标仓库（`add` 范围 = 该工作区子目录
   或仓库根），不是单个笔记文件。
@@ -227,8 +224,8 @@ v3 起笔记位置**恒定** `<ws>/.dsh-notes`：切换模式、配置/修改仓
 - `settings.section` 注册（`id: 'md-notes'`，order 10）。
 - **模式三态选择**（select）：
   - **关闭**：提示"笔记仅保存在本地 `.dsh-notes`，不与 git 同步"；
-  - **共享仓库**：仓库路径（PathPicker）+ 远程 + 授权；提示"推到 main 分支 + 工作区名子目录"；
-  - **独立仓库**：每工作区 仓库路径（PathPicker）+ 分支 + 子路径 + 远程 + 授权；
+  - **共享仓库**：仓库路径（文本输入）+ 远程 + 授权；提示"推到 main 分支 + 工作区名子目录"；
+  - **独立仓库**：每工作区 仓库路径 + 分支 + 子路径 + 远程 + 授权（文本输入）；
     提示"推送 = 同步到该分支/子路径；更新 = 拉回（不覆盖本地修改）"。
 - 全局字段：默认分支、自动拉取、作者名/邮箱；保存写 L3 命名空间。
 - **tip 面板**（顶部，随模式切换文案）：说明笔记保存位置与同步目标。

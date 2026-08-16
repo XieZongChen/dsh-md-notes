@@ -9,8 +9,7 @@
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { GitSettingsData, WorkspaceNotes } from '../api.ts'
-import { api, gitAuthorizeApi, gitConfigApi, gitPickDirApi, gitRevokeApi, gitSettingsApi } from '../api.ts'
-import { PathPicker } from '../components/PathPicker/PathPicker.tsx'
+import { api, gitAuthorizeApi, gitConfigApi, gitRevokeApi, gitSettingsApi } from '../api.ts'
 import styles from './settings-section.module.css'
 
 export interface SettingsSectionProps {
@@ -169,15 +168,6 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
             <option value="own">{t('git.modeOwn')}</option>
           </select>
         </label>
-        <label className={styles.field}>
-          <span className={styles.label}>{t('git.branch')}</span>
-          <input
-            className={styles.input}
-            placeholder={t('git.branchPlaceholder')}
-            value={settings.gitBranch ?? 'main'}
-            onChange={(e) => set({ gitBranch: e.target.value })}
-          />
-        </label>
       </div>
       <div className={styles.hint}>{mode === 'off' ? t('git.modeOffHint') : mode === 'shared' ? t('git.modeSharedHint') : t('git.modeOwnHint')}</div>
 
@@ -215,16 +205,11 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
           <div className={styles.row}>
             <label className={styles.field}>
               <span className={styles.label}>{t('git.repoPath')}</span>
-              <PathPicker
+              <input
+                className={styles.input}
+                placeholder={t('git.repoPathPlaceholder')}
                 value={settings.gitCentral?.path ?? ''}
-                placeholder={t('git.pickPath')}
-                disabled={busy}
-                onPick={() => {
-                  void gitPickDirApi().then((res) => {
-                    if (res.ok && typeof res.dir === 'string') setCentral({ path: res.dir })
-                    else if (!res.ok) setMsg(t('git.failed', { error: res.error ?? '' }))
-                  })
-                }}
+                onChange={(e) => setCentral({ path: e.target.value })}
               />
             </label>
             <label className={styles.field}>
@@ -262,16 +247,11 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
                 <div key={ws.workspaceId} className={styles.wsBlock}>
                   <div className={styles.wsName}>{ws.name}</div>
                   <div className={styles.wsRow}>
-                    <PathPicker
+                    <input
+                      className={styles.input}
+                      placeholder={t('git.repoPathPlaceholder')}
                       value={repo?.path ?? ''}
-                      placeholder={t('git.pickPath')}
-                      disabled={busy}
-                      onPick={() => {
-                        void gitPickDirApi().then((res) => {
-                          if (res.ok && typeof res.dir === 'string') setWs(ws.workspaceId, { path: res.dir })
-                          else if (!res.ok) setMsg(t('git.failed', { error: res.error ?? '' }))
-                        })
-                      }}
+                      onChange={(e) => setWs(ws.workspaceId, { path: e.target.value })}
                     />
                     <input
                       className={styles.input}

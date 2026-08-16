@@ -42,7 +42,6 @@ export interface GitSettingsData {
   gitMode?: 'off' | 'on' | 'shared' | 'own'
   gitCentral?: { path?: string; remote?: string; authorized?: boolean }
   gitRepos?: Record<string, RepoGitSettings>
-  gitBranch?: string
   gitAutoPull?: boolean
   gitAuthorName?: string
   gitAuthorEmail?: string
@@ -126,11 +125,6 @@ export interface GitSuggestData {
 
 export function gitSuggestApi(): Promise<ApiResult> {
   return api('gitSuggest')
-}
-
-/** Open the host directory picker (null when the user cancelled). */
-export function gitPickDirApi(): Promise<ApiResult> {
-  return api('gitPickDir')
 }
 
 /** Authorize (or revoke) a workspace repo — or the central repo when no id. */
