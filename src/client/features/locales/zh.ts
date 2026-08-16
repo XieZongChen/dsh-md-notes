@@ -50,7 +50,7 @@ export const zh = {
   'git.push': '推送',
   'git.commitPlaceholder': '提交信息（可留空）',
   'git.confirmPush': '提交并推送',
-  'git.pushRemoteChanged': '远端有以下笔记更新：{names}\n是否用本地版本覆盖远端？',
+  'git.pushRemoteChanged': '远端有以下笔记与本地不同或本地已删除：{names}\n是否用本地版本覆盖/删除远端？',
   'git.pushCancelled': '已取消推送，远端保持不变',
   'git.cancel': '取消',
   'git.notConfigured': '未配置 git 仓库',

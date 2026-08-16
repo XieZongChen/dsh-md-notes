@@ -17,7 +17,7 @@
 import { join, resolve, sep } from 'node:path'
 import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync, existsSync, realpathSync } from 'node:fs'
-import { mkdir, readdir, readFile, copyFile, stat } from 'node:fs/promises'
+import { mkdir, readdir, readFile, copyFile, stat, rm } from 'node:fs/promises'
 import type { Context } from '@deepseek-ai/cordis'
 import type { MdNotesSettings } from './settings.ts'
 
@@ -362,13 +362,53 @@ export async function changedNotes(remoteDir: string, localDir: string): Promise
 }
 
 /**
- * Push a workspace's notes into the repo target directory: copy the local
- * `.md` notes into `<repo>/<subdir>` (overwrite), stage that subdir, commit,
- * and push `branch`. Before copying, when `overwrite` is false, any note that
- * exists on the remote (fetched clone) with different content blocks the push
- * and returns `code: 'remote-changed'` with the changed names — the caller
- * (the UI) then asks the user whether to overwrite and retries with
- * `overwrite: true`.
+ * Names of `.md` notes present in `remoteDir` but absent in `localDir` —
+ * a push would DELETE them from the remote (mirror semantics). Surfaced so
+ * the user can confirm before those files are removed.
+ */
+export async function remoteOnlyNotes(remoteDir: string, localDir: string): Promise<string[]> {
+  let remoteNames: string[] = []
+  try {
+    remoteNames = (await readdir(remoteDir)).filter((n) => n.endsWith('.md'))
+  } catch {
+    return []
+  }
+  const localNames = new Set<string>()
+  try {
+    for (const n of (await readdir(localDir)).filter((x) => x.endsWith('.md'))) localNames.add(n)
+  } catch {
+    // local dir unreadable → treat everything as remote-only
+  }
+  return remoteNames.filter((n) => !localNames.has(n))
+}
+
+/**
+ * Delete `.md` notes in `remoteDir` that do not exist in `localDir`
+ * (mirror the local deletion to the remote). Returns the removed names.
+ */
+export async function deleteMissingNotes(remoteDir: string, localDir: string): Promise<string[]> {
+  const only = await remoteOnlyNotes(remoteDir, localDir)
+  const removed: string[] = []
+  for (const name of only) {
+    try {
+      await rm(join(remoteDir, name))
+      removed.push(name)
+    } catch {
+      // best effort
+    }
+  }
+  return removed
+}
+
+/**
+ * Push a workspace's notes into the repo target directory: mirror the local
+ * notes dir into `<repo>/<subdir>` — copy local `.md` (overwrite) AND delete
+ * `.md` notes present remotely but missing locally, so deletions sync too.
+ * Before touching anything, when `overwrite` is false, any note that exists
+ * on the remote (fetched clone) with different content — or exists remotely
+ * but not locally (would be deleted) — blocks the push and returns
+ * `code: 'remote-changed'` with the involved names. The caller (the UI) then
+ * asks the user whether to overwrite/delete and retries with `overwrite: true`.
  */
 export async function gitPush(
   ctx: Context, repo: ResolvedRepo, notesDir: string, message: string,
@@ -380,25 +420,31 @@ export async function gitPush(
   // Detect remote-vs-local conflicts before touching anything.
   const target = repoTargetDir(repo)
   if (!overwrite) {
-    const changed = await changedNotes(target, notesDir)
-    if (changed.length > 0) {
+    const [changed, remoteOnly] = await Promise.all([
+      changedNotes(target, notesDir),
+      remoteOnlyNotes(target, notesDir),
+    ])
+    const affected = [...changed, ...remoteOnly]
+    if (affected.length > 0) {
       return {
         ok: false,
         code: 'remote-changed',
-        changed,
-        error: `远端有更新：${changed.join('、')}，是否用本地版本覆盖？`,
+        changed: affected,
+        error: `远端有以下笔记与本地不同或本地已删除：${affected.join('、')}，是否用本地版本覆盖/删除远端？`,
       }
     }
   }
-  // Copy the workspace's notes into the repo target directory.
+  // Mirror the local notes dir into the repo target directory.
   try {
     await syncNotes(notesDir, target, true)
+    await deleteMissingNotes(target, notesDir)
   } catch (error) {
     return { ok: false, error: `同步笔记到仓库失败: ${error instanceof Error ? error.message : String(error)}` }
   }
 
   const addScope = repo.subdir === '' ? '.' : repo.subdir.replace(/\\/g, '/')
-  const add = await runGit(ctx, repo.repoDir, ['add', '--', addScope])
+  // `-A` so deletions staged as well.
+  const add = await runGit(ctx, repo.repoDir, ['add', '-A', '--', addScope])
   if (add.code !== 0) return { ok: false, error: `git add 失败: ${add.stderr || add.stdout}` }
 
   const identity = await resolveIdentity(ctx, repo, author)

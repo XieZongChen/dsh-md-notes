@@ -53,7 +53,7 @@ export const en: { [K in keyof typeof zh]: string } = {
   'git.push': 'Push',
   'git.commitPlaceholder': 'Commit message (optional)',
   'git.confirmPush': 'Commit & push',
-  'git.pushRemoteChanged': 'The remote has updated notes: {names}\nOverwrite the remote with your local version?',
+  'git.pushRemoteChanged': 'Remote notes differ from or are missing locally: {names}\nOverwrite/delete the remote with your local state?',
   'git.pushCancelled': 'Push cancelled — remote unchanged',
   'git.cancel': 'Cancel',
   'git.notConfigured': 'No git repo configured',
