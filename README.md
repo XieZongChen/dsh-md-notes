@@ -16,13 +16,25 @@
 
 ---
 
-## Features
+## Overview
+
+A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). It adds an **MD Notes** entry to the web sidebar and a **"Add to note"** action to every assistant answer, so you can capture conversations into plain `.md` files that stay editable anywhere.
+
+**Who it's for**: DSH web users who want local, file-based notes (no database, no cloud) — copy a conversation into a note with one click, then keep editing the `.md` file in any editor.
 
 - **Sidebar notes entry** → notes manager (list + edit/preview)
 - **Assistant-message action** (next to the copy button) → append that conversation to a note
 - Notes are stored as plain `.md` files, editable directly on the filesystem
+- UI copy follows dsh's language setting (Chinese / English)
 
-## Installation
+## Compatibility
+
+- **Plugin version**: 0.2.0 (see [CHANGELOG.md](CHANGELOG.md) for history).
+- **Requires**: the `dsh` CLI (with the `plugin` subcommand) and the `web` profile.
+- **Last verified**: 2026-08-16, against the deepseek-harness mainline checkout (dsh CLI `0.1.0-rc.x` era).
+- The plugin is not pinned to a specific mainline commit; pin the plugin version at install time if you need a fixed combination. Runtime dependencies (`@deepseek-ai/*`, `react`) are declared as optional peer dependencies and resolve from the dsh installation.
+
+## Install / Uninstall
 
 Prerequisites: `dsh` CLI installed, target profile is `web`.
 
@@ -34,7 +46,7 @@ dsh plugin --profile web add dsh-md-notes
 
 Then **restart dsh web** (bundle layer and client package metadata are cached in the process; a restart is required for changes to take effect).
 
-## Upgrade
+Upgrade:
 
 ```sh
 dsh plugin --profile web update dsh-md-notes
@@ -42,7 +54,7 @@ dsh plugin --profile web update dsh-md-notes
 
 A restart of dsh web is required for it to take effect.
 
-## Uninstall
+Uninstall:
 
 ```sh
 dsh plugin --profile web remove dsh-md-notes
@@ -51,16 +63,51 @@ dsh plugin --profile web remove dsh-md-notes
 > For development/debugging from source: run `dsh plugin --profile web add ./dsh-md-notes`
 > from the parent directory of the plugin project.
 
-## Usage
+## Quick start
 
-1. **Open the notes manager**: click the notes entry at the bottom of the sidebar (above Settings).
-   - Left: note list (title + updated time); enter a title at the top and click "New" (an empty title auto-falls back to "Untitled note <date>");
-   - Right: with a note selected, switch between the **Edit / Preview** tabs and click "Save" to write; 🗑 deletes a list item.
-2. **Add to note**: click the notes icon in the action row below an answer, pick the target note in the popup (or create one on the spot), and click "Write to note" — the answer and its user question are appended to the end of the note (with a timestamped section).
+1. Install the plugin (above), restart dsh web.
+2. **Create a note**: click the notes entry at the bottom of the sidebar (above Settings) → enter a title in the "New note title…" field → **New** → type in the editor → **Save**.
+3. **Capture a conversation**: below any assistant answer, click the notes icon (next to copy) → pick a target note (or create one on the spot) → **Write to note**. The user question + answer are appended to the note with a timestamped section.
 
-Note files live in the configured local directory (currently `dsh-work/.dsh-notes/`); you can open and edit them directly with any editor.
+Note files live in the configured local directory (default `<cwd>/.dsh-notes/`); you can open and edit them directly with any editor.
 
-## Maintenance
+## Configuration
+
+All options are plugin Config keys, overridable in the profile's `cordis.patch.yml` (a patch replaces the whole `config` of the row):
+
+```yaml
+- id: md-notes
+  config:
+    root: '/abs/path/to/notes'   # notes directory; default <cwd>/.dsh-notes
+    route: '/plugins/md-notes'   # HTTP API prefix; default is fine
+```
+
+| Key | Default | Meaning |
+|---|---|---|
+| `root` | `<cwd>/.dsh-notes` | Directory where notes (`.md` files + `meta.json`) are stored. |
+| `route` | `/plugins/md-notes` | HTTP API prefix served by the plugin; also hosts the icon at `<route>/icon.svg`. |
+
+There are **no environment variables and no secrets** in this plugin's configuration.
+
+## Permissions & data
+
+- **Filesystem**: reads and writes notes as plain `.md` files (plus a `meta.json` title/updated-time sidecar) under the configured `root` directory. Nothing else is touched.
+- **Network**: a loopback HTTP API (`POST <route>`, browser ↔ local dsh server) and the icon served from the same origin. **No external network calls, no telemetry.**
+- **Credentials**: none collected or transmitted.
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Changes don't appear after install/upgrade | Restart dsh web — bundle layer and client metadata are cached in the process. |
+| Icon looks stale | Hard-refresh the page; the icon is served with `no-cache` and reflects `assets/dsh-md-notes.svg` on every request. |
+| Plugin doesn't load | Verify the layer: `dsh --profile web --dump-config` and look for the `md-notes` row. |
+| Installed from git and `add` failed | pnpm ≥10 blocks build scripts by default; add the printed package key under `allowBuilds` in the profile's `pnpm-workspace.yaml`, then re-run `add`. |
+| Notes can't be created/saved | Make sure the configured `root` points to an existing writable directory. |
+
+Rollback: `dsh plugin --profile web remove dsh-md-notes` restores the previous state (notes files are untouched).
+
+## Development
 
 ```sh
 npm install --legacy-peer-deps   # first time or after dependency changes
@@ -79,4 +126,23 @@ Common scripts:
 | `npm run link-deps` | Re-link `@deepseek-ai/*` types to the checkout |
 | `npm run bundle` | Build only the client bundle |
 
-Configuration (notes directory, API route) and implementation details: [docs/architecture.md](docs/architecture.md).
+Contributions are welcome: open an issue to discuss, then a PR. Design docs: [docs/features.md](docs/features.md) · [docs/architecture.md](docs/architecture.md).
+
+## Repository structure
+
+| Path | Contents |
+|---|---|
+| `src/` | Source code (host half + client half) |
+| `src/host/` | Notes domain logic (`notes.ts`) + HTTP layer (`http.ts`) |
+| `src/client/` | Browser half: entry (`index.ts`) + feature modules under `features/` |
+| `src/client/features/locales/` | zh/en UI dictionaries (dsh locale namespace `md-notes`) |
+| `assets/` | Plugin icon (SVG source + PNG) |
+| `docs/` | Design docs: `features.md` (functional), `architecture.md`, `TODO.md` |
+| `scripts/` | Dev tooling (e.g. `link-deps.mjs`) |
+| `lib/` | Build output (gitignored; what npm publishes) |
+
+## License & security
+
+Licensed under the **MIT License** (see [LICENSE](LICENSE)).
+
+Security issues: please report them **privately** via the repository's [Security Advisory](https://github.com/XieZongChen/dsh-md-notes/security/advisories) rather than a public issue, so they can be addressed before disclosure.
