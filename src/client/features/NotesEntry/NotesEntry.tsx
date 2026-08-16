@@ -11,6 +11,7 @@ import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NotesStore } from '../store.ts'
 import { ICON_URL } from '../api.ts'
+import { useUpdateAvailable } from '../update.ts'
 import styles from './notes-entry.module.css'
 
 export interface NotesEntryProps {
@@ -27,6 +28,7 @@ export interface NotesEntryProps {
  */
 export function NotesEntry(props: NotesEntryProps): React.ReactElement {
   const { wide, store, t } = props
+  const update = useUpdateAvailable()
   const rowRef = React.useRef<HTMLDivElement | null>(null)
 
   React.useEffect(() => {
@@ -64,6 +66,11 @@ export function NotesEntry(props: NotesEntryProps): React.ReactElement {
           className={styles.entrySvg}
         />
         {wide ? <span className={styles.entryLabel}>{t('sidebar.label')}</span> : null}
+        {wide && update !== null && (
+          <span className={styles.updateTag} title={t('sidebar.updateTitle', { latest: update.latest })}>
+            {t('sidebar.updateTag')}
+          </span>
+        )}
       </button>
     </div>
   )

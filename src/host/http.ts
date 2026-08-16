@@ -80,6 +80,10 @@ export interface NotesApiDeps {
   suggest(): Record<string, unknown>
   /** Whether the workspace registry has at least one real workspace. */
   hasWorkspaces(): boolean
+  /** Whether the workspace registry has at least one real workspace. */
+  hasWorkspaces(): boolean
+  /** npm update check: latest published version vs the installed one (cached). */
+  checkUpdate(): Promise<{ ok: true; current: string; latest: string; hasUpdate: boolean } | { ok: false }>
   /** Bound git operations. */
   git: GitApi
   /** Optional session query service (for appendConversation). */
@@ -199,6 +203,9 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     }
     case 'gitSettings': {
       return { ok: true, settings: deps.readSettings() }
+    }
+    case 'checkUpdate': {
+      return deps.checkUpdate()
     }
     case 'gitSuggest': {
       return { ok: true, suggestions: deps.suggest() }

@@ -62,6 +62,8 @@ export type ApiResult =
     skipped?: number
     /** Notes that differ on both sides after a conservative pull (conflict hint). */
     changed?: string[]
+    /** npm update check result. */
+    update?: { current: string; latest: string; hasUpdate: boolean }
   }
   | { ok: false; error: string; code?: string; changed?: string[] }
 
@@ -123,6 +125,11 @@ export function gitSyncApi(workspaceId?: string): Promise<ApiResult> {
 /** Current user-level (L3) git settings. */
 export function gitSettingsApi(): Promise<ApiResult> {
   return api('gitSettings')
+}
+
+/** npm update check: is a newer plugin version available? */
+export function checkUpdateApi(): Promise<ApiResult> {
+  return api('checkUpdate')
 }
 
 /** Write git settings (whitelisted keys, see the host `gitConfig`). */

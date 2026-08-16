@@ -10,6 +10,8 @@ import { zh } from './zh.ts'
 export const en: { [K in keyof typeof zh]: string } = {
   'sidebar.entry': 'MD Notes',
   'sidebar.label': 'Notes',
+  'sidebar.updateTag': 'Update available',
+  'sidebar.updateTitle': 'Version {latest} is available — please upgrade',
   'action.tooltip': 'Add to note',
   'manager.title': 'MD Notes',
   'manager.close': 'Close',

@@ -7,6 +7,8 @@
 export const zh = {
   'sidebar.entry': 'MD 笔记',
   'sidebar.label': '笔记',
+  'sidebar.updateTag': '有新版本需要更新',
+  'sidebar.updateTitle': '有新版本 {latest} 可用，请前往升级',
   'action.tooltip': '发送到笔记',
   'manager.title': 'MD 笔记',
   'manager.close': '关闭',

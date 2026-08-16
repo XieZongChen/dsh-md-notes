@@ -13,6 +13,7 @@ import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutlin
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData, WorkspaceNotes } from '../api.ts'
 import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
+import { useUpdateAvailable } from '../update.ts'
 import { fmtTime, renderMd } from '../markdown.ts'
 import type { NotesStore } from '../store.ts'
 import type { MdNotesKey } from '../locales/index.ts'
@@ -31,6 +32,7 @@ export interface NotesManagerProps {
  */
 export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const { store, t } = props
+  const updateInfo = useUpdateAvailable()
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [noWorkspaces, setNoWorkspaces] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
@@ -356,6 +358,11 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
             <button type="button" className={shared.iconBtn} onClick={openDshSettings} title={t('manager.settings')}>
               <IconSettingsOutline16 />
             </button>
+            {updateInfo !== null && (
+              <span className={styles.updateTag} title={t('sidebar.updateTitle', { latest: updateInfo.latest })}>
+                {t('sidebar.updateTag')}
+              </span>
+            )}
           </span>
           <button type="button" className={shared.iconBtn} onClick={close} title={t('manager.close')}>
             <IconCloseOutline16 />
