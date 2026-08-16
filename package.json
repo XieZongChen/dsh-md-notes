@@ -26,6 +26,7 @@
     "./package.json": "./package.json"
   },
   "files": [
+    "package.json",
     "lib",
     "assets",
     "cordis.patch.yml",
