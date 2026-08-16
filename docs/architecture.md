@@ -49,8 +49,9 @@ dsh-md-notes/
     └── client/
         ├── index.ts     # 入口（组装层，无 JSX）：apply + slot 注册 + NotesOverlay
         └── features/
-            ├── api.ts            # Host HTTP API 封装 + gitErrorText（错误码→i18n）
+            ├── api.ts            # Host HTTP API 封装 + gitErrorText（错误码→i18n）+ checkUpdateApi
             ├── store.ts          # NotesStore（pub/sub 共享状态）
+            ├── update.ts         # useUpdateAvailable（npm 版本检测，模块级共享缓存）
             ├── markdown.ts       # markdown 渲染器（纯函数）
             ├── locales/          # i18n：zh.ts（源字典）/ en.ts（同键映射）+ LocaleNamespaceMap 合并
             ├── styles.module.css # 共享样式（mask/dialog/btn/input 等）
@@ -108,6 +109,7 @@ dsh-md-notes/
 | `gitSync` | `{ workspaceId? }` | `{ ok }`（合并远端，用户触发） |
 | `gitSettings` | — | `{ ok, settings }`（L3 原始值，设置表单用） |
 | `gitConfig` | 白名单 L3 keys | `{ ok }`（写设置） |
+| `checkUpdate` | — | `{ ok, update: { current, latest, hasUpdate } }`（npm 版本检测，host 缓存 10 分钟） |
 
 ## 4. Client 半（src/client/）
 
@@ -124,6 +126,9 @@ dsh-md-notes/
 - **错误码映射**：`api.ts` 的 `gitErrorText` 把 host 返回的 `code` 映射为本地化文案
   （`git.errNoRepo` / `git.errSyncBranch` / `git.errGitFailed` / `git.errNonFastForward` 等），
   `detail` 作参数；未知 code 回退 `git.failed`。
+- **版本更新检测**：`update.ts` 的 `useUpdateAvailable` 在入口/管理器挂载时调 `checkUpdateApi`
+  （模块级共享缓存，页面生命周期只查一次）；有新版时两处（侧边栏入口尾部、管理器标题栏设置
+  按钮旁）渲染黄色 tag（warn token，20% 透明度背景）。
 - 图标：`<img src="/plugins/md-notes/icon.svg">` 直接引用 host serve 的 SVG（`api.ts` 导出 `ICON_URL`）。
 - 目录约定：功能模块放在 `features/` 下，每个功能一个子目录；共享模块（`api.ts` / `store.ts` /
   `markdown.ts`）与共享样式 `styles.module.css` 在 `features/` 根；`components/` 放跨功能复用组件。

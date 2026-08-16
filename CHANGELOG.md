@@ -36,6 +36,8 @@ Only user-visible functional changes are recorded (no documentation, code refact
   settings button, per-workspace grouping/collapse, status line).
 - Notes are workspace-bound: the `root` config was removed; without a workspace the UI prompts to create
   one first (notes manager and note picker).
+- **Update notifications**: the plugin checks npm for a newer version on load (cached 10 min); a yellow
+  "Update available" tag appears on the sidebar notes entry and next to the manager's settings button.
 
 ### Fixed
 

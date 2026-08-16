@@ -29,6 +29,7 @@ A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 - **Git sync** (optional, URL-driven): **shared repo** mode (one repo for all workspaces, per-workspace folders) or **own repos** mode (per workspace: URL + branch + subpath). Push = mirror-sync (deletions included), Update = pull with conflict confirmation, auto-pull on open, merge-remote-and-retry.
 - **Settings panel** (dsh Settings → MD Notes): mode, repo URL/branch/subpath, auto-pull, commit author — with dsh-styled form controls.
 - **Theme & i18n**: token-based colors (light/dark), UI copy follows dsh's language (Chinese / English), error messages localized.
+- **Update notifications**: a yellow "Update available" tag appears when a newer npm version exists.
 
 **On the roadmap** (see [docs/TODO.md](docs/TODO.md)): restyle the note picker with cross-workspace capture, reference notes as conversation context, and visual Git conflict rendering & resolution.
 

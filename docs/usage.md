@@ -152,7 +152,18 @@ open dsh's Settings → **MD Notes** section). Everything Git-related is here:
 - **Commit author name / email** (used when the repository has no git identity
   configured; otherwise the repo's own config wins).
 
-## 6. Tips & notes
+## 6. Update notifications
+
+The plugin checks npm for a newer version of `dsh-md-notes` when it loads
+(the check is cached for 10 minutes; failures are silent). If a new version
+exists, a yellow **"Update available"** tag appears:
+
+- at the **tail of the sidebar notes entry** (hover to see the version number);
+- next to the **settings icon** in the notes manager title bar.
+
+Upgrade with `dsh plugin --profile web update dsh-md-notes`, then restart dsh web.
+
+## 7. Tips & notes
 
 - **Files are yours**: notes are ordinary `.md` files; edit them anywhere, keep
   them after uninstalling the plugin.
