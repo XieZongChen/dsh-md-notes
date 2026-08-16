@@ -29,6 +29,15 @@
   color: var(--dsw-alias-label-secondary, #888);
 }
 
+.tipCode {
+  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.12));
+  color: var(--dsw-alias-label-primary, #222);
+}
+
 .loading {
   padding: 12px 0;
   color: var(--dsw-alias-label-secondary, #888);

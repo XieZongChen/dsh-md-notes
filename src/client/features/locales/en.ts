@@ -93,6 +93,7 @@ export const en: { [K in keyof typeof zh]: string } = {
   'git.suggest': 'Suggest',
   'manager.noWorkspaces': 'Create a workspace in the dsh sidebar, or configure a repo in settings, to use notes',
   'git.tipTitle': 'Where notes are saved',
-  'git.tipWhere': "Notes always live locally under each workspace's `<workspace>/.dsh-notes`; git sync only pushes them to / pulls them from a remote repo and never changes where notes are stored locally.",
+  'git.tipWherePrefix': "Notes always live locally under each workspace's ",
+  'git.tipWhereSuffix': "; git sync only pushes them to / pulls them from a remote repo and never changes where notes are stored locally.",
 
 }

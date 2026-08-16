@@ -90,6 +90,7 @@ export const zh = {
   'git.suggest': '建议',
   'manager.noWorkspaces': '请先在 dsh 侧边栏新建工作区，或前往设置配置仓库后使用笔记功能',
   'git.tipTitle': '笔记保存在哪里',
-  'git.tipWhere': '笔记的本地项目都保存在各工作区的 `<工作区>/.dsh-notes` 目录下；Git 同步只是把笔记推送到远程仓库或从远程拉取，不影响本地保存位置。',
+  'git.tipWherePrefix': '笔记的本地项目都保存在各工作区的 ',
+  'git.tipWhereSuffix': ' 目录下；Git 同步只是把笔记推送到远程仓库或从远程拉取，不影响本地保存位置。',
 
 } as const

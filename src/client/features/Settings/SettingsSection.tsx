@@ -131,7 +131,11 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
     <div className={styles.section}>
       <div className={styles.tipPanel}>
         <div className={styles.tipTitle}>{t('git.tipTitle')}</div>
-        <div className={styles.tipBody}>{t('git.tipWhere')}</div>
+        <div className={styles.tipBody}>
+          {t('git.tipWherePrefix')}
+          <code className={styles.tipCode}>{'<工作区>/.dsh-notes'}</code>
+          {t('git.tipWhereSuffix')}
+        </div>
       </div>
       <div className={styles.row}>
         <label className={styles.field}>
