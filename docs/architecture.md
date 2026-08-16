@@ -132,7 +132,10 @@ dsh-md-notes/
 - **表单控件**：设置面板用 `DshInput` / `DshSelect`（`components/` 内本地副本，照抄 dsh
   ui-primitives Input 与 ui-settings-models select 的 token 化样式），暗黑模式与 dsh 原生表单一致。
 - **确认弹窗**：删除/推送覆盖/更新覆盖统一用页面内 `Modal`（ui-primitives），不依赖
-  原生 `window.confirm`（在 `shell.overlay` 下更可靠）。
+  原生 `window.confirm`（在 `shell.overlay` 下更可靠）；**记入笔记弹窗**（NotePicker）同样
+  用 `Modal`（headless 模式）+ `DshInput`，深色模式与 dsh 弹窗一致。
+- **记入笔记标签本地化**：`appendConversation` 写入笔记的分段标签（用户/助手/图片/空占位）
+  由 client 按界面语言传入 `labels`，host 用传入值渲染（缺省英文），笔记内容跟随 dsh 语言。
 - markdown 预览用内置轻量渲染器（先 HTML 转义，再逐行渲染标题/列表/引用/代码块/内联样式）。
 - 所有数据经 `fetch('/plugins/md-notes', { method: 'POST', body: JSON.stringify({ method, ...args }) })`。
 
