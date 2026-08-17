@@ -67,7 +67,21 @@ export function apply(ctx: ClientContext): void {
 
   // '@' reference source: notes as conversation context (docs/context.md).
   // Registered under ctx.effect so HMR/unmount clears the per-session caches.
-  const notesSource = createNotesSource(t)
+  // The re-track hook re-opens the candidate menu right after a workspace
+  // auto-complete (machine-driven draft changes never pass through onChange).
+  const notesSource = createNotesSource(t, (sessionId, caret) => {
+    const sessions = ctx.get('sessions') as { scope(id: SessionId): ClientContext | undefined } | undefined
+    const actx = sessions?.scope(sessionId)
+    if (actx === undefined) return
+    const conversation = actx.get('conversation') as {
+      input?: { for(a: ClientContext): { track(draft: string, caret: number): void; snapshot: { draft: string } } | undefined }
+    } | undefined
+    const input = conversation?.input?.for(actx)
+    if (input === undefined) return
+    queueMicrotask(() => {
+      input.track(input.snapshot.draft, caret)
+    })
+  })
   ctx.effect(() => {
     const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract | undefined
     if (inputTriggers === undefined) {

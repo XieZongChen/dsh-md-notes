@@ -83,11 +83,23 @@ export interface NotesSourceBundle {
 }
 
 /**
+ * Re-track hook supplied by the entry (apply): after a workspace auto-complete
+ * the machine-driven draft change never passes through the composer's
+ * onChange, so the menu would stay closed — the hook re-tracks the session's
+ * input with the caret right after the completed token, which re-runs trigger
+ * detection and pops that workspace's note list.
+ * @param sessionId - the session whose composer to re-track.
+ * @param caret - caret offset in draft coordinates after the insertion.
+ */
+export type ReTrackHook = (sessionId: SessionId, caret: number) => void
+
+/**
  * Build the `@` notes source. All state lives in the returned closure;
  * `dispose` clears it (the registering effect calls it on HMR/unmount).
  * @param t - bound `md-notes` translate (localized error copy).
+ * @param reTrack - optional composer re-track hook (workspace auto-complete).
  */
-export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle {
+export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackHook): NotesSourceBundle {
   /** Single-flight current-workspace list per session (shared by warm + candidates). */
   const fetches = new Map<SessionId, Promise<readonly WorkspaceNotes[]>>()
   /** Settled current-workspace list per session (backs the synchronous lexicon). */
@@ -235,12 +247,15 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
         return wsRows
       }
     },
-    onPick({ candidate, session }) {
+    onPick({ candidate, session, span }) {
       // Workspace fuzzy row: auto-complete `@工作区名/` (the trigger span is
-      // replaced; re-detection pops that workspace's note list).
+      // replaced; re-detection pops that workspace's note list). Machine-driven
+      // draft changes never pass through onChange, so re-track explicitly.
       const wsName = candidateWorkspaces.get(session.sessionId)?.get(candidate)
       if (wsName !== undefined) {
-        return { text: `@${wsName}/` }
+        const text = `@${wsName}/`
+        reTrack?.(session.sessionId, span.start + text.length)
+        return { text }
       }
       const ref = candidateRefs.get(session.sessionId)?.get(candidate)
       if (ref === undefined) return undefined // stale generation → miss (nothing inserted)
