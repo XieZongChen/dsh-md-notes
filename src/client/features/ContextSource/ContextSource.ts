@@ -39,6 +39,19 @@ interface NoteRef {
   readonly crossWs: boolean
 }
 
+/** One-time stale-host warning (the running dsh host predates `notesDir`). */
+let warnedStaleHost = false
+
+/** Warn once when the host list response lacks `notesDir` (old host code). */
+function warnStaleHost(): void {
+  if (warnedStaleHost) return
+  warnedStaleHost = true
+  // The client bundle updates via a page refresh alone, but the host half is
+  // loaded at process start — a restart of dsh web is required for the new
+  // `list` response shape (`notesDir`) to take effect.
+  console.error('[dsh-md-notes] stale host: the list response lacks "notesDir"; restart dsh web so the host loads the updated plugin')
+}
+
 /** Absolute path of one note (the chip ref; workspace + name, unambiguous). */
 function refPath(ws: WorkspaceNotes, note: NoteSummary): string {
   return ws.notesDir.endsWith('/') ? ws.notesDir + note.name : `${ws.notesDir}/${note.name}`
