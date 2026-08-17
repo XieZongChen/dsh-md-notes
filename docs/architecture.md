@@ -87,6 +87,9 @@ dsh-md-notes/
   `mergeSettings`（L2 Config 与 L3 逐层合并，`gitMode:'on'` 归一化为 shared/own）。
 - HTTP 层 `host/http.ts`：`readBody`（有界 JSON 读取）、`sendJson`、`notesApiHandler`（method 分发：
   notes 域 + git 域）、`iconHandler`（GET 返回打包的 SVG 图标）。
+- 上下文注入 `host/context-inject.ts`：监听 `agent/pre-step`，扫描已认领消息中的笔记路径
+  （`.dsh-notes/…` 正则提取，相对会话 cwd 解析），读取内容并作为注入上下文消息
+  （`source.kind: 'md-notes'`）折叠进模型请求——引用可靠生效，不依赖模型自觉 `read`。
 - **错误码协议**：git 操作失败返回 `{ ok: false, code, error }`（如 `no-repo`、`sync-branch`、
   `git-failed`、`identity`、`remote-changed`、`non-fast-forward`），`error` 为英文 detail；
   client 用 `gitErrorText` 按 `code` 渲染本地化文案。
@@ -125,11 +128,13 @@ dsh-md-notes/
   - `settings.section` → 设置面板「MD 笔记」分区（`id: 'md-notes'`，order 10）。
 - **`@` 引用 source**（`features/ContextSource/`）：`apply` 里
   `ctx.get('inputTriggers')?.registerSource(...)`（挂 `ctx.effect`，HMR 安全）注册
-  `trigger: '@'`、`name: 'md-notes'` 的引用源：`candidates` 默认取当前会话工作区笔记、
-  `@工作区名/`（ASCII）切换跨工作区；`onPick` 返回 `ReferenceInsert`（`ref` = 笔记绝对路径
-  `notesDir + 文件名`，`label` = 标题）；`codec.serialize` 提交时校验笔记仍存在并输出
-  本地化可读行（会话工作区相对路径：同工作区 `.dsh-notes/xxx.md`，跨工作区 `../<目录>/…`），失效则抛本地化错误阻断发送；`warm`/`lexicon`/`subscribeLexicon`
-  提供纯文本装饰热快照。无 `inputTriggers` 时特性静默禁用（console.warn）。
+  `trigger: '@'`、`name: 'notes'` 的引用源：`candidates` 默认取当前会话工作区笔记、
+  部分工作区名出现模糊**工作区行**（`{ text }` 自动补全 `@工作区名/` + re-track 重触发）
+  切换跨工作区（ASCII）；`onPick` 返回 `ReferenceInsert`（`ref` = **会话工作区相对路径**：
+  同工作区 `.dsh-notes/xxx.md`、跨工作区 `../<目录>/…`，`label` = 前置截断标题）；
+  `codec.serialize` 提交时校验笔记仍存在并输出本地化可读行，失效则抛本地化错误阻断发送；
+  `warm`/`lexicon`/`subscribeLexicon` 提供纯文本装饰热快照。无 `inputTriggers` 时特性静默
+  禁用（console.warn）。序列化格式与交互细节见 [context.md](context.md)。
   序列化格式与交互细节见 [context.md](context.md)。
 - **i18n**：所有 UI 文案在 `features/locales/`（`zh.ts` 源字典、`en.ts` 映射类型强制同键，
   `LocaleNamespaceMap` 合并 `md-notes` 命名空间）；组件用 `t(key, params)` 读取，随 dsh 语言
