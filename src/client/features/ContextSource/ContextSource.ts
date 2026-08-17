@@ -151,6 +151,10 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
         const all = await api('list', undefined, signal)
         if (signal.aborted) return []
         if (!all.ok || all.workspaces === undefined) return []
+        if (all.workspaces.some((w) => typeof w.notesDir !== 'string' || w.notesDir === '')) {
+          warnStaleHost()
+          return []
+        }
         const ws = all.workspaces.find((w) => w.name === cross[1])
         if (ws === undefined) return []
         const { rows, refs } = rowsFor(ws, cross[2] ?? '', true)
@@ -162,6 +166,12 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
         if (signal.aborted) return []
         const ws = workspaces[0]
         if (ws === undefined) return []
+        // Stale host (pre-`notesDir`): candidates still list fine, but a pick
+        // cannot build the absolute ref — surface the restart need early.
+        if (typeof ws.notesDir !== 'string' || ws.notesDir === '') {
+          warnStaleHost()
+          return []
+        }
         const { rows, refs } = rowsFor(ws, query, false)
         candidateRefs.set(session.sessionId, refs)
         return rows
@@ -172,6 +182,12 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
     onPick({ candidate, session }) {
       const ref = candidateRefs.get(session.sessionId)?.get(candidate)
       if (ref === undefined) return undefined // stale generation → miss (nothing inserted)
+      // Guard the stale-host window: without notesDir there is no absolute
+      // path to reference — report it instead of crashing on `undefined`.
+      if (typeof ref.ws.notesDir !== 'string' || ref.ws.notesDir === '') {
+        warnStaleHost()
+        return undefined
+      }
       const insert: ReferenceInsert = {
         source: NOTES_SOURCE,
         ref: refPath(ref.ws, ref.note),
@@ -190,6 +206,11 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
         // the missing note by name instead of silently dropping it.
         const list = await api('list', undefined, signal)
         if (!list.ok || list.workspaces === undefined) {
+          throw new Error(t('context.errCheck'))
+        }
+        // Stale host: no notesDir means no path identity — surface it.
+        if (list.workspaces.some((w) => typeof w.notesDir !== 'string' || w.notesDir === '')) {
+          warnStaleHost()
           throw new Error(t('context.errCheck'))
         }
         const owner = list.workspaces.find((ws) =>
