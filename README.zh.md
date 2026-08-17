@@ -11,14 +11,14 @@
 <p align="center">
   DSH 第三方插件（bundle）：<b>MD 笔记管理</b>
   <br />
-  <a href="docs/usage.zh.md">使用文档</a> · <a href="docs/features.md">功能设计</a> · <a href="docs/architecture.md">架构设计</a> · <a href="docs/TODO.md">路线规划</a> · <a href="CHANGELOG.zh.md">变更记录</a>
+  <a href="docs/usage.zh.md">使用文档</a> · <a href="docs/features.md">功能设计</a> · <a href="docs/architecture.md">架构设计</a> · <a href="docs/context.md">上下文引用</a> · <a href="docs/TODO.md">路线规划</a> · <a href="CHANGELOG.zh.md">变更记录</a>
 </p>
 
 ---
 
 ## 概述（Overview）
 
-一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的笔记插件：提供完整的 **MD 笔记管理器** 和 **MD 笔记编辑器**，对话内容可快速记入笔记。笔记可同步 Git 仓库维护。
+一个面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）的笔记插件：提供完整的 **MD 笔记管理器** 和 **MD 笔记编辑器**，对话内容可快速记入笔记。笔记可同步 Git 仓库维护。对话时可将笔记加入上下文。
 
 **适合谁**：DSH Web 用户，想要本地、基于文件的笔记（无数据库、无云）——一键把对话存进笔记，之后在任意编辑器里继续编辑，并可用 Git 仓库备份 / 多端同步。
 

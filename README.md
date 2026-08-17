@@ -11,7 +11,7 @@
 <p align="center">
   DSH third-party plugin (bundle): <b>MD Notes Manager</b>
   <br />
-  <a href="docs/usage.md">User Guide</a> · <a href="docs/features.md">Features</a> · <a href="docs/architecture.md">Architecture</a> · <a href="docs/TODO.md">Roadmap</a> · <a href="CHANGELOG.md">Changelog</a>
+  <a href="docs/usage.md">User Guide</a> · <a href="docs/features.md">Features</a> · <a href="docs/architecture.md">Architecture</a> · <a href="docs/context.md">Context</a> · <a href="docs/TODO.md">Roadmap</a> · <a href="CHANGELOG.md">Changelog</a>
 </p>
 
 ---

@@ -36,6 +36,7 @@ dsh-md-notes/
 │   ├── features.md        # 功能设计文档
 │   ├── architecture.md    # 本文档（架构设计）
 │   ├── git.md             # Git 同步设计（v4 模型）
+│   ├── context.md         # 笔记引用进对话上下文设计（规划中）
 │   └── TODO.md            # 功能规划（待办）
 ├── scripts/
 │   └── link-deps.mjs     # 开发期链接 deepseek-harness checkout 类型
