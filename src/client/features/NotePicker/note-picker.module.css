@@ -41,6 +41,16 @@
   gap: 2px;
 }
 
+/* The note-selection list has a fixed height and scrolls independently. */
+.noteList {
+  flex: none;
+  height: 300px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 /* ---- Workspace group (mirrors notes-manager .wsGroup/.wsGroupHead) ---- */
 
 .wsGroup {

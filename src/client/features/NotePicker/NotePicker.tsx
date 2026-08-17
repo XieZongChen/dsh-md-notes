@@ -113,7 +113,9 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
           ? <div className={shared.empty}>{t('picker.noWorkspaces')}</div>
           : workspaces.length === 0
             ? <div className={shared.empty}>{t('picker.empty')}</div>
-            : workspaces.map((ws) => (
+            : (
+              <div className={styles.noteList}>
+                {workspaces.map((ws) => (
               <div key={ws.workspaceId} className={styles.wsGroup}>
                 <div
                   className={styles.wsGroupHead}
@@ -148,7 +150,9 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
                     ))
                 )}
               </div>
-            ))}
+                ))}
+              </div>
+            )}
         <div className={styles.status}>{status === '' ? '' : t(status.key, status.params)}</div>
       </div>
       <div className={styles.dialogFoot}>
