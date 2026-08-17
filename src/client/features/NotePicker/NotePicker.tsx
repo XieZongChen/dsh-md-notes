@@ -10,7 +10,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconFolderClose16, IconFolderOpen16, IconTriangleRightFill14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconTriangleRightFill14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { WorkspaceNotes } from '../api.ts'
 import { api, ICON_URL } from '../api.ts'
 import type { NotesStore } from '../store.ts'
@@ -66,6 +66,30 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
 
   const toggleWorkspace = (workspaceId: string): void => {
     setCollapsed((prev) => ({ ...prev, [workspaceId]: !prev[workspaceId] }))
+  }
+
+  const reload = (): void => {
+    void api('list').then((res) => {
+      setNoWorkspaces(res.ok === true && res.noWorkspaces === true)
+      if (res.ok && res.workspaces) {
+        setWorkspaces(res.workspaces)
+      }
+    })
+  }
+
+  const createIn = (workspaceId: string): void => {
+    const title = t('manager.untitled', { date: new Date().toLocaleDateString() })
+    setStatus({ key: 'picker.creating' })
+    void api('create', { title, workspaceId }).then((res) => {
+      if (res.ok && res.name) {
+        setSelected({ workspaceId, name: res.name })
+        reload()
+        setStatus({ key: 'picker.created' })
+        window.setTimeout(() => setStatus(''), 1200)
+      } else {
+        setStatus({ key: 'picker.createFailed' })
+      }
+    })
   }
 
   const send = (): void => {
@@ -135,6 +159,14 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
                     <IconTriangleRightFill14 className={collapsed[ws.workspaceId] ? styles.wsArrow : `${styles.wsArrow} ${styles.wsArrowOpen}`} />
                   </span>
                   <span className={styles.wsGroupTitle}>{ws.name}</span>
+                  <button
+                    type="button"
+                    className={styles.wsNewBtn}
+                    title={t('manager.new')}
+                    onClick={(e) => { e.stopPropagation(); createIn(ws.workspaceId) }}
+                  >
+                    <IconPlusOutline16 />
+                  </button>
                 </div>
                 {!collapsed[ws.workspaceId] && (
                   ws.notes.length === 0

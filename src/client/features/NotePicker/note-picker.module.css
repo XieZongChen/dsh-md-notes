@@ -181,3 +181,23 @@
   justify-content: center;
   height: 120px;
 }
+
+/* New-note button on each workspace row — mirrors the notes manager's
+   persistent wsNewBtn (16px, radius 4, tertiary → primary on hover). */
+.wsNewBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 4px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--dsw-alias-label-tertiary);
+}
+.wsNewBtn:hover {
+  color: var(--dsw-alias-brand-primary, #4a7bff);
+}
