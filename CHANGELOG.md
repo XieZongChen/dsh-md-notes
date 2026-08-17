@@ -11,6 +11,25 @@ Only user-visible functional changes are recorded (no documentation, code refact
   fixes to that same feature **within the same version** are **not** recorded
   (they are part of building the feature, not repairs of a shipped behavior).
 - **Fixed** only records fixes to features from **earlier versions**.
+- Unreleased changes go under **`## NEXT_VERSION`** at the top; on release, run
+  `npm run changelog:release -- <version>` — it renames `NEXT_VERSION` to `[<version>] - <date>`
+  and prepends a fresh empty `NEXT_VERSION`. If a change lands and no `NEXT_VERSION` block
+  exists, add one first.
+
+## NEXT_VERSION
+
+### Added
+
+- **Referencing notes in a conversation (`@`)**: type `@` in the chat input to pick a note — each picked
+  note becomes a chip that serializes into a localized, readable line on send (e.g.
+  `Referenced note "title": /abs/path.md`), and the model reads the note with its `read` tool and can
+  cite it. Chip labels front-truncate (>6 chars) and the chip cell is widened via a plugin
+  `@font-face` override (4em→6em) — narrow for short labels, readable for long titles.
+  Serialized paths are workspace-qualified (`<workspace-name>/.dsh-notes/<name>`, e.g.
+  `dsh-plugin/.dsh-notes/3333.md`), self-describing and unambiguous across workspaces. Cross-workspace: typing a partial workspace name shows fuzzy workspace rows (🗂️) that
+  auto-complete to `@workspace-name/` on pick and pop that workspace's notes (ASCII names
+  only; an exact `@workspace-name` switches directly); a referenced note that was deleted or moved blocks the send with a
+  "not found — remove the reference" notice.
 
 ## [0.3.0] - 2026-08-16
 
@@ -38,16 +57,6 @@ Only user-visible functional changes are recorded (no documentation, code refact
   (notes manager and note picker).
 - **Update notifications**: the plugin checks npm for a newer version on load (cached 10 min); a yellow
   "Update available" tag appears on the sidebar notes entry and next to the manager's settings button.
-- **Referencing notes in a conversation (`@`)**: type `@` in the chat input to pick a note — each picked
-  note becomes a chip that serializes into a localized, readable line on send (e.g.
-  `Referenced note "title": /abs/path.md`), and the model reads the note with its `read` tool and can
-  cite it. Chip labels front-truncate (>6 chars) and the chip cell is widened via a plugin
-  `@font-face` override (4em→6em) — narrow for short labels, readable for long titles.
-  Serialized paths are workspace-qualified (`<workspace-name>/.dsh-notes/<name>`, e.g.
-  `dsh-plugin/.dsh-notes/3333.md`), self-describing and unambiguous across workspaces. Cross-workspace: typing a partial workspace name shows fuzzy workspace rows (🗂️) that
-  auto-complete to `@workspace-name/` on pick and pop that workspace's notes (ASCII names
-  only; an exact `@workspace-name` switches directly); a referenced note that was deleted or moved blocks the send with a
-  "not found — remove the reference" notice.
 
 ### Breaking
 

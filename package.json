@@ -51,6 +51,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit",
     "link-deps": "node scripts/link-deps.mjs",
     "bundle": "tsdown",
+  "changelog:release": "node scripts/release-changelog.mjs",
     "prepublishOnly": "npm run build"
   },
   "license": "MIT",
