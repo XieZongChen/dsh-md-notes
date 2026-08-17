@@ -21,8 +21,6 @@ import type {
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NoteSummary, WorkspaceNotes } from '../api.ts'
 import { api } from '../api.ts'
-// Side-effect: inject the widened DshChipCell @font-face (chip label capacity).
-import './chip-cell.module.css'
 
 /** Source identity: the menu group title and the chip `source` field. */
 export const NOTES_SOURCE = 'notes'
@@ -88,14 +86,14 @@ function refPath(ws: WorkspaceNotes, note: NoteSummary): string {
 }
 
 /**
- * Chip display label. dsh renders the chip label inside a fixed-width cell
- * (6em after our DshChipCell override, ~4em upstream) centered with
- * overflow hidden — a too-long label clips BOTH ends showing an unreadable
- * middle slice. Front-truncate instead so the chip always shows the note's
- * beginning (+ '…' as a truncation marker) and stays narrow.
+ * Chip display label. dsh renders the chip label inside a fixed 4em cell
+ * (the U+FFFC advance) centered with overflow hidden — a too-long label
+ * clips BOTH ends showing an unreadable middle slice. Front-truncate so the
+ * chip always shows the note's beginning (+ '…' as a truncation marker).
+ * 4 + '…' fits the ~48px window for Latin and keeps CJK front-visible.
  */
 function chipLabel(title: string): string {
-  return title.length > 6 ? `${title.slice(0, 6)}…` : title
+  return title.length > 4 ? `${title.slice(0, 4)}…` : title
 }
 
 /** The `@` source plus its teardown (clears per-session caches). */

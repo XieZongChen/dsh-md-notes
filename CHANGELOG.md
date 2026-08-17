@@ -26,8 +26,9 @@ Only user-visible functional changes are recorded (no documentation, code refact
 ### Added
 
 - **Referencing notes in a conversation (`@`)**: pick notes as chips in the chat
-  input — on send they enter the model context as path references (the model
-  reads the note and cites it), with cross-workspace support. See
+  input — on send the host folds each referenced note's CONTENT into the model
+  request (`agent/pre-step`), so citations work without relying on the model
+  calling `read`; cross-workspace supported. See
   [User guide §4 — Referencing notes in a conversation](docs/usage.md#4-referencing-notes-in-a-conversation).
 
 ## [0.3.0] - 2026-08-16
