@@ -21,15 +21,22 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
-## NEXT_VERSION
-
-### Added
+## [0.4.0] - 2026-08-18
 
 - **Referencing notes in a conversation (`@`)**: pick notes as chips in the chat
   input — on send the host folds each referenced note's CONTENT into the model
   request (`agent/pre-step`), so citations work without relying on the model
   calling `read`; cross-workspace supported. See
   [User guide §4 — Referencing notes in a conversation](docs/usage.md#4-referencing-notes-in-a-conversation).
+- **Note-picker enhancements**: the list is now grouped by workspace with
+  fold/collapse (matching the manager's left panel) and notes from any
+  workspace can be targeted; a **+** button on each workspace row creates a new
+  note on the spot; a progress hint shows while the list loads. See
+  [User guide §3 — Capturing a conversation into a note](docs/usage.md#3-capturing-a-conversation-into-a-note).
+- **Update/push shortcut buttons on workspace rows**: each workspace row in the
+  manager's left panel gains update/push icon buttons (still usable after the
+  workspace's last note is deleted). See
+  [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
 
 ## [0.3.0] - 2026-08-16
 
