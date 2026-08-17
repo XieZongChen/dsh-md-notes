@@ -93,8 +93,9 @@ the model can see and cite the note without you having to tell it to read files.
 - **Pick the workspace row** → it auto-completes to `@dsh-plugin/` and
   **immediately lists that workspace's notes**; keep typing to filter within it;
 - An exact workspace name (`@dsh-plugin`) switches directly;
-- **ASCII names only** (workspaces whose names contain Chinese or spaces cannot
-  be triggered by text).
+- **Chinese workspace names (no spaces) work**; only names **containing spaces**
+  cannot be triggered by text (dsh's trigger token stops at whitespace — a
+  platform limit; a menu-based all-workspaces picker is planned).
 
 ### 4.3 What happens on send
 
