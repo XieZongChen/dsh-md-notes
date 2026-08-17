@@ -42,8 +42,10 @@ grep -n "^## NEXT_VERSION" CHANGELOG.md CHANGELOG.zh.md
    git log --oneline <上个版本tag>..HEAD
    ```
 
-2. 按照 CHANGELOG 记录规则（Added / Breaking / Fixed 分类；同版本内新功能的 fix 不记；
-   Fixed 只记历史版本修复），**生成一个完整的 `NEXT_VERSION` 版本草稿**（中文版）。
+2. 按照 CHANGELOG 记录规则（分类固定为 **Breaking → Added → Fixed** 顺序；新功能 → **Added**；
+   破坏式变更 → **Breaking**；对历史版本已有功能的修复 → **Fixed**；同版本内新功能的 fix 不记；
+   记录时若该改动归属的分类不存在则**添加分类**，若某分类下没有任何记录则**删除分类**），
+   **生成一个完整的 `NEXT_VERSION` 版本草稿**（中文版）。
 3. 把草稿交给用户确认（**不写入文件**）——用 `ask_user_question` 或直接展示，询问：
    > 检测到 NEXT_VERSION 缺失，我按 CHANGELOG 规则整理了自上个版本以来的改动草稿，
    > 请确认是否有补充或修改：
@@ -76,8 +78,9 @@ grep -n "^## NEXT_VERSION" CHANGELOG.md CHANGELOG.zh.md
 
 - 用 `git log --oneline <上个版本tag>..HEAD` 看提交，对照 CHANGELOG 现有内容找出
   **尚未记录**的功能性改动（非文档/重构/构建）。
-- 分类遵循记录规则：新功能 → **Added**；破坏式变更 → **Breaking**；
-  对历史版本已有功能的修复 → **Fixed**；同版本内新功能的 fix **不记**。
+- 分类遵循记录规则：固定为 **Breaking → Added → Fixed** 顺序；新功能 → **Added**；
+  破坏式变更 → **Breaking**；对历史版本已有功能的修复 → **Fixed**；同版本内新功能的 fix **不记**；
+  记录时若该改动归属的分类不存在则**添加分类**，若某分类下没有任何记录则**删除分类**。
 - **条目不写操作介绍**：每条 = 功能名/一句话 + 使用文档锚点链接（如
   `docs/usage.md#4-referencing-notes-in-a-conversation`，链接精确到标题）。
   操作用法只存在于使用文档；若文档缺失该功能，**先补进文档**
@@ -91,8 +94,8 @@ grep -n "^## NEXT_VERSION" CHANGELOG.md CHANGELOG.zh.md
 npm run changelog:release -- <版本号>
 ```
 
-该脚本把 `## NEXT_VERSION` 改名为 `## [<版本号>] - <本地日期>`（中英两份），
-**不会**新增 NEXT_VERSION。
+该脚本只把 `## NEXT_VERSION` 标题行改名为 `## [<版本号>] - <本地日期>`（中英两份），
+**保留**其下的分类标题（如 `### Added`），**不会**新增 NEXT_VERSION。
 
 验证：
 

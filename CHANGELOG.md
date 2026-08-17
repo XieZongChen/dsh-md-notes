@@ -7,6 +7,9 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 **Recording rules**:
 
+- Sections are fixed to **Breaking → Added → Fixed**, in that order; when a
+  change's section does not exist yet, **add it**; when a section ends up with
+  no entries, **remove it**.
 - A feature that lands in the current version is recorded once, under **Added**;
   fixes to that same feature **within the same version** are **not** recorded
   (they are part of building the feature, not repairs of a shipped behavior).
@@ -22,6 +25,8 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change under it.
 
 ## [0.4.0] - 2026-08-18
+
+### Added
 
 - **Referencing notes in a conversation (`@`)**: pick notes as chips in the chat
   input — on send the host folds each referenced note's CONTENT into the model
@@ -39,6 +44,17 @@ Only user-visible functional changes are recorded (no documentation, code refact
   [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
 
 ## [0.3.0] - 2026-08-16
+
+### Breaking
+
+- **`root` config removed** — notes are now bound to workspaces (`<workspace>/.dsh-notes`); the old
+  `root`-configured notes directory is ignored and existing notes there are **not auto-migrated**
+  (copy them into the workspace's `.dsh-notes` manually). Without a workspace, notes can't be
+  read/written (the UI prompts to create one).
+- **`list` API response restructured** — previously `{ ok, notes, dir }` for a single fixed directory,
+  now `{ ok, workspaces: [{ workspaceId, name, notes }], noWorkspaces }` grouped per workspace.
+- **`notesApiHandler` signature changed** — from a fixed `dir` to a deps object resolving the directory
+  per workspace (internal host API; the bundled client was updated in lockstep).
 
 ### Added
 
@@ -62,17 +78,6 @@ Only user-visible functional changes are recorded (no documentation, code refact
 - dsh-styled form controls (DshInput / DshSelect) and a restyled full-screen
   notes manager (title-bar settings button, per-workspace grouping/collapse,
   status line).
-
-### Breaking
-
-- **`root` config removed** — notes are now bound to workspaces (`<workspace>/.dsh-notes`); the old
-  `root`-configured notes directory is ignored and existing notes there are **not auto-migrated**
-  (copy them into the workspace's `.dsh-notes` manually). Without a workspace, notes can't be
-  read/written (the UI prompts to create one).
-- **`list` API response restructured** — previously `{ ok, notes, dir }` for a single fixed directory,
-  now `{ ok, workspaces: [{ workspaceId, name, notes }], noWorkspaces }` grouped per workspace.
-- **`notesApiHandler` signature changed** — from a fixed `dir` to a deps object resolving the directory
-  per workspace (internal host API; the bundled client was updated in lockstep).
 
 ### Fixed
 

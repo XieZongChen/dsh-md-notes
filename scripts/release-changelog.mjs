@@ -21,17 +21,18 @@ if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
   process.exit(1)
 }
 const date = new Date().toLocaleDateString('en-CA') // local YYYY-MM-DD
-const marker = '## NEXT_VERSION\n\n### Added'
+// 只匹配块标题行本身（行首 `## NEXT_VERSION`），保留其下的分类标题（如 `### Added`）。
+// 不用 indexOf 裸标题：记录规则正文里也会出现反引号包裹的 `## NEXT_VERSION`。
+const marker = /^## NEXT_VERSION\n/m
 
 for (const file of ['CHANGELOG.md', 'CHANGELOG.zh.md']) {
   const path = join(root, file)
   const s = readFileSync(path, 'utf8')
-  const idx = s.indexOf(marker)
-  if (idx === -1) {
-    console.error(`${file}: no top ${marker.trim()} block found — nothing to release`)
+  if (!marker.test(s)) {
+    console.error(`${file}: no top ${marker.source.trim()} block found — nothing to release`)
     process.exit(1)
   }
-  const renamed = s.slice(0, idx) + `## [${version}] - ${date}` + s.slice(idx + marker.length)
+  const renamed = s.replace(marker, `## [${version}] - ${date}\n`)
   writeFileSync(path, renamed)
   console.log(`${file}: NEXT_VERSION → [${version}] - ${date}`)
 }
