@@ -116,5 +116,6 @@ export const zh = {
   'context.noteMissing': '{name} 无法找到，请删除引用',
   'context.errCheck': '检查笔记引用失败，请重试',
   'context.reference': '引用笔记「{title}」：{path}',
+  'context.workspaceRow': '工作区',
 
 } as const

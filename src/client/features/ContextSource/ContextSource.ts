@@ -96,6 +96,9 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
   const lexiconListeners = new Map<SessionId, Set<() => void>>()
   /** Latest candidate generation per session: candidate object → note identity. */
   const candidateRefs = new Map<SessionId, Map<InputTriggerCandidate, NoteRef>>()
+  /** Latest candidate generation per session: workspace-row candidate → workspace name
+   *  (partial-name fuzzy rows; picking one auto-completes `@工作区名/`). */
+  const candidateWorkspaces = new Map<SessionId, Map<InputTriggerCandidate, string>>()
 
   const notifyLexicon = (sessionId: SessionId): void => {
     for (const fn of [...(lexiconListeners.get(sessionId) ?? [])]) {
@@ -159,13 +162,17 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
     // Notes above the core subagent group in the '@' menu.
     order: -10,
     async candidates(session, { query, signal }) {
-      // Cross-workspace: `@工作区名/…` filters that workspace's notes, and a
-      // bare exact workspace name (`@工作区名`) also switches to it — the
-      // trailing slash is optional. Anything else → the session's workspace.
+      // Workspace context = query contains `/` (or is an exact workspace name).
+      // Partial bare names show BOTH fuzzy workspace rows and the current
+      // workspace's notes; picking a workspace row auto-completes `@工作区名/`
+      // and the note list of that workspace pops up (filtered from then on).
       const slash = query.indexOf('/')
       const prefix = slash === -1 ? query : query.slice(0, slash)
       const rest = slash === -1 ? '' : query.slice(slash + 1)
-      if (prefix !== '' || slash !== -1) {
+
+      // Workspace entered (slash, or exact bare workspace name): only that
+      // workspace's notes, filtered by `rest`.
+      if (slash !== -1 || prefix !== '') {
         const all = await api('list', undefined, signal)
         if (signal.aborted) return []
         if (!all.ok || all.workspaces === undefined) return []
@@ -177,31 +184,64 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
         if (ws !== undefined) {
           const { rows, refs } = rowsFor(ws, rest, true)
           candidateRefs.set(session.sessionId, refs)
+          candidateWorkspaces.set(session.sessionId, new Map())
           return rows
         }
-        // A `@工作区名/` prefix that matches no workspace yields nothing;
-        // a bare partial name falls through to the current-workspace filter.
+        // A `@工作区名/` prefix matching no workspace yields nothing.
         if (slash !== -1) return []
       }
+
+      // Bare partial name (or just `@`): fuzzy workspace rows + current notes.
+      const all = await api('list', undefined, signal)
+      if (signal.aborted) return []
+      if (!all.ok || all.workspaces === undefined) return []
+      if (all.workspaces.some((w) => typeof w.notesDir !== 'string' || w.notesDir === '')) {
+        warnStaleHost()
+        return []
+      }
+      const wsRows: InputTriggerCandidate[] = []
+      const wsMap = new Map<InputTriggerCandidate, string>()
+      if (query !== '') {
+        const q = query.toLowerCase()
+        for (const w of all.workspaces) {
+          if (!w.name.toLowerCase().includes(q)) continue
+          // Trailing slash on the row shows the completion target and keeps
+          // the row distinct from note titles.
+          const candidate: InputTriggerCandidate = {
+            name: `${w.name}/`,
+            description: t('context.workspaceRow'),
+            icon: '🗂️',
+          }
+          wsRows.push(candidate)
+          wsMap.set(candidate, w.name)
+        }
+      }
+      candidateWorkspaces.set(session.sessionId, wsMap)
       try {
         const workspaces = await fetchCurrent(session.sessionId, signal)
         if (signal.aborted) return []
         const ws = workspaces[0]
-        if (ws === undefined) return []
+        if (ws === undefined) return wsRows
         // Stale host (pre-`notesDir`): candidates still list fine, but a pick
         // cannot build the reference — surface the restart need early.
         if (typeof ws.notesDir !== 'string' || ws.notesDir === '') {
           warnStaleHost()
-          return []
+          return wsRows
         }
-        const { rows, refs } = rowsFor(ws, query, false)
+        const { rows: noteRows, refs } = rowsFor(ws, query, false)
         candidateRefs.set(session.sessionId, refs)
-        return rows
+        return [...wsRows, ...noteRows]
       } catch {
-        return []
+        return wsRows
       }
     },
     onPick({ candidate, session }) {
+      // Workspace fuzzy row: auto-complete `@工作区名/` (the trigger span is
+      // replaced; re-detection pops that workspace's note list).
+      const wsName = candidateWorkspaces.get(session.sessionId)?.get(candidate)
+      if (wsName !== undefined) {
+        return { text: `@${wsName}/` }
+      }
       const ref = candidateRefs.get(session.sessionId)?.get(candidate)
       if (ref === undefined) return undefined // stale generation → miss (nothing inserted)
       // Guard the stale-host window: without notesDir there is no absolute
@@ -292,6 +332,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
       settled.clear()
       lexiconListeners.clear()
       candidateRefs.clear()
+      candidateWorkspaces.clear()
     },
   }
 }

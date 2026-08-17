@@ -44,7 +44,9 @@ Only user-visible functional changes are recorded (no documentation, code refact
   cite it. Chip labels front-truncate (>6 chars) and the chip cell is widened via a plugin
   `@font-face` override (4em→6em) — narrow for short labels, readable for long titles.
   Serialized paths are workspace-qualified (`<workspace-name>/.dsh-notes/<name>`, e.g.
-  `dsh-plugin/.dsh-notes/3333.md`), self-describing and unambiguous across workspaces. Cross-workspace via `@workspace-name` (trailing slash optional, ASCII names only); a referenced note that was deleted or moved blocks the send with a
+  `dsh-plugin/.dsh-notes/3333.md`), self-describing and unambiguous across workspaces. Cross-workspace: typing a partial workspace name shows fuzzy workspace rows (🗂️) that
+  auto-complete to `@workspace-name/` on pick and pop that workspace's notes (ASCII names
+  only; an exact `@workspace-name` switches directly); a referenced note that was deleted or moved blocks the send with a
   "not found — remove the reference" notice.
 
 ### Breaking

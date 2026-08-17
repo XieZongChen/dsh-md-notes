@@ -119,5 +119,6 @@ export const en: { [K in keyof typeof zh]: string } = {
   'context.noteMissing': '{name} could not be found. Remove the reference.',
   'context.errCheck': 'Failed to check the note reference. Please retry.',
   'context.reference': 'Referenced note "{title}": {path}',
+  'context.workspaceRow': 'Workspace',
 
 }
