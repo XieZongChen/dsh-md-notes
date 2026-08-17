@@ -1,23 +1,29 @@
 /**
- * Note picker popup (记入笔记): choose or create a note, then append the
- * addressed answer's conversation to it. All UI copy comes from the
- * `md-notes` locale namespace via `t`.
+ * Note picker popup (记入笔记): choose a note, then append the addressed
+ * answer's conversation to it. The note list mirrors the notes manager's left
+ * panel — grouped by workspace with collapsible rows and folder glyphs — but
+ * without create/delete, and workspace rows only fold (not selectable).
+ * Cross-workspace capture is supported: any workspace's note can be chosen.
+ * All UI copy comes from the `md-notes` locale namespace via `t`.
  * @module dsh-md-notes/client/NotePicker
  */
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { NoteSummary } from '../api.ts'
+import { IconFolderClose16, IconFolderOpen16, IconTriangleRightFill14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { WorkspaceNotes } from '../api.ts'
 import { api, ICON_URL } from '../api.ts'
 import type { NotesStore } from '../store.ts'
 import type { MdNotesKey } from '../locales/index.ts'
-import { DshInput } from '../components/DshInput/DshInput.tsx'
+import { fmtTime } from '../markdown.ts'
 import shared from '../styles.module.css'
 import styles from './note-picker.module.css'
 
 /** Status line state: a locale key plus optional template params. */
 type Status = '' | { key: MdNotesKey; params?: Record<string, unknown> }
+
+/** A selected note, identified by workspace + name. */
+interface Selection { workspaceId: string; name: string }
 
 export interface NotePickerProps {
   sessionId: string
@@ -33,47 +39,40 @@ export interface NotePickerProps {
  */
 export function NotePicker(props: NotePickerProps): React.ReactElement {
   const { sessionId, messageId, store, t } = props
-  const [notes, setNotes] = React.useState<NoteSummary[]>([])
+  const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [noWorkspaces, setNoWorkspaces] = React.useState(false)
-  const [selected, setSelected] = React.useState<string | null>(null)
-  const [newTitle, setNewTitle] = React.useState('')
+  const [selected, setSelected] = React.useState<Selection | null>(null)
+  const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
   const [busy, setBusy] = React.useState(false)
   const [status, setStatus] = React.useState<Status>('')
 
   React.useEffect(() => {
-    void api('list', { sessionId }).then((res) => {
+    // No sessionId → list every workspace, enabling cross-workspace capture.
+    void api('list').then((res) => {
       setNoWorkspaces(res.ok === true && res.noWorkspaces === true)
       if (res.ok && res.workspaces) {
-        const notes = res.workspaces.flatMap((w) => w.notes)
-        setNotes(notes)
-        if (notes.length > 0) setSelected(notes[0]!.name)
+        setWorkspaces(res.workspaces)
+        const first = res.workspaces.find((w) => w.notes.length > 0)
+        const firstNote = first?.notes[0]
+        if (firstNote !== undefined && first !== undefined) {
+          setSelected({ workspaceId: first.workspaceId, name: firstNote.name })
+        }
       }
     })
-  }, [sessionId])
+  }, [])
 
-  const createAndPick = (): void => {
-    if (noWorkspaces) { setStatus({ key: 'picker.noWorkspaces' }); return }
-    const title = newTitle.trim()
-    setBusy(true)
-    void api('create', { title, sessionId }).then((res) => {
-      setBusy(false)
-      if (res.ok && res.name) {
-        setSelected(res.name)
-        setNewTitle('')
-        return api('list', { sessionId })
-      }
-      setStatus({ key: 'picker.createFailed' })
-      return null
-    }).then((res) => { if (res?.ok && res.workspaces) setNotes(res.workspaces.flatMap((w) => w.notes)) })
+  const toggleWorkspace = (workspaceId: string): void => {
+    setCollapsed((prev) => ({ ...prev, [workspaceId]: !prev[workspaceId] }))
   }
 
   const send = (): void => {
     if (noWorkspaces) { setStatus({ key: 'picker.noWorkspaces' }); return }
-    if (!selected) { setStatus({ key: 'picker.needSelect' }); return }
+    if (selected === null) { setStatus({ key: 'picker.needSelect' }); return }
     setBusy(true)
     setStatus({ key: 'picker.writing' })
     void api('appendConversation', {
-      noteName: selected,
+      noteName: selected.name,
+      workspaceId: selected.workspaceId,
       sessionId,
       messageId,
       labels: {
@@ -112,34 +111,48 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
       <div className={styles.dialogBody}>
         {noWorkspaces
           ? <div className={shared.empty}>{t('picker.noWorkspaces')}</div>
-          : notes.length === 0
+          : workspaces.length === 0
             ? <div className={shared.empty}>{t('picker.empty')}</div>
-            : <div className={styles.pickList}>
-              {notes.map((n) => (
+            : workspaces.map((ws) => (
+              <div key={ws.workspaceId} className={styles.wsGroup}>
                 <div
-                  key={n.name}
-                  className={selected === n.name ? `${styles.pickItem} ${styles.pickItemActive}` : styles.pickItem}
-                  onClick={() => setSelected(n.name)}
+                  className={styles.wsGroupHead}
+                  onClick={() => toggleWorkspace(ws.workspaceId)}
+                  title={ws.name}
+                  aria-expanded={!collapsed[ws.workspaceId]}
                 >
-                  <span className={styles.pickRadio}>{selected === n.name ? '●' : '○'}</span>
-                  <span>{n.title}</span>
+                  <span className={styles.wsFolder}>
+                    {collapsed[ws.workspaceId] ? <IconFolderClose16 /> : <IconFolderOpen16 />}
+                  </span>
+                  <span className={styles.wsChevron}>
+                    <IconTriangleRightFill14 className={collapsed[ws.workspaceId] ? styles.wsArrow : `${styles.wsArrow} ${styles.wsArrowOpen}`} />
+                  </span>
+                  <span className={styles.wsGroupTitle}>{ws.name}</span>
                 </div>
-              ))}
-            </div>}
-        <div className={styles.newRow}>
-          <DshInput
-            placeholder={t('picker.newPlaceholder')}
-            value={newTitle}
-            disabled={noWorkspaces}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') createAndPick() }}
-          />
-          <button type="button" className={shared.btn} onClick={createAndPick} disabled={busy || noWorkspaces}>{t('picker.new')}</button>
-        </div>
+                {!collapsed[ws.workspaceId] && (
+                  ws.notes.length === 0
+                    ? <div className={`${shared.empty} ${styles.wsEmpty}`}>{t('picker.empty')}</div>
+                    : ws.notes.map((n) => (
+                      <div
+                        key={n.name}
+                        className={selected !== null && selected.workspaceId === ws.workspaceId && selected.name === n.name
+                          ? `${styles.noteItem} ${styles.noteItemActive}`
+                          : styles.noteItem}
+                        onClick={() => setSelected({ workspaceId: ws.workspaceId, name: n.name })}
+                      >
+                        <div className={styles.noteMain}>
+                          <div className={styles.noteTitle}>{n.title}</div>
+                          <div className={styles.noteTime}>{fmtTime(n.updatedAt)}</div>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            ))}
         <div className={styles.status}>{status === '' ? '' : t(status.key, status.params)}</div>
       </div>
       <div className={styles.dialogFoot}>
-        <button type="button" className={`${shared.btn} ${shared.btnPrimary}`} onClick={send} disabled={busy || !selected || noWorkspaces}>
+        <button type="button" className={`${shared.btn} ${shared.btnPrimary}`} onClick={send} disabled={busy || selected === null || noWorkspaces}>
           {busy ? t('picker.writing') : t('picker.write')}
         </button>
       </div>

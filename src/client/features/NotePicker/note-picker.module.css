@@ -1,6 +1,7 @@
 /* Note picker popup (记入笔记). The card/mask/shadow come from dsh's Modal
-   component (headless mode); this file only lays out the picker's own content
-   with dsh theme tokens so dark mode renders correctly. */
+   component (headless mode). The note list mirrors the notes manager's left
+   panel — grouped by workspace with collapsible rows and folder glyphs —
+   reusing the same token-based styles so both surfaces look identical. */
 
 .dialog {
   width: 420px;
@@ -33,58 +34,127 @@
 }
 
 .dialogBody {
-  padding: 16px 20px;
+  padding: 12px 12px;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 2px;
 }
 
-.pickList {
-  max-height: 240px;
-  overflow: auto;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 10px;
+/* ---- Workspace group (mirrors notes-manager .wsGroup/.wsGroupHead) ---- */
+
+.wsGroup {
+  display: flex;
+  flex-direction: column;
 }
 
-.pickItem {
+.wsGroupHead {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 6px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 13px;
+  user-select: none;
   color: var(--dsw-alias-label-primary);
+  box-sizing: border-box;
 }
-.pickItem:hover {
+
+.wsGroupHead:hover {
   background: var(--dsw-alias-interactive-bg-hover);
 }
-.pickItemActive {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
 
-.pickRadio {
-  color: var(--dsw-alias-brand-primary);
-  font-size: 11px;
-}
-
-.newRow {
-  display: flex;
-  gap: 8px;
-}
-
-/* The DshInput inside is width:100% by default; in a flex row it must shrink
-   so the New button stays on the same line. */
-.newRow input {
+.wsGroupTitle {
   flex: 1;
-  width: auto;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+/* Folder glyph: tertiary grey (workspace rows are not selectable here, so no
+   business-primary active state — they only fold). */
+.wsFolder {
+  flex: none;
+  width: 16px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* Expand chevron: caption grey, rotates to point down when expanded. */
+.wsChevron {
+  flex: none;
+  width: 16px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dsw-alias-label-caption);
+}
+
+.wsArrow {
+  transition: transform 150ms var(--ds-ease-in-out);
+}
+
+.wsArrowOpen {
+  transform: rotate(90deg);
+}
+
+/* ---- Note item (mirrors notes-manager .noteItem) ---- */
+
+.noteItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+.noteItem:hover {
+  background: var(--dsw-alias-bg-layer-1, #f5f5f5);
+}
+.noteItemActive {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.noteItemActive .noteTitle {
+  font-weight: 600;
+}
+
+.noteMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.noteTitle {
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary, #222);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.noteTime {
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary, #888);
+}
+
+.wsEmpty {
+  padding: 4px 10px;
 }
 
 .status {
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);
   min-height: 16px;
+  padding: 4px 8px;
 }
 
 .dialogFoot {
