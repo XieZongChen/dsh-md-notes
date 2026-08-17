@@ -16,7 +16,8 @@
   不可定制渲染，工作区信息走候选 label 文本（见 §3.3.1）
 - ✅ **纯文本 `@笔记名` 仅装饰**（textRef 高亮），不产生 chip、不注入上下文；引用必须走菜单 chip
 - ✅ **serialize 失败阻断发送**（源码 "serialize failure blocks the send"）——引用失效需用户移除
-- ✅ **textRef 匹配 `[\w-]+`** → 跨工作区文本触发仅支持 ASCII 工作区名
+- ✅ **textRef 装饰匹配 `[\w-]+`**（lexicon 纯文本高亮仅对 ASCII 名称生效；不影响引用
+  语义与跨工作区触发——中文工作区名已支持，见 §3.2/TODO 2.3）
 - ✅ **候选 icon 实测结论**：`MenuView` 把 `InputTriggerCandidate.icon` 作为**纯文本**渲染在
   16px 槽位（`{item.icon}` 字符串子节点）——**URL/SVG 无法渲染成图片**，会显示字面 URL 文本。
   因此候选 icon 用 📝 emoji 替代插件 SVG（见 §3.2）。
