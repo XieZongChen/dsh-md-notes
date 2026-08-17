@@ -1,11 +1,11 @@
 /**
  * Changelog release helper: rename the top `## NEXT_VERSION` block to a real
- * version (`[<version>] - <date>`) in both CHANGELOG.md and CHANGELOG.zh.md,
- * then prepend a fresh empty `NEXT_VERSION` block.
+ * version (`[<version>] - <date>`) in both CHANGELOG.md and CHANGELOG.zh.md.
  *
- * The fresh block is inserted right before the (renamed) first version block —
- * i.e. after the header + rules — so the rules' own `## NEXT_VERSION` mention
- * (inside the rules prose) is never touched.
+ * It does NOT prepend a fresh NEXT_VERSION — a new block is only created on
+ * demand when the next change lands (see the recording rules in the
+ * changelogs). This keeps the changelog free of empty NEXT_VERSION blocks
+ * while nothing is in development.
  *
  * Usage: node scripts/release-changelog.mjs <version>
  * (exposed as `npm run changelog:release -- <version>`)
@@ -31,14 +31,7 @@ for (const file of ['CHANGELOG.md', 'CHANGELOG.zh.md']) {
     console.error(`${file}: no top ${marker.trim()} block found — nothing to release`)
     process.exit(1)
   }
-  // Rename this (the real version block) to the released version.
   const renamed = s.slice(0, idx) + `## [${version}] - ${date}` + s.slice(idx + marker.length)
-  // Insert a fresh empty NEXT_VERSION right before the renamed block, so it
-  // stays the top-most version block under the header/rules.
-  const at = renamed.indexOf(`## [${version}] - ${date}`)
-  const head = renamed.slice(0, at)
-  const rest = renamed.slice(at)
-  const fresh = `${head}## NEXT_VERSION\n\n### Added\n\n${rest}`
-  writeFileSync(path, fresh)
-  console.log(`${file}: NEXT_VERSION → [${version}] - ${date}, fresh NEXT_VERSION prepended`)
+  writeFileSync(path, renamed)
+  console.log(`${file}: NEXT_VERSION → [${version}] - ${date}`)
 }

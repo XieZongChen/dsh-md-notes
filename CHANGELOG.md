@@ -13,8 +13,9 @@ Only user-visible functional changes are recorded (no documentation, code refact
 - **Fixed** only records fixes to features from **earlier versions**.
 - Unreleased changes go under **`## NEXT_VERSION`** at the top; on release, run
   `npm run changelog:release -- <version>` — it renames `NEXT_VERSION` to `[<version>] - <date>`
-  and prepends a fresh empty `NEXT_VERSION`. If a change lands and no `NEXT_VERSION` block
-  exists, add one first.
+  and does **not** create a new one (no empty blocks while nothing is in development). When a
+  change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
+  change under it.
 
 ## NEXT_VERSION
 

@@ -11,8 +11,9 @@
   **不再记入**（那是构建该功能的一部分，不是对已发布行为的修复）。
 - **Fixed** 只记录对**历史版本**已有功能的修复。
 - 未发布的改动写入顶部 **`## NEXT_VERSION`** 块；发版时执行
-  `npm run changelog:release -- <版本号>`——脚本会把 `NEXT_VERSION` 改名为 `[<版本号>] - <日期>`
-  并在最上方新增一个空的 `NEXT_VERSION`。若写入改动时不存在 `NEXT_VERSION` 块，先添加一个。
+  `npm run changelog:release -- <版本号>`——脚本会把 `NEXT_VERSION` 改名为 `[<版本号>] - <日期>`，
+  **不新增** `NEXT_VERSION`（开发空窗期不留空块）。写入改动时先检查是否存在 `NEXT_VERSION`
+  块——没有就先添加一个，再在块下记录新改动。
 
 ## NEXT_VERSION
 
