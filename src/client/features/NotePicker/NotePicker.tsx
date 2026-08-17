@@ -16,6 +16,7 @@ import { api, ICON_URL } from '../api.ts'
 import type { NotesStore } from '../store.ts'
 import type { MdNotesKey } from '../locales/index.ts'
 import { fmtTime } from '../markdown.ts'
+import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import shared from '../styles.module.css'
 import styles from './note-picker.module.css'
 
@@ -41,6 +42,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
   const { sessionId, messageId, store, t } = props
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [noWorkspaces, setNoWorkspaces] = React.useState(false)
+  const [loading, setLoading] = React.useState(true)
   const [selected, setSelected] = React.useState<Selection | null>(null)
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
   const [busy, setBusy] = React.useState(false)
@@ -49,6 +51,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
   React.useEffect(() => {
     // No sessionId → list every workspace, enabling cross-workspace capture.
     void api('list').then((res) => {
+      setLoading(false)
       setNoWorkspaces(res.ok === true && res.noWorkspaces === true)
       if (res.ok && res.workspaces) {
         setWorkspaces(res.workspaces)
@@ -109,11 +112,13 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
         <button type="button" className={shared.iconBtn} onClick={close} title={t('picker.close')}>✕</button>
       </div>
       <div className={styles.dialogBody}>
-        {noWorkspaces
-          ? <div className={shared.empty}>{t('picker.noWorkspaces')}</div>
-          : workspaces.length === 0
-            ? <div className={shared.empty}>{t('picker.empty')}</div>
-            : (
+        {loading
+          ? <div className={styles.pickerLoading}><LoadingIndicator label={t('picker.loading')} /></div>
+          : noWorkspaces
+            ? <div className={shared.empty}>{t('picker.noWorkspaces')}</div>
+            : workspaces.length === 0
+              ? <div className={shared.empty}>{t('picker.empty')}</div>
+              : (
               <div className={styles.noteList}>
                 {workspaces.map((ws) => (
               <div key={ws.workspaceId} className={styles.wsGroup}>

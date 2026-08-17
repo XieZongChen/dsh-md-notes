@@ -173,3 +173,11 @@
   display: flex;
   justify-content: flex-end;
 }
+
+/* Loading state while the note list is being fetched. */
+.pickerLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+}
