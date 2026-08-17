@@ -52,17 +52,39 @@ function warnStaleHost(): void {
 }
 
 /**
- * The serialized path of one note: workspace-qualified —
- * `<工作区名>/.dsh-notes/<name>` (e.g. `dsh-plugin/.dsh-notes/3333.md`).
- * The workspace name as the first segment makes the reference self-describing
- * (which workspace the note lives in) and unambiguous across workspaces; the
- * model resolves the note from this path (its `read` tool may need to locate
- * the absolute file — reads pass through the sandbox, cross-workspace fine).
+ * POSIX relative path from one absolute directory to an absolute target
+ * (no node:path in the browser bundle). Same-dir targets yield
+ * `.dsh-notes/<name>`-style paths; siblings yield `../<dir>/…`.
  */
-function refFor(ws: WorkspaceNotes, note: NoteSummary): string {
-  // notesDir is always `<wsRoot>/.dsh-notes`; keep the dir segment derived.
-  const dir = ws.notesDir.split('/').filter(Boolean).pop() ?? '.dsh-notes'
-  return `${ws.name}/${dir}/${note.name}`
+function relFrom(fromDir: string, target: string): string {
+  const f = fromDir.split('/').filter(Boolean)
+  const t = target.split('/').filter(Boolean)
+  let i = 0
+  while (i < f.length && i < t.length && f[i] === t[i]) i++
+  const ups = f.length - i
+  const down = t.slice(i).join('/')
+  return ups === 0 ? down : `${'../'.repeat(ups)}${down}`
+}
+
+/** Canonicalize a POSIX path (collapse `.` / `..` segments) for exact compares. */
+function canon(p: string): string {
+  const out: string[] = []
+  for (const seg of p.split('/')) {
+    if (seg === '' || seg === '.') continue
+    if (seg === '..') out.pop()
+    else out.push(seg)
+  }
+  return out.length === 0 ? '/' : `/${out.join('/')}`
+}
+
+/** Strip the last segment of an absolute dir (e.g. `<ws>/.dsh-notes` → `<ws>`). */
+function parentDir(dir: string): string {
+  return dir.replace(/[\\/]+$/, '').replace(/[\\/][^\\/]*$/, '')
+}
+
+/** Absolute path of one note (the target for the session-relative path). */
+function refPath(ws: WorkspaceNotes, note: NoteSummary): string {
+  return ws.notesDir.endsWith('/') ? ws.notesDir + note.name : `${ws.notesDir}/${note.name}`
 }
 
 /**
@@ -185,7 +207,12 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
       // Workspace entered (slash, or exact bare workspace name): only that
       // workspace's notes, filtered by `rest`.
       if (slash !== -1 || prefix !== '') {
-        const all = await api('list', undefined, signal)
+        // Warm the session's own workspace list in parallel so a pick can
+        // compute the session-relative path (settled backs onPick).
+        const [all, _sessionWs] = await Promise.all([
+          api('list', undefined, signal),
+          fetchCurrent(session.sessionId, signal),
+        ])
         if (signal.aborted) return []
         if (!all.ok || all.workspaces === undefined) return []
         if (all.workspaces.some((w) => typeof w.notesDir !== 'string' || w.notesDir === '')) {
@@ -259,15 +286,28 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
       }
       const ref = candidateRefs.get(session.sessionId)?.get(candidate)
       if (ref === undefined) return undefined // stale generation → miss (nothing inserted)
-      // Guard the stale-host window: without notesDir there is no absolute
-      // path to reference — report it instead of crashing on `undefined`.
+      // Guard the stale-host window: without notesDir there is no path
+      // identity — report it instead of crashing on `undefined`.
       if (typeof ref.ws.notesDir !== 'string' || ref.ws.notesDir === '') {
         warnStaleHost()
         return undefined
       }
+      // Serialized path: RELATIVE to the session workspace root — the model's
+      // `read` resolves against its session cwd (the workspace root). Same
+      // workspace → `.dsh-notes/<name>`; other workspaces → `../<dir>/.dsh-notes/<name>`.
+      // A `<工作区名>/…` prefix can NEVER resolve (the workspace is not nested
+      // inside itself), so the workspace title is omitted from the path.
+      const sessionWs = settled.get(session.sessionId)?.[0]
+      const sessionRoot = sessionWs !== undefined && typeof sessionWs.notesDir === 'string'
+        ? parentDir(sessionWs.notesDir)
+        : undefined
+      const dir = ref.ws.notesDir.split('/').filter(Boolean).pop() ?? '.dsh-notes'
+      const path = sessionRoot !== undefined
+        ? relFrom(sessionRoot, refPath(ref.ws, ref.note))
+        : `${ref.ws.name}/${dir}/${ref.note.name}`
       const insert: ReferenceInsert = {
         source: NOTES_SOURCE,
-        ref: refFor(ref.ws, ref.note),
+        ref: path,
         label: chipLabel(candidate.name),
         clipboardText: ref.crossWs ? `@${ref.ws.name}/${candidate.name}` : `@${candidate.name}`,
       }
@@ -290,16 +330,22 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
           warnStaleHost()
           throw new Error(t('context.errCheck'))
         }
-        // Resolve the ref to its owning workspace + note. Refs are
-        // workspace-qualified (`<wsName>/.dsh-notes/<name>`) — match by the
-        // workspace name; an absolute ref (legacy draft / direct call) still
-        // matches by notesDir prefix.
+        // Resolve the ref to its owning workspace + note. Refs are relative to
+        // a workspace root (`.dsh-notes/<name>` or `../<dir>/.dsh-notes/<name>`)
+        // — resolve against every workspace root and require an exact notesDir
+        // match; a `<wsName>/…` ref (fallback pick) matches by workspace name;
+        // an absolute ref (legacy draft / direct call) matches by notesDir prefix.
         let owner: WorkspaceNotes | undefined
         let name = ''
         if (ref.startsWith('/')) {
           owner = list.workspaces.find((ws) =>
             ref.startsWith(ws.notesDir.endsWith('/') ? ws.notesDir : `${ws.notesDir}/`))
           name = owner === undefined ? '' : ref.slice(owner.notesDir.length + (owner.notesDir.endsWith('/') ? 0 : 1))
+        } else if (ref.startsWith('.')) {
+          name = ref.slice(ref.lastIndexOf('/') + 1)
+          owner = list.workspaces.find((ws) =>
+            canon(`${parentDir(ws.notesDir)}/${ref}`) === canon(`${ws.notesDir}/${name}`)
+            && ws.notes.some((n) => n.name === name))
         } else {
           const slash = ref.indexOf('/')
           const wsName = slash === -1 ? '' : ref.slice(0, slash)

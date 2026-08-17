@@ -82,10 +82,11 @@ model uses its `read` tool to load the note and can cite it in the answer.
    a **workspace row** (`dsh-plugin/`); pick it to auto-complete `@dsh-plugin/` and list
    that workspace's notes — keep typing to filter within it (**ASCII names only**; an exact
    `@dsh-plugin` switches directly).
-4. Send → each chip serializes to a readable line with a
-   workspace-qualified path, e.g.
-   `Referenced note "title": dsh-plugin/.dsh-notes/note.md`; the model reads
-   the referenced note and answers with it. A plain-text
+4. Send → each chip serializes to a readable line whose path is relative to
+   the current workspace root (same workspace: `Referenced note "title":
+   .dsh-notes/note.md`; cross-workspace: `Referenced note "title":
+   ../other-dir/.dsh-notes/note.md`); the model reads the referenced note and
+   answers with it. A plain-text
    `@note-title` you type by hand is only highlighted decoration — it does
    **not** enter the context; real references go through the menu (chip).
 5. If a referenced note was deleted or moved, the send is blocked with
