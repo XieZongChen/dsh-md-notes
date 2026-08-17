@@ -5,12 +5,19 @@
 
 ## 0. 实现状态
 
-> 最后更新 2026-08-16。🚧 设计已定、未实现；⏳ 待实测确认。
+> 最后更新 2026-08-16。🚧 设计已定、未实现；✅ 机制已确认；⏳ 待实测确认。
+
+### 已确认（dsh 源码调研）
+
+- ✅ `@` 引用管线（`ui-input-trigger`：registerSource / candidates / onPick / ReferenceCodec）
+- ✅ fs 沙箱只拦写入、读放行 → 跨工作区读取无授权障碍
+- ✅ `tool-fs` 核心挂载，`read` 工具默认对 agent 可用
+- ✅ chip 与候选菜单为 dsh 硬编码，插件不可定制渲染（工作区信息走候选 label 文本）
 
 ### 未实现
 
 - 🚧 对话输入 `@` 引用笔记（候选菜单 / chip / 提交序列化）
-- 🚧 模型上下文注入（`ReferenceCodec.serialize` 输出笔记内容）
+- 🚧 模型上下文注入（`ReferenceCodec.serialize` 输出路径引用）
 - 🚧 纯文本 `@笔记名` 装饰（`lexicon` 热快照）
 - 🚧 知识库式自动检索（超出 dsh 原生能力，需自定义）
 
@@ -33,13 +40,22 @@
 | `candidates(session, req)` | 菜单候选列表 | 从 host `list` 拉当前工作区笔记 → `{ name, description, icon, hint }` |
 | `onPick(pick)` | 选中回调 | 返回 `ReferenceInsert { source, ref, label, clipboardText }` |
 | `ReferenceInsert` | 插入 U+FFFC 占位符（UI 渲染为 chip） | `source: 'md-notes'`、`ref: 文件名`、`label: 标题` |
-| `ReferenceCodec` | 提交时把引用**序列化为模型文本** | `serialize(ref)` → 读笔记全文 markdown |
+| `ReferenceCodec` | 提交时把引用**序列化为模型文本** | `serialize(ref)` → 输出**路径 + 标题**（见 §3.3） |
 | `warm(session)` | 会话诞生时预取数据 | 预取笔记名列表（配合 lexicon） |
 | `lexicon(session)` | 纯文本 `@笔记名` 装饰（同步热快照） | 返回笔记标题数组；未 warm 时返回 undefined（不触发 fetch） |
 | `matchEnter` | Enter 时解析整行 | 可选：支持 `/引用 笔记名` 等命令式 |
 
 **关键**：`ReferenceCodec.serialize` 的输出就是进入模型上下文的内容——这是"注入"的
 真正落点，UI 的 chip 只是表象。
+
+### 2.1 渲染定制能力（已确认，有限制）
+
+- **引用 chip**：dsh 硬编码渲染（`InputBar` 内 `css.chip` + `chipLabel`，显示 `ReferenceInsert.label`），
+  **插件无法定制样式/结构**（无 slot 注入点）。
+- **`@` 候选菜单**：dsh 硬编码渲染（`MenuView` 按 source 分组候选行），插件无法改面板结构；
+  但**候选内容本身可携带任意 label/description**，可在文本里体现工作区信息
+  （如 `「工作区名」笔记标题`）。
+- **模型 `read` 工具**：`tool-fs` 在 base/web bundle 核心挂载，`read` **默认对 agent 可用**（无需额外配置）。
 
 ## 3. 方案设计（B：路径引用，对话自主读取）
 
@@ -51,31 +67,38 @@
 
 ### 3.1 交互流程（用户视角）
 
-1. 在对话输入框输入 `@` → 弹出菜单，列出笔记（标题 + 文件名 hint），**可跨工作区**。
+1. 在对话输入框输入 `@` → 弹出菜单，列出**当前工作区**的笔记（标题 + 文件名 hint）。
 2. 上下键选择 / 点击选中 → 输入框出现一个笔记 chip（占位符），可多选（多篇笔记）。
-3. 发送消息 → 每个 chip 经 `codec.serialize` 序列化为**路径 + 标题**（见 §3.3）。
-4. 模型看到路径后调用 `read` 工具读取笔记内容（读放行，跨工作区可读），回答时引用。
+3. **跨工作区**：候选 label 带工作区名（如「工作区B」标题），选中后序列化为
+   工作区限定路径（§3.3）。
+4. 发送消息 → 每个 chip 经 `codec.serialize` 序列化为**路径 + 标题**（§3.3）。
+5. 模型看到路径后调用 `read` 工具读取笔记内容（读放行，跨工作区可读），回答时引用。
 
 纯文本输入 `@笔记名`（不弹菜单直接打字）也能被装饰成 chip，前提是 `warm` 已预取
-（lexicon 同步匹配）。
+（lexicon 同步匹配，默认当前工作区以避免同名歧义）。
 
 ### 3.2 候选数据源（含跨工作区）
 
-- **默认范围**：当前会话工作区的笔记（`api('list', { sessionId })`）。
-- **跨工作区**：`list` 不带 sessionId 时返回全部工作区；候选可加**工作区分组**——
-  每个候选携带 `workspaceId`，序列化时解析为该工作区的 `.dsh-notes/<name>.md` 绝对路径。
-- **候选**：`{ name: 文件名（去 .md）, description: 笔记标题（+ 工作区名）, hint: 更新时间 }`。
+- **默认范围**：当前会话工作区的笔记（`api('list', { sessionId })`）——`@` 默认只列当前工作区，
+  避免菜单杂乱。
+- **跨工作区**：候选文本里体现工作区（如 `「工作区名」笔记标题`）；菜单结构不可定制，
+  但**候选 label 可携带工作区名**（见 §2.1）。跨工作区引用通过输入过滤（`query`）或
+  显式带工作区前缀触发。
+- **候选**：`{ name: 文件名（去 .md）, description: 笔记标题, hint: 更新时间 }`；
+  label 若含工作区名则直接拼接进显示文本。
+- **无工作区**：`warm`/`candidates` 返回空（`@` 不到笔记）——不弹菜单，静默无候选。
 - **实时性**：`warm` 在会话诞生时预取；笔记增删后经 `subscribeLexicon` 通知刷新。
 
 ### 3.3 序列化格式（进入模型的文本）
 
-`ReferenceCodec.serialize(ref)` 返回**路径引用**（不包含全文）：
+`ReferenceCodec.serialize(ref)` 返回**路径引用**（不包含全文）。跨工作区时 ref 带工作区限定：
 
 ```markdown
 <note ref="<工作区>/.dsh-notes/xxx.md">笔记标题</note>
 ```
 
-- `ref` 为笔记的**绝对路径**（解析到具体工作区的 `.dsh-notes`），模型据此调用 `read` 读取。
+- `ref` 为笔记的**绝对路径**（当前工作区）或**工作区限定路径**（跨工作区）——
+  用户可确认格式为 `<工作区>/笔记名.md` 风格，模型据此调用 `read` 读取。
 - 标题作为 chip/序列化的可读标签；路径即"授权"——读放行，跨工作区无碍。
 - 标签语言跟随界面语言（新增 `context.noteOpen` / `context.noteClose` 之类 key，中英各一份）。
 - 失败（笔记不存在）→ 序列化为空占位并提示，不阻断发送。
@@ -86,10 +109,9 @@
 
 - **client**：新增 `features/ContextSource/`（`ContextSource.tsx` + css），在 `apply` 里
   `ctx.get('inputTriggers')?.registerSource(...)`（挂 `ctx.effect`，HMR 安全）。
-- **host**：需要两个小扩展：
-  - `list` 已支持返回全部工作区（不带 sessionId）；
-  - 新增 `resolveNotePath(workspaceId, name)`（或复用现有解析）返回笔记**绝对路径**，
-    供 client 序列化 `ref` 使用。
+- **host**：`list` API **透出每个工作区的 `notesDir`**（WorkspaceEntry 已有该字段，http 层
+  补返回即可）——client 用 `notesDir + 文件名` 拼绝对路径，**零新增 API**。
+  跨工作区候选也由 `list`（不带 sessionId）全量返回，各带 `notesDir`。
 
 ### 3.5 与「记入笔记」的闭环
 
@@ -114,11 +136,11 @@
 
 ## 5. 验收标准
 
-- 输入 `@` 弹出笔记候选（含**跨工作区**分组）；选中后显示 chip；可多篇。
+- 输入 `@` 弹出笔记候选（**默认当前工作区**）；选中后显示 chip；可多篇。
 - 发送后序列化输出**路径 + 标题**；模型能调用 `read` 读取笔记并在回答中引用内容。
-- **跨工作区**：引用其他工作区的笔记，模型 `read` 正常读到（无授权障碍）。
-- 纯文本 `@笔记名` 可装饰成 chip 并正常序列化。
-- 无工作区时 `@` 菜单提示先新建工作区（与现有无工作区提示一致）。
+- **跨工作区**：候选文本带工作区名；序列化 ref 为 `<工作区>/笔记名.md`；模型 `read` 正常读到。
+- 纯文本 `@笔记名` 可装饰成 chip 并正常序列化（默认当前工作区，避免同名歧义）。
+- 无工作区时 `@` 无候选（静默）。
 - i18n：菜单空态/提示/序列化标签中英双语。
 - HMR 安全：`registerSource` 挂在 `ctx.effect`，卸载自动清理。
 
@@ -126,7 +148,7 @@
 
 1. **依赖确认**：`@deepseek-ai/dsh-client-ui-input-trigger` 加入 link-deps 与
    tsdown external（client 侧类型 + 运行时服务）。
-2. **host**：`resolveNotePath(workspaceId, name)` 返回笔记绝对路径（跨工作区候选用它）。
+2. **host**：`list` API 透出每工作区 `notesDir`（供 client 拼 ref 绝对路径）。
 3. **Client source**：`features/ContextSource/` 实现 `InputTriggerSource`
    （`candidates` / `onPick` / `codec` / `warm` / `lexicon`）；codec 输出路径引用。
 4. **i18n**：新增 `context.*` 前缀 key（菜单标题、空态、序列化标签、无工作区提示）。
@@ -138,7 +160,8 @@
 - **上下文长度**：路径引用方案下，全文不进上下文——模型按需 `read`，长度风险基本消除。
   残余风险：模型可能读入大量内容，由模型自身权衡（`read` 有窗口限制）。
 - **多篇笔记**：序列化多篇时按插入顺序拼接，各加 `<note ref=...>` 标签分隔。
-- **跨工作区路径**：`ref` 输出绝对路径，可能暴露工作区目录结构——但 dsh 会话本就
-  知道工作区路径（cwd），风险可接受。
-- **模型不会主动读**：路径引用依赖模型自主调用 `read`；若模型不读，只拿到标题。
-  摘要功能（未来）可缓解（见 TODO）。
+- **跨工作区路径**：ref 输出绝对路径 + 工作区限定——dsh 会话本就知晓工作区路径，可接受。
+- **模型主动读**：`tool-fs` 核心挂载、`read` 默认可用（已确认），模型通常会在引用后读取；
+  但依赖模型自主行为——若模型不读，用户只拿到标题。摘要功能（未来）可缓解（见 TODO）。
+- **渲染不可定制**：chip 与候选菜单为 dsh 硬编码，插件无法改样式/结构——工作区信息只能
+  通过候选 label 文本体现（§2.1）。
