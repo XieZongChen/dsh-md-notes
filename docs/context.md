@@ -39,14 +39,15 @@
 | `InputTriggerService.registerSource` | 注册一个 `@` 触发源 | `trigger: '@'`，命名 `md-notes` |
 | `candidates(session, req)` | 菜单候选列表 | 从 host `list` 拉当前工作区笔记 → `{ name, description, icon, hint }` |
 | `onPick(pick)` | 选中回调 | 返回 `ReferenceInsert { source, ref, label, clipboardText }` |
-| `ReferenceInsert` | 插入 U+FFFC 占位符（UI 渲染为 chip） | `source: 'md-notes'`、`ref: 文件名`、`label: 标题` |
+| `ReferenceInsert` | 插入 U+FFFC 占位符（UI 渲染为 chip） | `source: 'md-notes'`、`ref: 笔记绝对路径`、`label: 标题` |
 | `ReferenceCodec` | 提交时把引用**序列化为模型文本** | `serialize(ref)` → 输出**路径 + 标题**（见 §3.3） |
 | `warm(session)` | 会话诞生时预取数据 | 预取笔记名列表（配合 lexicon） |
 | `lexicon(session)` | 纯文本 `@笔记名` 装饰（同步热快照） | 返回笔记标题数组；未 warm 时返回 undefined（不触发 fetch） |
 | `matchEnter` | Enter 时解析整行 | 可选：支持 `/引用 笔记名` 等命令式 |
 
 **关键**：`ReferenceCodec.serialize` 的输出就是进入模型上下文的内容——这是"注入"的
-真正落点，UI 的 chip 只是表象。
+真正落点，UI 的 chip 只是表象。`ReferenceInsert.ref` 携带**笔记绝对路径**（含工作区信息），
+`label` 才是显示文本——serialize 阶段不再丢失工作区信息。
 
 ### 2.1 渲染定制能力（已确认，有限制）
 
@@ -67,10 +68,10 @@
 
 ### 3.1 交互流程（用户视角）
 
-1. 在对话输入框输入 `@` → 弹出菜单，列出**当前工作区**的笔记（标题 + 文件名 hint）。
+1. 在对话输入框输入 `@` → 弹出菜单，列出**当前工作区**的笔记（标题 + 文件名 hint，插件图标）。
 2. 上下键选择 / 点击选中 → 输入框出现一个笔记 chip（占位符），可多选（多篇笔记）。
-3. **跨工作区**：候选 label 带工作区名（如「工作区B」标题），选中后序列化为
-   工作区限定路径（§3.3）。
+3. **跨工作区**：输入 `@工作区名/`（如 `@dsh-plugin/`）时扩展到该工作区的笔记；
+   候选 label 显示笔记标题，description 可带工作区名（§3.2）。
 4. 发送消息 → 每个 chip 经 `codec.serialize` 序列化为**路径 + 标题**（§3.3）。
 5. 模型看到路径后调用 `read` 工具读取笔记内容（读放行，跨工作区可读），回答时引用。
 
@@ -81,11 +82,11 @@
 
 - **默认范围**：当前会话工作区的笔记（`api('list', { sessionId })`）——`@` 默认只列当前工作区，
   避免菜单杂乱。
-- **跨工作区**：候选文本里体现工作区（如 `「工作区名」笔记标题`）；菜单结构不可定制，
-  但**候选 label 可携带工作区名**（见 §2.1）。跨工作区引用通过输入过滤（`query`）或
-  显式带工作区前缀触发。
-- **候选**：`{ name: 文件名（去 .md）, description: 笔记标题, hint: 更新时间 }`；
-  label 若含工作区名则直接拼接进显示文本。
+- **跨工作区触发（方式 A）**：输入 `@工作区名/`（触发词前缀）时，candidates 根据 `query`
+  识别工作区前缀，返回该工作区的笔记；label 为笔记标题，description 可附工作区名。
+  菜单结构不可定制，但候选 label/description 文本可携带工作区信息（§2.1）。
+- **候选**：`{ name: 文件名（去 .md）, description: 笔记标题, icon: 插件 SVG, hint: 更新时间 }`；
+  `icon` 统一用 `assets/dsh-md-notes.svg`（经 `ICON_URL`）。
 - **无工作区**：`warm`/`candidates` 返回空（`@` 不到笔记）——不弹菜单，静默无候选。
 - **实时性**：`warm` 在会话诞生时预取；笔记增删后经 `subscribeLexicon` 通知刷新。
 
@@ -136,9 +137,10 @@
 
 ## 5. 验收标准
 
-- 输入 `@` 弹出笔记候选（**默认当前工作区**）；选中后显示 chip；可多篇。
+- 输入 `@` 弹出笔记候选（**默认当前工作区**，候选带插件图标）；选中后显示 chip；可多篇。
 - 发送后序列化输出**路径 + 标题**；模型能调用 `read` 读取笔记并在回答中引用内容。
-- **跨工作区**：候选文本带工作区名；序列化 ref 为 `<工作区>/笔记名.md`；模型 `read` 正常读到。
+- **跨工作区**：输入 `@工作区名/` 触发该工作区候选；序列化 ref 为 `<工作区>/笔记名.md`；
+  模型 `read` 正常读到。
 - 纯文本 `@笔记名` 可装饰成 chip 并正常序列化（默认当前工作区，避免同名歧义）。
 - 无工作区时 `@` 无候选（静默）。
 - i18n：菜单空态/提示/序列化标签中英双语。
@@ -150,9 +152,12 @@
    tsdown external（client 侧类型 + 运行时服务）。
 2. **host**：`list` API 透出每工作区 `notesDir`（供 client 拼 ref 绝对路径）。
 3. **Client source**：`features/ContextSource/` 实现 `InputTriggerSource`
-   （`candidates` / `onPick` / `codec` / `warm` / `lexicon`）；codec 输出路径引用。
+   （`candidates` / `onPick` / `codec` / `warm` / `lexicon`）：
+   - `ref` = 笔记**绝对路径**（`notesDir + 文件名`），`label` = 标题；
+   - `candidates` 解析 `query`：`@工作区名/` 前缀 → 该工作区候选，否则当前工作区；
+   - `icon` = `ICON_URL`（插件 SVG）。
 4. **i18n**：新增 `context.*` 前缀 key（菜单标题、空态、序列化标签、无工作区提示）。
-5. **联调**：真实会话中 `@` 选笔记（含跨工作区）→ 发送 → 验证模型 `read` 读取并引用。
+5. **联调**：真实会话中 `@` 选笔记（含 `@工作区名/` 跨工作区）→ 发送 → 验证模型 `read` 读取并引用。
 6. **文档**：实现后更新 features.md（新增 §2.7）+ architecture.md（目录与 slot 说明）。
 
 ## 7. 风险与取舍
