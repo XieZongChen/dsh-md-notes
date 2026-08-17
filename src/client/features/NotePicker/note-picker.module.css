@@ -10,6 +10,11 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* dsh's Modal card carries `padding: 0 0 24px` (bottom gap under the
+     footer). The picker's own head/body/foot manage all inner spacing, so
+     zero the card padding here (this class is appended to the Modal's
+     .dialog and wins by cascade order). */
+  padding: 0;
 }
 
 .dialogHead {
@@ -168,7 +173,7 @@
 }
 
 .dialogFoot {
-  padding: 8px 20px 0;
+  padding: 8px 20px 12px;
   border-top: 1px solid var(--dsw-alias-border-l1);
   display: flex;
   justify-content: flex-end;
