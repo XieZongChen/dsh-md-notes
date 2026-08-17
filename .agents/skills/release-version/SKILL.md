@@ -78,6 +78,10 @@ grep -n "^## NEXT_VERSION" CHANGELOG.md CHANGELOG.zh.md
   **尚未记录**的功能性改动（非文档/重构/构建）。
 - 分类遵循记录规则：新功能 → **Added**；破坏式变更 → **Breaking**；
   对历史版本已有功能的修复 → **Fixed**；同版本内新功能的 fix **不记**。
+- **条目不写操作介绍**：每条 = 功能名/一句话 + 使用文档锚点链接（如
+  `docs/usage.md#4-referencing-notes-in-a-conversation`，链接精确到标题）。
+  操作用法只存在于使用文档；若文档缺失该功能，**先补进文档**
+  （`docs/usage.md` / `docs/usage.zh.md` 两份），再在 CHANGELOG 引用。
 
 ## 3. 版本号替换
 
@@ -145,4 +149,6 @@ npm publish
 - **版本号一致性**：package.json 与 CHANGELOG 必须一致（脚本 + 手动两步都改）。
 - **NEXT_VERSION 不新增**：发版只把 NEXT_VERSION 改名；新的 NEXT_VERSION 等下次有改动时按需创建。
 - **确认前置**：changelog 的补足/修改内容**先以中文版草稿交用户确认，确认后才写入文件**（写入时中英两份都要写，英文按中文合理化翻译）。
+- **CHANGELOG 不写操作介绍**：功能条目 = 功能名/一句话 + 使用文档锚点链接（精确到标题）；
+  操作用法只存在于使用文档（缺失先补文档再引用）。
 - **用户确认点**：① 版本号（若缺失）② changelog 草稿（补充/修改）③ 发布由用户手动执行。

@@ -27,8 +27,9 @@ Click the **notes entry** at the bottom of the sidebar. A full-screen manager
 opens with two columns:
 
 - **Left — note list**, grouped by workspace. Each workspace row has a folder
-  icon, a collapse arrow, and a **+** button (on the active workspace) to
-  create a note.
+  icon, a collapse arrow, and a **+** button to create a note in that
+  workspace (with Git enabled it also carries update/push icon buttons — see
+  [§5](#5-git-sync-optional)).
 - **Right — editor**, with **Edit / Preview** tabs and a **Save** button.
 
 ### Creating a note
@@ -52,8 +53,10 @@ confirmation (deleting cannot be undone).
 Below any assistant answer, click the **notes icon** (next to the copy button).
 A picker opens:
 
-1. Choose an existing note (only notes of the current workspace's folder are
-   listed), or create a new one on the spot.
+1. Choose an existing note — the list shows **all workspaces' notes**, grouped
+   by workspace (fold/collapse a workspace row to browse; the current
+   workspace's notes are included), or create a new one on the spot with the
+   **+** button on any workspace row.
 2. Click **Write to note**. The user question + the answer are appended to the
    note as a timestamped section:
 

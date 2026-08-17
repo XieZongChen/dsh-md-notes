@@ -11,6 +11,10 @@ Only user-visible functional changes are recorded (no documentation, code refact
   fixes to that same feature **within the same version** are **not** recorded
   (they are part of building the feature, not repairs of a shipped behavior).
 - **Fixed** only records fixes to features from **earlier versions**.
+- **No operational how-to details**: an entry states the feature and links to
+  the matching section (anchor to the heading) of the [user guide](docs/usage.md).
+  Usage instructions live in the guide, not here — if the guide lacks a feature,
+  document it there first, then reference it.
 - Unreleased changes go under **`## NEXT_VERSION`** at the top; on release, run
   `npm run changelog:release -- <version>` — it renames `NEXT_VERSION` to `[<version>] - <date>`
   and does **not** create a new one (no empty blocks while nothing is in development). When a
@@ -21,48 +25,35 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Added
 
-- **Referencing notes in a conversation (`@`)**: type `@` in the chat input to pick a note — each picked
-  note becomes a chip that serializes into a localized, readable line on send (e.g.
-  `Referenced note "title": /abs/path.md`), and the model reads the note with its `read` tool and can
-  cite it. Chip labels front-truncate (>6 chars) and the chip cell is widened via a plugin
-  `@font-face` override (4em→6em) — narrow for short labels, readable for long titles.
-  Serialized paths are relative to the session workspace root — `.dsh-notes/<name>` for
-  same-workspace notes, `../<dir>/.dsh-notes/<name>` across workspaces (a
-  `<workspace-name>/…` prefix cannot resolve: the read cwd IS the workspace, so a
-  workspace can never nest inside itself).
-  The host folds each referenced note's CONTENT into the model request at
-  `agent/pre-step` (durable injected-context, deduped) — references work without
-  relying on the model calling `read` on its own. Cross-workspace: typing a partial workspace name shows fuzzy workspace rows (🗂️) that
-  auto-complete to `@workspace-name/` on pick and pop that workspace's notes (ASCII names
-  only; an exact `@workspace-name` switches directly); a referenced note that was deleted or moved blocks the send with a
-  "not found — remove the reference" notice.
+- **Referencing notes in a conversation (`@`)**: pick notes as chips in the chat
+  input — on send they enter the model context as path references (the model
+  reads the note and cites it), with cross-workspace support. See
+  [User guide §4 — Referencing notes in a conversation](docs/usage.md#4-referencing-notes-in-a-conversation).
 
 ## [0.3.0] - 2026-08-16
 
 ### Added
 
-- **Git sync** (URL-driven): the plugin manages a local clone automatically — configure a repo URL,
-  no path or authorization needed. Two mutually exclusive modes:
-  - **Shared repo** — one repo for all workspaces, each workspace syncing into its branch under a
-    per-workspace folder;
-  - **Own repos** — per workspace: repo URL + branch (default `main`) + in-repo subpath (default repo root).
-- Push = mirror-sync: local notes are copied into the repo target directory **and local deletions are
-  synced to the remote** (after confirmation when the remote differs); Update pulls the remote branch and
-  copies notes back without overwriting locally-modified files.
-- Remote-change detection before push (`remote-changed`) and on open (`changed`): conflicts are surfaced
-  with in-app confirmation dialogs (overwrite remote with local / use remote version), plus a
-  "merge remote & retry" action for rejected pushes.
-- Auto-pull on open (configurable, default on); the left list refreshes after a successful update so
-  newly-pulled notes appear immediately.
-- Git settings panel (dsh Settings → MD Notes): mode, repo URL/branch/subpath, auto-pull, commit author.
-- Interface copy fully internationalized: host errors return machine codes + detail, the client renders
-  localized text (`gitErrorText`); note-append section labels follow the UI language.
-- dsh-styled form controls (DshInput / DshSelect) and a full-screen notes manager restyle (title-bar
-  settings button, per-workspace grouping/collapse, status line).
-- Notes are workspace-bound: without a workspace the UI prompts to create one first
-  (notes manager and note picker).
-- **Update notifications**: the plugin checks npm for a newer version on load (cached 10 min); a yellow
-  "Update available" tag appears on the sidebar notes entry and next to the manager's settings button.
+- **Git sync** (URL-driven): configure a repo URL and the plugin manages a local
+  clone; two mutually exclusive modes (shared repo / own repos), mirror-sync
+  push, conflict handling and auto-pull. See
+  [User guide §5 — Git sync](docs/usage.md#5-git-sync-optional) (modes
+  [§5.1](docs/usage.md#51-two-modes-choose-one), push
+  [§5.2](docs/usage.md#52-pushing-notes), update
+  [§5.3](docs/usage.md#53-updating-notes-pulling), auto-pull
+  [§5.4](docs/usage.md#54-auto-pull-when-opening-a-note), rejected pushes
+  [§5.5](docs/usage.md#55-when-a-push-is-rejected)).
+- Git settings panel (dsh Settings → MD Notes) —
+  [User guide §6](docs/usage.md#6-the-settings-panel).
+- **Update notifications**: an npm version check on load shows an "Update
+  available" tag — [User guide §7](docs/usage.md#7-update-notifications).
+- Notes are workspace-bound (`<workspace>/.dsh-notes`); without a workspace the
+  UI prompts to create one first — [User guide §1](docs/usage.md#1-where-your-notes-live).
+- Interface copy fully internationalized: host errors return machine codes +
+  detail, the client renders localized text (`gitErrorText`).
+- dsh-styled form controls (DshInput / DshSelect) and a restyled full-screen
+  notes manager (title-bar settings button, per-workspace grouping/collapse,
+  status line).
 
 ### Breaking
 
@@ -88,7 +79,8 @@ Only user-visible functional changes are recorded (no documentation, code refact
 ### Added
 
 - UI copy now follows dsh's locale: all interface texts (sidebar entry, action tooltip, both popups, buttons)
-  moved to the `md-notes` dictionary namespace — they switch between Chinese/English together with the host app's language.
+  moved to the `md-notes` dictionary namespace — they switch between Chinese/English together with the host app's language
+  ([User guide §8](docs/usage.md#8-tips--notes)).
 
 ## [0.1.1] - 2026-08-16
 
@@ -99,13 +91,9 @@ Docs-only release — no functional changes. README and CHANGELOG now default to
 ### Added
 
 - Official bundle plugin (persists with dsh, survives restarts), installed via `dsh plugin --profile web add`
-- **Sidebar entry**: notes entry at the top row of the sidebar bottom area; click to open the notes manager
-- **Notes manager** (`shell.overlay` full-screen panel):
-  - Left: note list (title + updated time); create (an empty title auto-falls back to "Untitled note <date>") and delete
-  - Right: Edit / Preview tabs with a built-in lightweight markdown renderer; Save writes to disk
-- **Add to note**: action icon below each answer; pick (or create) a target note in the popup — the user question + answer are appended to the end of the note with a timestamped section
-- Notes are plain `.md` files (default `<cwd>/.dsh-notes`, overridable via Config `root`); `meta.json` records the title and updated time; editable directly on the filesystem
-- Hover Tooltip "Add to note" on the assistant action (same as the copy button, side=bottom)
-- Notes manager and note-picker popup titles now use the plugin SVG icon (same source as the sidebar/action icons)
-- Icon trimmed: the SVG viewBox was tightened to remove the ~173px border, so it no longer renders small
-- Sidebar entry and assistant-action styling aligned with native controls (Settings button / copy button)
+- **Sidebar entry** and **notes manager** (create / edit / preview / delete) —
+  [User guide §2](docs/usage.md#2-opening-the-notes-manager)
+- **Add to note**: capture the current question + answer into a note from the
+  assistant action bar — [User guide §3](docs/usage.md#3-capturing-a-conversation-into-a-note)
+- Notes are plain `.md` files (default `<cwd>/.dsh-notes`, overridable via Config `root`);
+  `meta.json` records the title and updated time
