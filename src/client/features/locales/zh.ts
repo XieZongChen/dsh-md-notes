@@ -115,5 +115,6 @@ export const zh = {
   'git.tipWhereSuffix': ' 目录下；Git 同步只是把笔记推送到远程仓库或从远程拉取，不影响本地保存位置',
   'context.noteMissing': '{name} 无法找到，请删除引用',
   'context.errCheck': '检查笔记引用失败，请重试',
+  'context.reference': '引用笔记「{title}」：{path}',
 
 } as const

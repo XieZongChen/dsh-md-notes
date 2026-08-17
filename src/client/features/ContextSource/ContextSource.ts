@@ -5,9 +5,9 @@
  * workspace. A pick inserts a chip whose `ref` is the note's ABSOLUTE path
  * (`<ws>/.dsh-notes/<name>.md`) — workspace + name, unambiguous across
  * workspaces — and the codec serializes each chip at submit time to a
- * path reference the model can `read` (fs sandbox reads pass through, so
- * cross-workspace paths work). A missing note at submit time blocks the
- * send with a localized notice (never a silent downgrade to plain text).
+ * localized, readable path reference the model can `read` (fs sandbox reads
+ * pass through, so cross-workspace paths work). A missing note at submit
+ * time blocks the send with a localized notice (never a silent downgrade).
  *
  * Plain-text `@标题` is decorative only (the lexicon hot roll highlights
  * exact `[\w-]+` matches); real references always go through the chip.
@@ -21,6 +21,8 @@ import type {
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NoteSummary, WorkspaceNotes } from '../api.ts'
 import { api } from '../api.ts'
+// Side-effect: inject the widened DshChipCell @font-face (chip label capacity).
+import './chip-cell.module.css'
 
 /** Source identity: the menu group title and the chip `source` field. */
 export const NOTES_SOURCE = 'md-notes'
@@ -57,9 +59,15 @@ function refPath(ws: WorkspaceNotes, note: NoteSummary): string {
   return ws.notesDir.endsWith('/') ? ws.notesDir + note.name : `${ws.notesDir}/${note.name}`
 }
 
-/** Escape the few XML-significant chars so the serialized tag stays parseable. */
-function escapeXml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+/**
+ * Chip display label. dsh renders the chip label inside a fixed-width cell
+ * (10em after our DshChipCell override, ~4em upstream) centered with
+ * overflow hidden — a too-long label clips BOTH ends showing an unreadable
+ * middle slice. Front-truncate instead so the chip always shows the note's
+ * beginning (+ '…' as a truncation marker) and stays narrow.
+ */
+function chipLabel(title: string): string {
+  return title.length > 18 ? `${title.slice(0, 18)}…` : title
 }
 
 /** The `@` source plus its teardown (clears per-session caches). */
@@ -191,7 +199,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
       const insert: ReferenceInsert = {
         source: NOTES_SOURCE,
         ref: refPath(ref.ws, ref.note),
-        label: candidate.name,
+        label: chipLabel(candidate.name),
         clipboardText: ref.crossWs ? `@${ref.ws.name}/${candidate.name}` : `@${candidate.name}`,
       }
       return { insert }
@@ -221,9 +229,11 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
           const basename = ref.slice(ref.lastIndexOf('/') + 1).replace(/\.md$/i, '')
           throw new Error(t('context.noteMissing', { name: basename }))
         }
-        // Path reference: the model calls `read` on the absolute path (fs
-        // reads pass through the sandbox, cross-workspace included).
-        return `<note ref="${escapeXml(ref)}">${escapeXml(note.title)}</note>`
+        // Localized, readable path reference: the title in 「」 and the
+        // absolute path after the colon. The model reads the path with its
+        // `read` tool (fs reads pass through the sandbox, cross-workspace
+        // included); the line also reads naturally in the sent message.
+        return t('context.reference', { title: note.title, path: ref })
       },
     },
     warm(session) {

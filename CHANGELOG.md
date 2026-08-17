@@ -39,8 +39,10 @@ Only user-visible functional changes are recorded (no documentation, code refact
 - **Update notifications**: the plugin checks npm for a newer version on load (cached 10 min); a yellow
   "Update available" tag appears on the sidebar notes entry and next to the manager's settings button.
 - **Referencing notes in a conversation (`@`)**: type `@` in the chat input to pick a note — each picked
-  note becomes a chip that serializes into a path reference (`<note ref="…">title</note>`) on send, and
-  the model reads the note with its `read` tool and can cite it. Cross-workspace via `@workspace-name/`
+  note becomes a chip that serializes into a localized, readable line on send (e.g.
+  `Referenced note "title": /abs/path.md`), and the model reads the note with its `read` tool and can
+  cite it. Chip labels front-truncate (>18 chars) and the chip cell is widened via a plugin
+  `@font-face` override (4em→10em) so titles read clearly. Cross-workspace via `@workspace-name/`
   (ASCII names only); a referenced note that was deleted or moved blocks the send with a
   "not found — remove the reference" notice.
 

@@ -127,7 +127,7 @@ dsh-md-notes/
   `trigger: '@'`、`name: 'md-notes'` 的引用源：`candidates` 默认取当前会话工作区笔记、
   `@工作区名/`（ASCII）切换跨工作区；`onPick` 返回 `ReferenceInsert`（`ref` = 笔记绝对路径
   `notesDir + 文件名`，`label` = 标题）；`codec.serialize` 提交时校验笔记仍存在并输出
-  `<note ref="…">标题</note>`，失效则抛本地化错误阻断发送；`warm`/`lexicon`/`subscribeLexicon`
+  本地化可读行（如 `引用笔记「标题」：…`），失效则抛本地化错误阻断发送；`warm`/`lexicon`/`subscribeLexicon`
   提供纯文本装饰热快照。无 `inputTriggers` 时特性静默禁用（console.warn）。
   序列化格式与交互细节见 [context.md](context.md)。
 - **i18n**：所有 UI 文案在 `features/locales/`（`zh.ts` 源字典、`en.ts` 映射类型强制同键，
