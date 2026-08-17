@@ -22,34 +22,62 @@ dsh-md-notes 的发版流程。**最后一步（npm publish）由用户手动执
 - **没有版本号**：用 `ask_user_question` 询问用户，格式如 `0.x.y`。
 - 校验格式：`/^\d+\.\d+\.\d+/`。
 
-## 2. CHANGELOG 检查与补足（需用户确认）
+## 2. CHANGELOG 检查与补足（先确认后写入）
 
-### 2.1 检查 NEXT_VERSION 是否存在
+先检查两份 CHANGELOG 是否都有 `## NEXT_VERSION` 块：
 
 ```sh
 grep -n "^## NEXT_VERSION" CHANGELOG.md CHANGELOG.zh.md
 ```
 
-- 若两份都存在且块内有内容 → 跳到第 3 步。
-- 若不存在 → **不要自动添加**：先收集「自上次发版以来的未记录改动」，
-  与用户确认哪些应记入 changelog，再创建 `## NEXT_VERSION` 块并写入。
+分两种情况处理。两种情况**都以中文版为准生成草稿**，交给用户确认；用户确认（无补充或修改）之后，才把内容写入 CHANGELOG 文件（中英均写入，英文需按中文合理化翻译）。
 
-### 2.2 收集未记录改动
+### 2.1 情况 A：NEXT_VERSION 完全缺失
 
-用 git 查看自上一个版本 tag 以来的提交，归类为 Added / Breaking / Fixed：
+说明上个版本到现在一直忘了写 changelog。此时：
 
-```sh
-git log --oneline <上个版本tag>..HEAD
-```
+1. 用 git 收集自上一个版本 tag 以来的所有提交：
 
-对照 CHANGELOG 现有内容，找出**尚未记录**的功能性改动（非文档/重构）。
+   ```sh
+   git log --oneline <上个版本tag>..HEAD
+   ```
 
-### 2.3 写入并请用户确认
+2. 按照 CHANGELOG 记录规则（Added / Breaking / Fixed 分类；同版本内新功能的 fix 不记；
+   Fixed 只记历史版本修复），**生成一个完整的 `NEXT_VERSION` 版本草稿**（中文版）。
+3. 把草稿交给用户确认（**不写入文件**）——用 `ask_user_question` 或直接展示，询问：
+   > 检测到 NEXT_VERSION 缺失，我按 CHANGELOG 规则整理了自上个版本以来的改动草稿，
+   > 请确认是否有补充或修改：
+   > （展示中文草稿）
+4. 用户确认（没有补充或修改）后，才把该内容写入 CHANGELOG.md 和 CHANGELOG.zh.md
+   （中文写入 zh，英文按中文翻译后写入 en，均放在顶部 `## NEXT_VERSION` 块下）。
 
-在 `## NEXT_VERSION` 块下按 `### Added` / `### Breaking` / `### Fixed` 归类写入
-（遵守 CHANGELOG 记录规则：同版本内新功能的 fix 不记；Fixed 只记历史版本修复）。
-写入后**必须请用户确认**内容无误再继续——例如：
-> CHANGELOG 已补足 NEXT_VERSION，请确认以下改动记录是否正确：…
+### 2.2 情况 B：NEXT_VERSION 已存在
+
+说明部分改动已记录。此时：
+
+1. 用 git 收集自上一个版本 tag 以来的所有提交：
+
+   ```sh
+   git log --oneline <上个版本tag>..HEAD
+   ```
+
+2. 按照 CHANGELOG 记录规则，与现有 `NEXT_VERSION` 块下已写的内容**比对**：
+   - 找出已写内容中**缺失的改动**（补足）；
+   - 找出已写内容中**与提交不符的**（修正，如把同版本内 fix 误记为 Fixed 的移出）；
+   - 保持已正确记录的内容不变。
+3. 形成**修改/补足后的 NEXT_VERSION 草稿**（中文版），交给用户确认（**不写入文件**）：
+   > 我比对了自上个版本以来的改动与现有 NEXT_VERSION，做了以下补足/修正，
+   > 请确认是否有补充或修改：
+   > （展示中文草稿，必要时列出与现有内容的差异点）
+4. 用户确认（没有补充或修改）后，才把最终内容写入 CHANGELOG.md 和 CHANGELOG.zh.md
+   （中文写入 zh，英文按中文翻译后写入 en）。
+
+### 2.3 收集改动的归类要点
+
+- 用 `git log --oneline <上个版本tag>..HEAD` 看提交，对照 CHANGELOG 现有内容找出
+  **尚未记录**的功能性改动（非文档/重构/构建）。
+- 分类遵循记录规则：新功能 → **Added**；破坏式变更 → **Breaking**；
+  对历史版本已有功能的修复 → **Fixed**；同版本内新功能的 fix **不记**。
 
 ## 3. 版本号替换
 
@@ -116,4 +144,5 @@ npm publish
 
 - **版本号一致性**：package.json 与 CHANGELOG 必须一致（脚本 + 手动两步都改）。
 - **NEXT_VERSION 不新增**：发版只把 NEXT_VERSION 改名；新的 NEXT_VERSION 等下次有改动时按需创建。
-- **用户确认点**：① 版本号（若缺失）② changelog 补足内容 ③ 发布由用户手动执行。
+- **确认前置**：changelog 的补足/修改内容**先以中文版草稿交用户确认，确认后才写入文件**（写入时中英两份都要写，英文按中文合理化翻译）。
+- **用户确认点**：① 版本号（若缺失）② changelog 草稿（补充/修改）③ 发布由用户手动执行。
