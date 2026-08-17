@@ -73,6 +73,11 @@
    - 来源标签显示**笔记标题**而非 `md-notes`（受 `contextProvenance` 的 kind 映射约束，
      需在 source 里携带标题字段或选用 dsh 已有 form/provenance 通道）；
    - 行内摘要（标题 + 前 N 字）与更贴合的图标/配色（当前走通用 `OpaqueBody`）。
+   - **手动删除持久化**：注入的笔记内容会一直留在会话历史里（直到 compaction）。
+     在注入上下文行上加「删除」按钮：host 新增 API（如 `contextRemove(sessionId, path)`），
+     按 `source.kind === 'md-notes'` + `path` 定位该消息，用 surface `{ op: 'replace', start, end }`
+     把它从模型可见历史中移除（compaction 同款机制）；只删注入内容、不动用户自己的消息；
+     删除后不会复活（pre-step 只扫描新提交消息找引用）。
 
 **验收标准**：三个展示面都能一眼识别「这是一篇笔记引用」及其来源工作区/标题；
 明暗主题下样式一致；不破坏现有引用功能（候选/chip/注入）。
