@@ -5,7 +5,7 @@
 
 ## 0. 实现状态
 
-> 最后更新 2026-08-16。🚧 设计已定、未实现；✅ 机制已确认；⏳ 待实测确认。
+> 最后更新 2026-08-17。✅ 已实现；⏳ 待真实会话联调确认。
 
 ### 已确认（dsh 源码调研）
 
@@ -16,14 +16,21 @@
 - ✅ **纯文本 `@笔记名` 仅装饰**（textRef 高亮），不产生 chip、不注入上下文；引用必须走菜单 chip
 - ✅ **serialize 失败阻断发送**（源码 "serialize failure blocks the send"）——引用失效需用户移除
 - ✅ **textRef 匹配 `[\w-]+`** → 跨工作区文本触发仅支持 ASCII 工作区名
-- ⏳ **待实测**：`InputTriggerCandidate.icon` 是否在 MenuView 渲染（候选图标可能不显示）
+- ✅ **候选 icon 实测结论**：`MenuView` 把 `InputTriggerCandidate.icon` 作为**纯文本**渲染在
+  16px 槽位（`{item.icon}` 字符串子节点）——**URL/SVG 无法渲染成图片**，会显示字面 URL 文本。
+  因此候选 icon 用 📝 emoji 替代插件 SVG（见 §3.2）。
 
-### 未实现
+### 已实现（0.3.0）
 
-- 🚧 对话输入 `@` 引用笔记（候选菜单 / chip / 提交序列化）
-- 🚧 模型上下文注入（`ReferenceCodec.serialize` 输出路径引用）
-- 🚧 纯文本 `@笔记名` 装饰（`lexicon` 热快照）
-- 🚧 知识库式自动检索（超出 dsh 原生能力，需自定义）
+- ✅ 对话输入 `@` 引用笔记（候选菜单 / chip / 提交序列化）
+- ✅ 模型上下文注入（`ReferenceCodec.serialize` 输出路径引用，模型自主 `read`）
+- ✅ 纯文本 `@笔记名` 装饰（`lexicon` 热快照，仅 ASCII 标题生效）
+- 🚧 知识库式自动检索（超出 dsh 原生能力，需自定义，见 §4）
+
+### 待实测（真实会话）
+
+- ⏳ `@` 选笔记（含 `@工作区名/` 跨工作区）→ 发送 → 模型 `read` 读取并在回答中引用
+- ⏳ 引用失效路径：删除笔记后发送被阻断，提示「<笔记名> 无法找到，请删除引用」
 
 ## 1. 目标
 
@@ -92,8 +99,10 @@
   识别工作区前缀，返回该工作区的笔记；label 为笔记标题，description 可附工作区名。
   **仅支持 ASCII 工作区名**（`[\w-]+`，dsh 的 textRef 匹配约束；中文/空格工作区名无法
   用文本触发——跨工作区引用受限，可后续提供菜单内全工作区列选）。
-- **候选**：`{ name: 文件名（去 .md）, description: 笔记标题, icon: 插件 SVG, hint: 更新时间 }`；
-  `icon` 统一用 `assets/dsh-md-notes.svg`（经 `ICON_URL`）。
+- **候选**：`{ name: 笔记标题, description: 文件名（去 .md）, icon: '📝', hint: 无 }`；
+  跨工作区候选 `description` 为 `工作区名 · 文件名`。
+  `icon` 实测为**纯文本渲染**（16px 槽位），URL/SVG 无法显示为图片，故用 📝 emoji 替代
+  插件 SVG（§0 实测结论）。
 - **无工作区**：`warm`/`candidates` 返回空（`@` 不到笔记）——不弹菜单，静默无候选。
 - **实时性**：`warm` 在会话诞生时预取；笔记增删后经 `subscribeLexicon` 通知刷新
   （lexicon 仅用于可选的高亮装饰，不影响引用语义）。
@@ -109,7 +118,9 @@
 - `ref` 为笔记的**绝对路径**（含工作区），形如 `<工作区>/.dsh-notes/xxx.md`——**工作区 + 名称**
   天然唯一，跨工作区/同名笔记无歧义；模型据此调用 `read` 读取。
 - 标题作为 chip/序列化的可读标签；路径即"授权"——读放行，跨工作区无碍。
-- 标签语言跟随界面语言（新增 `context.noteOpen` / `context.noteClose` 之类 key，中英各一份）。
+- **标签 `<note>` 固定英文**：它是面向模型的协议 token（机器可读、需确定性），不随界面
+  语言变化——中英文界面发出同样的 `<note ref=...>`，模型解析一致（§3.3 原文「标签语言跟随
+  界面语言」为早期草案，实现时按协议稳定性定为固定 `<note>`）。
 - **引用失效处理**：被引用的笔记若已删除/移动，`serialize` 失败会**阻断发送**（dsh 源码：
   "serialize failure blocks the send"）。此时向用户提示
   **「<笔记名> 无法找到，请删除该引用」**，保留 draft 与 chip 让用户移除后重发。
@@ -157,22 +168,22 @@
 - 无工作区时 `@` 无候选（静默）。
 - i18n：菜单空态/提示/序列化标签/失效提示中英双语。
 - HMR 安全：`registerSource` 挂在 `ctx.effect`，卸载自动清理。
-- ⏳ 待实测：`InputTriggerCandidate.icon` 是否在菜单渲染（dsh MenuView 是否展示 icon）。
+- ✅ 已实测确认：`InputTriggerCandidate.icon` 在菜单中渲染为**纯文本**（16px 槽位），
+  URL/SVG 不能显示为图片 → 候选图标用 📝 emoji（§0 实测结论）。
 
 ## 6. 实现步骤
 
 1. **依赖确认**：`@deepseek-ai/dsh-client-ui-input-trigger` 加入 link-deps 与
-   tsdown external（client 侧类型 + 运行时服务）。
-2. **host**：`list` API 透出每工作区 `notesDir`（供 client 拼 ref 绝对路径）。
+   tsdown external（client 侧类型 + 运行时服务）。✅
+2. **host**：`list` API 透出每工作区 `notesDir`（供 client 拼 ref 绝对路径）。✅
 3. **Client source**：`features/ContextSource/` 实现 `InputTriggerSource`
    （`candidates` / `onPick` / `codec` / `warm` / `lexicon`）：
    - `ref` = 笔记**绝对路径**（`notesDir + 文件名`），`label` = 标题；
    - `candidates` 解析 `query`：`@工作区名/` 前缀 → 该工作区候选，否则当前工作区；
-   - `icon` = `ICON_URL`（插件 SVG）。
-4. **i18n**：新增 `context.*` 前缀 key（菜单标题、空态、序列化标签、**引用失效提示**、
-   无工作区提示）。
-5. **联调**：真实会话中 `@` 选笔记（含 `@工作区名/` 跨工作区）→ 发送 → 验证模型 `read` 读取并引用。
-6. **文档**：实现后更新 features.md（新增 §2.7）+ architecture.md（目录与 slot 说明）。
+   - `icon` = 📝 emoji（实测 icon 为纯文本渲染，见 §0）。✅
+4. **i18n**：新增 `context.*` 前缀 key（**引用失效提示**、校验失败提示）。✅
+5. **联调**：真实会话中 `@` 选笔记（含 `@工作区名/` 跨工作区）→ 发送 → 验证模型 `read` 读取并引用。⏳
+6. **文档**：features.md §2.7 + architecture.md（目录与 slot 说明）+ 本文状态。✅
 
 ## 7. 风险与取舍
 
@@ -189,5 +200,5 @@
   source 重名——但引用语义不依赖 lexicon（仅装饰），chip 的 ref 是工作区+名称绝对路径，无歧义。
 - **ASCII 限制**：跨工作区文本触发仅支持 ASCII 工作区名（`[\w-]+`）；中文/空格工作区名需
   其他方式（后续可加菜单内全工作区列选）。
-- ⏳ **待实测**：`InputTriggerCandidate.icon` 是否在 MenuView 渲染（候选图标可能不显示，
-  仅 label 生效）。
+- ✅ **icon 结论**：候选 icon 为纯文本渲染，插件 SVG 无法显示——用 📝 emoji 替代
+  （16px 槽位内可见），不再依赖 `ICON_URL`。

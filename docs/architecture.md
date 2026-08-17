@@ -36,7 +36,7 @@ dsh-md-notes/
 │   ├── features.md        # 功能设计文档
 │   ├── architecture.md    # 本文档（架构设计）
 │   ├── git.md             # Git 同步设计（v4 模型）
-│   ├── context.md         # 笔记引用进对话上下文设计（规划中）
+│   ├── context.md         # 笔记引用进对话上下文设计（已实现）
 │   └── TODO.md            # 功能规划（待办）
 ├── scripts/
 │   └── link-deps.mjs     # 开发期链接 deepseek-harness checkout 类型
@@ -64,6 +64,7 @@ dsh-md-notes/
             ├── NoteAction/       # 记入笔记图标
             ├── NotePicker/       # 记入笔记弹窗
             ├── NotesManager/     # 笔记管理面板（列表 + 编辑器 + Git 同步区 + 冲突确认 Modal）
+            ├── ContextSource/    # @ 引用 source（ui-input-trigger：candidates/onPick/codec）
             └── Settings/         # dsh 设置面板「MD 笔记」分区（SettingsSection + css）
 ```
 
@@ -97,7 +98,7 @@ dsh-md-notes/
 
 | method | body | 返回 |
 |---|---|---|
-| `list` | — | `{ ok, workspaces: [{ workspaceId, name, notes }], noWorkspaces }`（按工作区分组） |
+| `list` | — | `{ ok, workspaces: [{ workspaceId, name, notesDir, notes }], noWorkspaces }`（按工作区分组；带 `sessionId` 时只返回该会话工作区，会话无工作区返回空数组） |
 | `read` | `{ workspaceId?, name }` | `{ ok, name, content }` |
 | `write` | `{ workspaceId?, name, content }` | `{ ok, name }` |
 | `create` | `{ workspaceId?, title }` | `{ ok, name }`（空标题自动用 Untitled note） |
@@ -121,6 +122,14 @@ dsh-md-notes/
   - `conversation.chat.assistant-actions` → 记入笔记图标；
   - `shell.overlay` → 笔记管理器与记入笔记选择弹窗；
   - `settings.section` → 设置面板「MD 笔记」分区（`id: 'md-notes'`，order 10）。
+- **`@` 引用 source**（`features/ContextSource/`）：`apply` 里
+  `ctx.get('inputTriggers')?.registerSource(...)`（挂 `ctx.effect`，HMR 安全）注册
+  `trigger: '@'`、`name: 'md-notes'` 的引用源：`candidates` 默认取当前会话工作区笔记、
+  `@工作区名/`（ASCII）切换跨工作区；`onPick` 返回 `ReferenceInsert`（`ref` = 笔记绝对路径
+  `notesDir + 文件名`，`label` = 标题）；`codec.serialize` 提交时校验笔记仍存在并输出
+  `<note ref="…">标题</note>`，失效则抛本地化错误阻断发送；`warm`/`lexicon`/`subscribeLexicon`
+  提供纯文本装饰热快照。无 `inputTriggers` 时特性静默禁用（console.warn）。
+  序列化格式与交互细节见 [context.md](context.md)。
 - **i18n**：所有 UI 文案在 `features/locales/`（`zh.ts` 源字典、`en.ts` 映射类型强制同键，
   `LocaleNamespaceMap` 合并 `md-notes` 命名空间）；组件用 `t(key, params)` 读取，随 dsh 语言
   自动重渲染；host 错误经 `gitErrorText(t, code, detail)` 本地化。占位符用 `{name}` 模板。
