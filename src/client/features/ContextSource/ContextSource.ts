@@ -54,26 +54,18 @@ function warnStaleHost(): void {
   console.error('[dsh-md-notes] stale host: the list response lacks "notesDir"; restart dsh web so the host loads the updated plugin')
 }
 
-/** Absolute path of one note (cross-workspace refs; workspace + name, unambiguous). */
-function refPath(ws: WorkspaceNotes, note: NoteSummary): string {
-  return ws.notesDir.endsWith('/') ? ws.notesDir + note.name : `${ws.notesDir}/${note.name}`
-}
-
 /**
- * The serialized path of one note. Same-workspace picks emit the path
- * RELATIVE to the workspace root (`.dsh-notes/<name>`): the model's `read`
- * tool resolves relative paths against the session cwd, which IS the
- * workspace root — the common case reads cleanly. Cross-workspace picks keep
- * the absolute path (no reliable relative base from the session workspace).
+ * The serialized path of one note: workspace-qualified —
+ * `<工作区名>/.dsh-notes/<name>` (e.g. `dsh-plugin/.dsh-notes/3333.md`).
+ * The workspace name as the first segment makes the reference self-describing
+ * (which workspace the note lives in) and unambiguous across workspaces; the
+ * model resolves the note from this path (its `read` tool may need to locate
+ * the absolute file — reads pass through the sandbox, cross-workspace fine).
  */
-function refFor(ws: WorkspaceNotes, note: NoteSummary, crossWs: boolean): string {
-  if (!crossWs) {
-    // notesDir is always `<wsRoot>/.dsh-notes`; the in-workspace form is
-    // `.dsh-notes/<name>` (read cwd = workspace root).
-    const dir = ws.notesDir.split('/').filter(Boolean).pop() ?? '.dsh-notes'
-    return `${dir}/${note.name}`
-  }
-  return refPath(ws, note)
+function refFor(ws: WorkspaceNotes, note: NoteSummary): string {
+  // notesDir is always `<wsRoot>/.dsh-notes`; keep the dir segment derived.
+  const dir = ws.notesDir.split('/').filter(Boolean).pop() ?? '.dsh-notes'
+  return `${ws.name}/${dir}/${note.name}`
 }
 
 /**
@@ -215,7 +207,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
       }
       const insert: ReferenceInsert = {
         source: NOTES_SOURCE,
-        ref: refFor(ref.ws, ref.note, ref.crossWs),
+        ref: refFor(ref.ws, ref.note),
         label: chipLabel(candidate.name),
         clipboardText: ref.crossWs ? `@${ref.ws.name}/${candidate.name}` : `@${candidate.name}`,
       }
@@ -238,10 +230,10 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
           warnStaleHost()
           throw new Error(t('context.errCheck'))
         }
-        // Resolve the ref to its owning workspace + note. Absolute refs
-        // (cross-workspace picks) match by notesDir prefix; relative refs
-        // (`.dsh-notes/<name>`, same-workspace picks) resolve against any
-        // workspace whose notes list still contains that file name.
+        // Resolve the ref to its owning workspace + note. Refs are
+        // workspace-qualified (`<wsName>/.dsh-notes/<name>`) — match by the
+        // workspace name; an absolute ref (legacy draft / direct call) still
+        // matches by notesDir prefix.
         let owner: WorkspaceNotes | undefined
         let name = ''
         if (ref.startsWith('/')) {
@@ -249,18 +241,20 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
             ref.startsWith(ws.notesDir.endsWith('/') ? ws.notesDir : `${ws.notesDir}/`))
           name = owner === undefined ? '' : ref.slice(owner.notesDir.length + (owner.notesDir.endsWith('/') ? 0 : 1))
         } else {
+          const slash = ref.indexOf('/')
+          const wsName = slash === -1 ? '' : ref.slice(0, slash)
           name = ref.slice(ref.lastIndexOf('/') + 1)
-          owner = list.workspaces.find((ws) => ws.notes.some((n) => n.name === name))
+          owner = list.workspaces.find((ws) => ws.name === wsName)
         }
         const note = owner?.notes.find((n) => n.name === name)
         if (owner === undefined || note === undefined) {
           const basename = ref.slice(ref.lastIndexOf('/') + 1).replace(/\.md$/i, '')
           throw new Error(t('context.noteMissing', { name: basename }))
         }
-        // Localized, readable path reference: the title in 「」 and the path
-        // after the colon. The model reads the path with its `read` tool
-        // (relative `.dsh-notes/<name>` resolves against the session cwd =
-        // the workspace root; absolute paths read cross-workspace).
+        // Localized, readable path reference: the title in 「」 and the
+        // workspace-qualified path after the colon. The model reads the note
+        // from this path (absolute reads and cross-workspace reads pass
+        // through the sandbox).
         return t('context.reference', { title: note.title, path: ref })
       },
     },

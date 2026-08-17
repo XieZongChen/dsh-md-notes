@@ -81,9 +81,10 @@ model uses its `read` tool to load the note and can cite it in the answer.
 3. **Cross-workspace**: type `@workspace-name/` (e.g. `@dsh-plugin/`, **ASCII
    names only**) → candidates switch to that workspace's notes (secondary line
    shows `workspace-name · file-name`).
-4. Send → each chip serializes to a readable line, e.g.
-   `Referenced note "title": <absolute note path>`; the model reads the
-   referenced note and answers with it. A plain-text
+4. Send → each chip serializes to a readable line with a
+   workspace-qualified path, e.g.
+   `Referenced note "title": dsh-plugin/.dsh-notes/note.md`; the model reads
+   the referenced note and answers with it. A plain-text
    `@note-title` you type by hand is only highlighted decoration — it does
    **not** enter the context; real references go through the menu (chip).
 5. If a referenced note was deleted or moved, the send is blocked with

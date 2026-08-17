@@ -43,9 +43,8 @@ Only user-visible functional changes are recorded (no documentation, code refact
   `Referenced note "title": /abs/path.md`), and the model reads the note with its `read` tool and can
   cite it. Chip labels front-truncate (>6 chars) and the chip cell is widened via a plugin
   `@font-face` override (4em→6em) — narrow for short labels, readable for long titles.
-  Serialized paths are workspace-relative (`.dsh-notes/<name>`) for same-workspace
-  references (the read tool resolves against the session cwd = workspace root) and
-  absolute for cross-workspace ones. Cross-workspace via `@workspace-name/`
+  Serialized paths are workspace-qualified (`<workspace-name>/.dsh-notes/<name>`, e.g.
+  `dsh-plugin/.dsh-notes/3333.md`), self-describing and unambiguous across workspaces. Cross-workspace via `@workspace-name/`
   (ASCII names only); a referenced note that was deleted or moved blocks the send with a
   "not found — remove the reference" notice.
 
