@@ -144,12 +144,20 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
     }
   }
 
-  /** Fetch (and cache) the session workspace's notes; settles the lexicon roll. */
-  const fetchCurrent = (sessionId: SessionId, signal?: AbortSignal): Promise<readonly WorkspaceNotes[]> => {
+  /**
+   * Fetch (and cache) the session workspace's notes; settles the lexicon roll.
+   * Deliberately NOT bound to any per-call signal: this is a shared prewarm
+   * that must outlive superseded keystroke calls (ui-skill's shared-fetch
+   * pattern) — the controller aborts the previous generation's fetch each
+   * keystroke, and binding that abort here would poison the shared promise
+   * for every later consumer, flashing the menu empty. Callers check their
+   * own `signal.aborted` after awaiting.
+   */
+  const fetchCurrent = (sessionId: SessionId): Promise<readonly WorkspaceNotes[]> => {
     const existing = fetches.get(sessionId)
     if (existing !== undefined) return existing
     const promise = (async () => {
-      const res = await api('list', { sessionId }, signal)
+      const res = await api('list', { sessionId })
       if (!res.ok) throw new Error(res.error)
       return res.workspaces ?? []
     })()
@@ -209,7 +217,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
         // compute the session-relative path (settled backs onPick).
         const [all, _sessionWs] = await Promise.all([
           api('list', undefined, signal),
-          fetchCurrent(session.sessionId, signal),
+          fetchCurrent(session.sessionId),
         ])
         if (signal.aborted) return []
         if (!all.ok || all.workspaces === undefined) return []
@@ -255,7 +263,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
       }
       candidateWorkspaces.set(session.sessionId, wsMap)
       try {
-        const workspaces = await fetchCurrent(session.sessionId, signal)
+        const workspaces = await fetchCurrent(session.sessionId)
         if (signal.aborted) return []
         const ws = workspaces[0]
         if (ws === undefined) return wsRows
