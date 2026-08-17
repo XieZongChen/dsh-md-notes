@@ -56,10 +56,10 @@
 
 | 机制 | 作用 | 笔记插件的用法 |
 |---|---|---|
-| `InputTriggerService.registerSource` | 注册一个 `@` 触发源 | `trigger: '@'`，命名 `md-notes` |
+| `InputTriggerService.registerSource` | 注册一个 `@` 触发源 | `trigger: '@'`，命名 `notes`（唯一；平台建议名） |
 | `candidates(session, req)` | 菜单候选列表 | 从 host `list` 拉当前工作区笔记 → `{ name, description, icon, hint }` |
 | `onPick(pick)` | 选中回调 | 返回 `ReferenceInsert { source, ref, label, clipboardText }` |
-| `ReferenceInsert` | 插入 U+FFFC 占位符（UI 渲染为 chip） | `source: 'md-notes'`、`ref: 笔记绝对路径`、`label: 标题` |
+| `ReferenceInsert` | 插入 U+FFFC 占位符（UI 渲染为 chip） | `source: 'notes'`、`ref: 会话工作区相对路径`、`label: 标题` |
 | `ReferenceCodec` | 提交时把引用**序列化为模型文本** | `serialize(ref)` → 输出**路径 + 标题**（见 §3.3） |
 | `warm(session)` | 会话诞生时预取数据 | 预取笔记名列表（配合 lexicon） |
 | `lexicon(session)` | 纯文本 `@笔记名` 高亮装饰（同步热快照） | 返回笔记标题数组；**仅装饰，不参与引用语义**（见 §3.1） |

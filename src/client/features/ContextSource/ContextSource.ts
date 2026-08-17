@@ -25,7 +25,7 @@ import { api } from '../api.ts'
 import './chip-cell.module.css'
 
 /** Source identity: the menu group title and the chip `source` field. */
-export const NOTES_SOURCE = 'md-notes'
+export const NOTES_SOURCE = 'notes'
 
 /** Candidate row glyph (the pipeline renders `icon` as text — a URL cannot
  *  render an image, so a small emoji stands in for the plugin SVG). */
