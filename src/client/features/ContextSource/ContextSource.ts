@@ -27,9 +27,6 @@ import './chip-cell.module.css'
 /** Source identity: the menu group title and the chip `source` field. */
 export const NOTES_SOURCE = 'md-notes'
 
-/** Cross-workspace trigger prefix: `@<ascii-workspace-name>/<rest>`. */
-const CROSS_WS_RE = /^([\w-]+)\/([\s\S]*)$/
-
 /** Candidate row glyph (the pipeline renders `icon` as text — a URL cannot
  *  render an image, so a small emoji stands in for the plugin SVG). */
 const NOTE_ICON = '📝'
@@ -162,9 +159,13 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
     // Notes above the core subagent group in the '@' menu.
     order: -10,
     async candidates(session, { query, signal }) {
-      // `@工作区名/…` → that workspace's notes; anything else → the session's.
-      const cross = CROSS_WS_RE.exec(query)
-      if (cross !== null) {
+      // Cross-workspace: `@工作区名/…` filters that workspace's notes, and a
+      // bare exact workspace name (`@工作区名`) also switches to it — the
+      // trailing slash is optional. Anything else → the session's workspace.
+      const slash = query.indexOf('/')
+      const prefix = slash === -1 ? query : query.slice(0, slash)
+      const rest = slash === -1 ? '' : query.slice(slash + 1)
+      if (prefix !== '' || slash !== -1) {
         const all = await api('list', undefined, signal)
         if (signal.aborted) return []
         if (!all.ok || all.workspaces === undefined) return []
@@ -172,11 +173,15 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
           warnStaleHost()
           return []
         }
-        const ws = all.workspaces.find((w) => w.name === cross[1])
-        if (ws === undefined) return []
-        const { rows, refs } = rowsFor(ws, cross[2] ?? '', true)
-        candidateRefs.set(session.sessionId, refs)
-        return rows
+        const ws = all.workspaces.find((w) => w.name === prefix)
+        if (ws !== undefined) {
+          const { rows, refs } = rowsFor(ws, rest, true)
+          candidateRefs.set(session.sessionId, refs)
+          return rows
+        }
+        // A `@工作区名/` prefix that matches no workspace yields nothing;
+        // a bare partial name falls through to the current-workspace filter.
+        if (slash !== -1) return []
       }
       try {
         const workspaces = await fetchCurrent(session.sessionId, signal)
@@ -184,7 +189,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>): NotesSourceBundle
         const ws = workspaces[0]
         if (ws === undefined) return []
         // Stale host (pre-`notesDir`): candidates still list fine, but a pick
-        // cannot build the absolute ref — surface the restart need early.
+        // cannot build the reference — surface the restart need early.
         if (typeof ws.notesDir !== 'string' || ws.notesDir === '') {
           warnStaleHost()
           return []

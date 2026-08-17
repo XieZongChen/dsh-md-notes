@@ -78,9 +78,9 @@ model uses its `read` tool to load the note and can cite it in the answer.
 1. Type `@` → the candidate menu lists notes of the **current workspace**
    (📝 prefix; the title is the primary row, the file name the secondary line).
 2. Select with arrows / click → a note chip appears; keep typing `@` to add more.
-3. **Cross-workspace**: type `@workspace-name/` (e.g. `@dsh-plugin/`, **ASCII
-   names only**) → candidates switch to that workspace's notes (secondary line
-   shows `workspace-name · file-name`).
+3. **Cross-workspace**: type `@workspace-name` (e.g. `@dsh-plugin`, **ASCII names
+   only**; the trailing slash is optional) → candidates switch to that
+   workspace's notes (secondary line shows `workspace-name · file-name`).
 4. Send → each chip serializes to a readable line with a
    workspace-qualified path, e.g.
    `Referenced note "title": dsh-plugin/.dsh-notes/note.md`; the model reads
