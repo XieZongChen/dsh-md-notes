@@ -9,7 +9,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSettingsOutline16, IconTriangleRightFill14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconRefreshOutline16, IconSendOutline16, IconSettingsOutline16, IconTriangleRightFill14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData, WorkspaceNotes } from '../api.ts'
 import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
@@ -46,6 +46,8 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const [statusByWs, setStatusByWs] = React.useState<Record<string, GitStatusData | null>>({})
   const [gitMsg, setGitMsg] = React.useState('')
   const [pushOpen, setPushOpen] = React.useState(false)
+  /** Workspace the commit popover targets (undefined = current workspace). */
+  const [pushTargetWsId, setPushTargetWsId] = React.useState<string | null>(null)
   const [pushMsg, setPushMsg] = React.useState('')
   const [updating, setUpdating] = React.useState(false)
   const [pushing, setPushing] = React.useState(false)
@@ -303,6 +305,13 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     runPush(wsId, message)
   }
 
+  /** Open the commit popover targeting a specific workspace. */
+  const pushForWs = (wsId: string): void => {
+    setPushTargetWsId(wsId)
+    setPushMsg('')
+    setPushOpen(true)
+  }
+
   const resolveAndRetry = (): void => {
     if (pushConflict === null) return
     setPushing(true)
@@ -393,16 +402,30 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                           <IconTriangleRightFill14 className={collapsed[ws.workspaceId] ? styles.wsArrow : `${styles.wsArrow} ${styles.wsArrowOpen}`} />
                         </span>
                         <span className={styles.wsGroupTitle}>{ws.name}</span>
-                        {selectedWsId === ws.workspaceId && (
-                          <span
-                            className={styles.wsNewBtn}
-                            role="button"
-                            title={t('manager.new')}
-                            onClick={(e) => { e.stopPropagation(); createIn(ws.workspaceId) }}
-                          >
-                            <IconPlusOutline16 />
-                          </span>
-                        )}
+                        <button
+                          type="button"
+                          className={styles.wsIconBtn}
+                          title={t('git.update')}
+                          onClick={(e) => { e.stopPropagation(); updateClick(ws.workspaceId) }}
+                        >
+                          <IconRefreshOutline16 />
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.wsIconBtn}
+                          title={t('git.push')}
+                          onClick={(e) => { e.stopPropagation(); pushForWs(ws.workspaceId) }}
+                        >
+                          <IconSendOutline16 />
+                        </button>
+                        <span
+                          className={styles.wsNewBtn}
+                          role="button"
+                          title={t('manager.new')}
+                          onClick={(e) => { e.stopPropagation(); createIn(ws.workspaceId) }}
+                        >
+                          <IconPlusOutline16 />
+                        </span>
                       </div>
                     )}
                     {!collapsed[ws.workspaceId] && (ws.notes.length === 0 && grouped
@@ -473,15 +496,15 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                         placeholder={t('git.commitPlaceholder')}
                         value={pushMsg}
                         onChange={(e) => setPushMsg(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { const id = currentWsId(); if (id !== null) doPush(id) } }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { const id = pushTargetWsId ?? currentWsId(); if (id !== null) doPush(id) } }}
                       />
                       <button
                         type="button"
                         className={styles.saveBtn}
                         disabled={busy}
-                        onClick={() => { const id = currentWsId(); if (id !== null) doPush(id) }}
+                        onClick={() => { const id = pushTargetWsId ?? currentWsId(); if (id !== null) doPush(id) }}
                       >{pushing && <LoadingIndicator size={12} />}{t('git.confirmPush')}</button>
-                      <button type="button" className={shared.btn} disabled={busy} onClick={() => setPushOpen(false)}>
+                      <button type="button" className={shared.btn} disabled={busy} onClick={() => { setPushOpen(false); setPushTargetWsId(null) }}>
                         {t('git.cancel')}
                       </button>
                     </div>

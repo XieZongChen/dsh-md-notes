@@ -22,6 +22,7 @@ const targets = [
   'packages/client/ui-sidebar',
   'packages/client/ui-layout',
   'packages/client/ui-primitives',
+  'packages/client/ui-input-trigger',
   'packages/client/locale',
   'packages/client/ui-settings',
   'packages/client/ui-settings-general',

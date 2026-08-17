@@ -15,6 +15,8 @@ export interface NoteSummary {
 export interface WorkspaceNotes {
   workspaceId: string
   name: string
+  /** Absolute notes directory (`<ws>/.dsh-notes`) — used to build reference paths. */
+  notesDir: string
   notes: NoteSummary[]
 }
 
@@ -77,18 +79,23 @@ export const ICON_URL = `${API}/icon.svg`
  * Call one host API method.
  * @param method - endpoint name (list/read/write/create/delete/appendConversation/git*).
  * @param body - endpoint arguments.
+ * @param signal - optional abort signal (the @ reference pipeline supersedes
+ * per-keystroke candidate fetches; a signal lets a stale call stop early).
  * @returns the parsed result, or a failure branch on transport/HTTP errors.
  */
-export async function api(method: string, body: Record<string, unknown> = {}): Promise<ApiResult> {
+export async function api(method: string, body: Record<string, unknown> = {}, signal?: AbortSignal): Promise<ApiResult> {
   try {
     const res = await fetch(API, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ method, ...body }),
+      signal,
     })
     if (!res.ok) return { ok: false, error: `http ${res.status}` }
     return (await res.json()) as ApiResult
   } catch (error) {
+    // An aborted request is a superseded candidate fetch — report it as a
+    // failure branch; the caller treats it as "no candidates yet".
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
 }

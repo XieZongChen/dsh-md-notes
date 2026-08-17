@@ -17,6 +17,8 @@ const PLATFORM_MODULES = [
   '@deepseek-ai/dsh-client-ui-slots/types',
   '@deepseek-ai/dsh-client-ui-conversation',
   '@deepseek-ai/dsh-client-ui-conversation/client',
+  '@deepseek-ai/dsh-client-ui-input-trigger',
+  '@deepseek-ai/dsh-client-ui-input-trigger/client',
   '@deepseek-ai/dsh-client-ui-sidebar',
   '@deepseek-ai/dsh-client-ui-sidebar/client',
   '@deepseek-ai/dsh-client-ui-layout',

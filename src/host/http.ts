@@ -101,20 +101,28 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
   switch (method) {
     // ---- notes domain ----
     case 'list': {
-      // A session-scoped request (note picker) sees only its own workspace's
-      // notes; the manager (no sessionId) sees every workspace. Without this
-      // the picker would list all workspaces yet append into only the
-      // session's workspace — mismatched notes.
+      // A session-scoped request (note picker / @ reference) sees only its
+      // own workspace's notes; the manager (no sessionId) sees every
+      // workspace. A session that resolves NO workspace sees no notes at all
+      // (the @ trigger yields no candidates) rather than every workspace.
       const sessionWsId = typeof req.sessionId === 'string'
         ? deps.workspaceIdForSession(req.sessionId)
         : undefined
+      if (typeof req.sessionId === 'string' && sessionWsId === undefined) {
+        return { ok: true, workspaces: [], noWorkspaces: !deps.hasWorkspaces() }
+      }
       const entries = sessionWsId !== undefined
         ? deps.listWorkspaces().filter((ws) => ws.workspaceId === sessionWsId)
         : deps.listWorkspaces()
-      const workspaces: Array<{ workspaceId: string; name: string; notes: import('./notes.ts').NoteSummary[] }> = []
+      const workspaces: Array<{
+        workspaceId: string
+        name: string
+        notesDir: string
+        notes: import('./notes.ts').NoteSummary[]
+      }> = []
       for (const ws of entries) {
         const result = await listNotes(ws.notesDir)
-        workspaces.push({ workspaceId: ws.workspaceId, name: ws.name, notes: result.ok ? result.notes : [] })
+        workspaces.push({ workspaceId: ws.workspaceId, name: ws.name, notesDir: ws.notesDir, notes: result.ok ? result.notes : [] })
       }
       return { ok: true, workspaces, noWorkspaces: !deps.hasWorkspaces() }
     }

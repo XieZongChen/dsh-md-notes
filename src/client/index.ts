@@ -16,6 +16,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-general/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type { InputTriggerServiceContract } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { NotesStore } from './features/store.ts'
 import { en, zh } from './features/locales/index.ts'
@@ -24,6 +25,7 @@ import { NoteAction } from './features/NoteAction/NoteAction.tsx'
 import { NotePicker } from './features/NotePicker/NotePicker.tsx'
 import { NotesManager } from './features/NotesManager/NotesManager.tsx'
 import { SettingsSection } from './features/Settings/SettingsSection.tsx'
+import { createNotesSource } from './features/ContextSource/ContextSource.ts'
 
 export const inject = ['slots', 'locale']
 
@@ -62,6 +64,23 @@ export function apply(ctx: ClientContext): void {
   const store = new NotesStore()
   const t = ctx.locale.bind('md-notes')
   ctx.effect(() => ctx.locale.register('md-notes', { zh, en }), 'dsh-md-notes: locale dicts')
+
+  // '@' reference source: notes as conversation context (docs/context.md).
+  // Registered under ctx.effect so HMR/unmount clears the per-session caches.
+  const notesSource = createNotesSource(t)
+  ctx.effect(() => {
+    const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract | undefined
+    if (inputTriggers === undefined) {
+      // ui-input-trigger absent (unbundled host) — the feature is inert.
+      console.warn('[dsh-md-notes] inputTriggers unavailable; @ reference disabled')
+      return () => {}
+    }
+    const unregister = inputTriggers.registerSource(notesSource.source)
+    return () => {
+      unregister()
+      notesSource.dispose()
+    }
+  }, 'dsh-md-notes: @ source')
 
   ctx.effect(() => ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register(
     { name: 'sidebar.footer.action', id: 'dsh-notes-entry', order: 30, label: t('sidebar.label'), locale: 'md-notes' },
