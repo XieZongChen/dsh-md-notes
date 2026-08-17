@@ -30,6 +30,8 @@ const targets = [
   'packages/subprocess/subprocess',
   'packages/workspace/workspace',
   'packages/core/session',
+  'packages/core/agent',
+  'packages/llm/llm',
   'packages/session-query/session-query',
   'packages/sandbox/sandbox-policy',
   'packages/host/webserver',

@@ -28,6 +28,7 @@ import {
 } from './host/git.ts'
 import { iconHandler, notesApiHandler, type GitApi, type NotesApiDeps, type WorkspaceEntry } from './host/http.ts'
 import { MdNotesSettingsSchema, mergeSettings, MD_NOTES_NS, type MdNotesSettings } from './host/settings.ts'
+import { registerNoteContextInjection } from './host/context-inject.ts'
 
 /** Plugin row config. */
 export interface Config {
@@ -255,4 +256,7 @@ export function apply(ctx: Context, config: Config): void {
     path: `${prefix}/icon.svg`,
     handler: iconHandler(iconPath),
   }), 'dsh-md-notes: icon route')
+  // Note-content injection: fold referenced notes into the model request at
+  // every agent pre-step (reliable references without relying on `read`).
+  ctx.effect(() => registerNoteContextInjection(ctx), 'dsh-md-notes: context injection')
 }

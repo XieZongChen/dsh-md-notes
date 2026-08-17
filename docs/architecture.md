@@ -46,6 +46,7 @@ dsh-md-notes/
     │   ├── notes.ts      # 笔记领域逻辑（目录/元数据/各操作方法）
     │   ├── git.ts        # Git 领域逻辑（runGit/仓库解析/同步/冲突检测）
     │   ├── settings.ts   # L3 settings 命名空间（schema + mergeSettings）
+    │   ├── context-inject.ts # agent/pre-step 笔记内容注入（模型请求前折叠笔记内容）
     │   └── http.ts       # HTTP 工具 + 路由 handler 组装（notes + git 分发）
     └── client/
         ├── index.ts     # 入口（组装层，无 JSX）：apply + slot 注册 + NotesOverlay

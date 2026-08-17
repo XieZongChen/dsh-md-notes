@@ -29,7 +29,10 @@ Only user-visible functional changes are recorded (no documentation, code refact
   Serialized paths are relative to the session workspace root — `.dsh-notes/<name>` for
   same-workspace notes, `../<dir>/.dsh-notes/<name>` across workspaces (a
   `<workspace-name>/…` prefix cannot resolve: the read cwd IS the workspace, so a
-  workspace can never nest inside itself). Cross-workspace: typing a partial workspace name shows fuzzy workspace rows (🗂️) that
+  workspace can never nest inside itself).
+  The host folds each referenced note's CONTENT into the model request at
+  `agent/pre-step` (durable injected-context, deduped) — references work without
+  relying on the model calling `read` on its own. Cross-workspace: typing a partial workspace name shows fuzzy workspace rows (🗂️) that
   auto-complete to `@workspace-name/` on pick and pop that workspace's notes (ASCII names
   only; an exact `@workspace-name` switches directly); a referenced note that was deleted or moved blocks the send with a
   "not found — remove the reference" notice.
