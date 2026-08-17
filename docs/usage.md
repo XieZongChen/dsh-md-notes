@@ -58,7 +58,8 @@ A picker opens:
    workspace's notes are included), or create a new one on the spot with the
    **+** button on any workspace row.
 2. Click **Write to note**. The user question + the answer are appended to the
-   note as a timestamped section:
+   note as a timestamped section (the picker closes itself ~1 second after a
+   successful write):
 
    ```markdown
    ---
@@ -75,28 +76,53 @@ A picker opens:
 ## 4. Referencing notes in a conversation (@)
 
 Type **`@`** in the chat input to pick a note: the pick inserts a **note chip**,
-and on send each chip enters the model context as a **path reference** — the
-model uses its `read` tool to load the note and can cite it in the answer.
+and on send the note's **content** is put into the model context automatically —
+the model can see and cite the note without you having to tell it to read files.
+
+### 4.1 Picking a note
 
 1. Type `@` → the candidate menu lists notes of the **current workspace**
    (📝 prefix; the title is the primary row, the file name the secondary line).
 2. Select with arrows / click → a note chip appears; keep typing `@` to add more.
-3. **Cross-workspace**: type a partial workspace name (e.g. `@dsh-pl`) → candidates show
-   a **workspace row** (`dsh-plugin/`); pick it to auto-complete `@dsh-plugin/` and list
-   that workspace's notes — keep typing to filter within it (**ASCII names only**; an exact
-   `@dsh-plugin` switches directly).
-4. Send → each chip serializes to a readable line whose path is relative to
-   the current workspace root (same workspace: `Referenced note "title":
-   .dsh-notes/note.md`; cross-workspace: `Referenced note "title":
-   ../other-dir/.dsh-notes/note.md`); the model reads the referenced note and
-   answers with it. A plain-text
-   `@note-title` you type by hand is only highlighted decoration — it does
-   **not** enter the context; real references go through the menu (chip).
-5. If a referenced note was deleted or moved, the send is blocked with
-   "«name» could not be found. Remove the reference." — delete the stale chip
-   and resend.
+3. Keep typing to **filter** the candidates (by title or file name).
 
-> Sessions without a workspace get no `@` candidates (silent).
+### 4.2 Referencing notes from other workspaces
+
+- Type a partial workspace name (e.g. `@dsh-pl`) → a **workspace row** appears
+  (`dsh-plugin/`, 🗂️ icon);
+- **Pick the workspace row** → it auto-completes to `@dsh-plugin/` and
+  **immediately lists that workspace's notes**; keep typing to filter within it;
+- An exact workspace name (`@dsh-plugin`) switches directly;
+- **ASCII names only** (workspaces whose names contain Chinese or spaces cannot
+  be triggered by text).
+
+### 4.3 What happens on send
+
+Two things:
+
+1. **Your message keeps a readable reference line** — e.g. `Referenced note "title":
+   .dsh-notes/note.md` (same workspace) or `Referenced note "title":
+   ../other-dir/.dsh-notes/note.md` (cross-workspace) — it tells the model (and
+   you) which note was referenced;
+2. **The host injects the note's content into the model context** — a collapsible
+   "context injection" row (source `md-notes`) appears in the chat; expand it to
+   see the injected content. The model gets the content directly — it does **not**
+   depend on calling its `read` tool itself.
+
+### 4.4 Common questions
+
+- **No need to re-reference for follow-ups**: the injected content stays in the
+  session context (until dsh compacts old history), so follow-up questions
+  (e.g. "what was X in the note?") work without re-referencing. If a note is
+  large and you worry about context usage, start a new session or reference only
+  the notes you need.
+- **Note deleted / moved**: if the note no longer exists at send time, the send
+  is blocked with "«name» could not be found. Remove the reference." — delete
+  the stale chip and resend.
+- **A typed `@note-title` does nothing**: plain-text `@note-title` is only a
+  highlight decoration — it does **not** enter the model context; real
+  references go through the menu (chip).
+- **No workspace**: sessions without a workspace get no `@` candidates (silent).
 
 ## 5. Git sync (optional)
 
@@ -124,7 +150,8 @@ In the settings panel (see [§6](#6-the-settings-panel)), pick a mode:
 
 ### 5.2 Pushing notes
 
-1. Open any note and click **Push** (next to Save).
+1. Open any note and click **Push** (next to Save) — or click the **push icon**
+   on a workspace row in the note list.
 2. A small panel asks for a commit message (default "Notes update <time>").
    Confirm to commit & push.
 3. First push clones the repository automatically (credentials come from git
@@ -142,7 +169,8 @@ difference it asks:
 
 ### 5.3 Updating notes (pulling)
 
-Click **Update** to pull the remote version of the notes down:
+Click **Update** (above the editor, or the **update icon** on a workspace row)
+   to pull the remote version of the notes down:
 
 - If the remote has **new notes** you don't have → they're pulled in and the
   list refreshes automatically.
