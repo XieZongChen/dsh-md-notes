@@ -69,7 +69,29 @@ A picker opens:
    <answer>
    ```
 
-## 4. Git sync (optional)
+## 4. Referencing notes in a conversation (@)
+
+Type **`@`** in the chat input to pick a note: the pick inserts a **note chip**,
+and on send each chip enters the model context as a **path reference** — the
+model uses its `read` tool to load the note and can cite it in the answer.
+
+1. Type `@` → the candidate menu lists notes of the **current workspace**
+   (📝 prefix; the title is the primary row, the file name the secondary line).
+2. Select with arrows / click → a note chip appears; keep typing `@` to add more.
+3. **Cross-workspace**: type `@workspace-name/` (e.g. `@dsh-plugin/`, **ASCII
+   names only**) → candidates switch to that workspace's notes (secondary line
+   shows `workspace-name · file-name`).
+4. Send → each chip serializes to `<note ref="<absolute note path>">title</note>`;
+   the model reads the referenced note and answers with it. A plain-text
+   `@note-title` you type by hand is only highlighted decoration — it does
+   **not** enter the context; real references go through the menu (chip).
+5. If a referenced note was deleted or moved, the send is blocked with
+   "«name» could not be found. Remove the reference." — delete the stale chip
+   and resend.
+
+> Sessions without a workspace get no `@` candidates (silent).
+
+## 5. Git sync (optional)
 
 Git sync keeps your notes backed up and synchronized across machines. The
 plugin manages a local **clone** of your repository automatically — you only
@@ -79,9 +101,9 @@ need to give it a repository **URL**.
 > pushes them to / pulls them from a repository; it never changes where notes
 > are stored locally.
 
-### 4.1 Two modes (choose one)
+### 5.1 Two modes (choose one)
 
-In the settings panel (see [§5](#5-the-settings-panel)), pick a mode:
+In the settings panel (see [§6](#6-the-settings-panel)), pick a mode:
 
 | Mode | What it does | Configure |
 |---|---|---|
@@ -93,7 +115,7 @@ In the settings panel (see [§5](#5-the-settings-panel)), pick a mode:
 > workspace gets its own folder automatically. Want different repos per
 > project? Use **Own repos**.
 
-### 4.2 Pushing notes
+### 5.2 Pushing notes
 
 1. Open any note and click **Push** (next to Save).
 2. A small panel asks for a commit message (default "Notes update <time>").
@@ -111,7 +133,7 @@ difference it asks:
 - **Overwrite remote with local** → push proceeds, including deletions.
 - **Cancel** → nothing is pushed.
 
-### 4.3 Updating notes (pulling)
+### 5.3 Updating notes (pulling)
 
 Click **Update** to pull the remote version of the notes down:
 
@@ -126,7 +148,7 @@ Click **Update** to pull the remote version of the notes down:
   - **Use remote version** → the remote copy overwrites your local file.
   - **Cancel** → local stays unchanged.
 
-### 4.4 Auto-pull when opening a note
+### 5.4 Auto-pull when opening a note
 
 When you open a note, the plugin (if `gitAutoPull` is on) silently pulls the
 remote first — **without overwriting** anything you've edited locally. If the
@@ -134,13 +156,13 @@ remote has notes that conflict with local ones, it shows a hint next to the
 **Update** button: "Remote has updates — update manually." Click **Update** to
 resolve.
 
-### 4.5 When a push is rejected
+### 5.5 When a push is rejected
 
 If the remote is ahead or the histories are unrelated, the push is rejected
 and you'll see a **"Merge remote & retry"** action. Click it to merge the
 remote into the local clone, then push again.
 
-## 5. The settings panel
+## 6. The settings panel
 
 Open the notes manager and click the **⚙ settings icon** next to the title (or
 open dsh's Settings → **MD Notes** section). Everything Git-related is here:
@@ -152,7 +174,7 @@ open dsh's Settings → **MD Notes** section). Everything Git-related is here:
 - **Commit author name / email** (used when the repository has no git identity
   configured; otherwise the repo's own config wins).
 
-## 6. Update notifications
+## 7. Update notifications
 
 The plugin checks npm for a newer version of `dsh-md-notes` when it loads
 (the check is cached for 10 minutes; failures are silent). If a new version
@@ -163,7 +185,7 @@ exists, a yellow **"Update available"** tag appears:
 
 Upgrade with `dsh plugin --profile web update dsh-md-notes`, then restart dsh web.
 
-## 7. Tips & notes
+## 8. Tips & notes
 
 - **Files are yours**: notes are ordinary `.md` files; edit them anywhere, keep
   them after uninstalling the plugin.
