@@ -490,6 +490,19 @@ export async function gitPull(
   await gitInit(ctx, repo, repo.branch)
   const branch = await ensureBranch(ctx, repo)
   if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
+  // Does the remote actually have new commits? Judged by git refs (fetch has
+  // already moved origin/<branch> to the remote tip), NOT by content diff —
+  // a local edit that was never pushed differs from the clone without the
+  // remote having any update, and must not be reported as "remote updated".
+  const ahead = await runGit(ctx, repo.repoDir, ['rev-list', '--count', `${repo.branch}..origin/${repo.branch}`])
+  const remoteAhead = ahead.code === 0 && Number(ahead.stdout.trim()) > 0
+  if (!remoteAhead) {
+    // Remote has no new commits: any local-vs-clone difference is an unpushed
+    // local edit. Copy nothing and overwrite nothing (a manual Update must
+    // not roll the local edit back to the older mirror content) and surface
+    // no "remote updated" hint.
+    return { ok: true, skipped: 0, changed: force ? undefined : [] }
+  }
   const target = repoTargetDir(repo)
   const { skipped } = await syncNotes(target, notesDir, force)
   // In the conservative (auto-pull) path, notes differing on both sides were
