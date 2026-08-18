@@ -24,7 +24,7 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
-## NEXT_VERSION
+## [0.5.0] - 2026-08-19
 
 ### Added
 
@@ -44,6 +44,18 @@ Only user-visible functional changes are recorded (no documentation, code refact
   lists, TeX math, code highlighting, built-in XSS safety), matching the chat
   rendering. See
   [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+- **Notes-manager open behavior**: clicking an existing note opens **Preview**
+  by default (the Preview tab comes first); a newly created note opens directly
+  in **Edit** mode. See
+  [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+
+### Fixed
+
+- Remote-update detection no longer false-positives: it now compares git
+  references (rev-list ahead count) instead of file contents — unsynced local
+  edits no longer report "update available"; a manual update no longer
+  overwrites local changes when the remote has nothing new.
+  See [User guide §5 — Git sync](docs/usage.md#5-git-sync-optional).
 
 ## [0.4.0] - 2026-08-18
 

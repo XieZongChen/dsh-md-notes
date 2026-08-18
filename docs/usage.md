@@ -32,18 +32,20 @@ opens with two columns:
   icon, a collapse arrow, and a **+** button to create a note in that
   workspace (with Git enabled it also carries update/push icon buttons — see
   [§5](#5-git-sync-optional)).
-- **Right — editor**, with **Edit / Preview** tabs and a **Save** button.
+- **Right — note content**, with **Preview / Edit** tabs and a **Save** button.
+  **Clicking an existing note opens Preview by default**; a newly created note
+  opens directly in Edit mode.
 
 ### Creating a note
 
 Click **+** on a workspace row. A note is created with an auto title
-("Untitled note <date>") and opens in the editor immediately.
+("Untitled note <date>") and **opens directly in Edit mode**.
 
 ### Editing & previewing
 
-- **Edit** tab: write markdown source.
 - **Preview** tab: see the rendered result (GFM tables / task lists / math /
-   code highlighting).
+   code highlighting) — shown by default when you open an existing note.
+- **Edit** tab: write markdown source.
 - **Save**: writes to the local `.md` file and refreshes the list.
 
 ### Deleting a note
