@@ -24,6 +24,16 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## NEXT_VERSION
+
+### Added
+
+- **Note preview uses dsh's `MarkdownText`**: the notes-manager preview now renders
+  with dsh's own MarkdownText (micromark stack: GFM tables / task lists / ordered
+  lists, TeX math, code highlighting, built-in XSS safety), matching the chat
+  rendering. See
+  [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+
 ## [0.4.0] - 2026-08-18
 
 ### Added

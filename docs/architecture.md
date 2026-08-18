@@ -54,7 +54,7 @@ dsh-md-notes/
             ├── api.ts            # Host HTTP API 封装 + gitErrorText（错误码→i18n）+ checkUpdateApi
             ├── store.ts          # NotesStore（pub/sub 共享状态）
             ├── update.ts         # useUpdateAvailable（npm 版本检测，模块级共享缓存）
-            ├── markdown.ts       # markdown 渲染器（纯函数）
+            ├── markdown.ts       # 共享小工具（fmtTime；渲染已改用 dsh MarkdownText）
             ├── locales/          # i18n：zh.ts（源字典）/ en.ts（同键映射）+ LocaleNamespaceMap 合并
             ├── styles.module.css # 共享样式（mask/dialog/btn/input 等）
             ├── components/
@@ -157,7 +157,9 @@ dsh-md-notes/
   用 `Modal`（headless 模式）+ `DshInput`，深色模式与 dsh 弹窗一致。
 - **记入笔记标签本地化**：`appendConversation` 写入笔记的分段标签（用户/助手/图片/空占位）
   由 client 按界面语言传入 `labels`，host 用传入值渲染（缺省英文），笔记内容跟随 dsh 语言。
-- markdown 预览用内置轻量渲染器（先 HTML 转义，再逐行渲染标题/列表/引用/代码块/内联样式）。
+- markdown 预览用 **dsh 的 `MarkdownText`**（`@deepseek-ai/dsh-client-ui-primitives`，micromark/mdast 生态：
+  GFM、TeX 公式（KaTeX）、代码高亮（Shiki）、CJK 友好加粗，XSS 安全内置——原始 HTML 与危险协议
+  禁用）。自研 `renderMd` 已移除。
 - 所有数据经 `fetch('/plugins/md-notes', { method: 'POST', body: JSON.stringify({ method, ...args }) })`。
 
 ## 5. 开发环境

@@ -20,6 +20,15 @@
   **不新增** `NEXT_VERSION`（开发空窗期不留空块）。写入改动时先检查是否存在 `NEXT_VERSION`
   块——没有就先添加一个，再在块下记录新改动。
 
+## NEXT_VERSION
+
+### Added
+
+- **笔记预览改用 dsh `MarkdownText`**：笔记管理器的预览 Tab 改用 dsh 自带的
+  MarkdownText 渲染（micromark 生态：GFM 表格 / 任务列表 / 有序列表、TeX 公式、代码高亮，
+  XSS 安全内置），与 dsh 聊天渲染一致。见
+  [使用文档 §2 — 打开笔记管理器](docs/usage.zh.md#2-打开笔记管理器)。
+
 ## [0.4.0] - 2026-08-18
 
 ### Added
