@@ -50,11 +50,10 @@ export function blocksToText(
     const block = b as { type?: string; text?: string }
     if (block.type === 'text' && typeof block.text === 'string') parts.push(block.text)
     else if (block.type === 'reasoning' && typeof block.text === 'string') {
-      // Reasoning renders as a fenced blockquote with open/close markers so it
-      // never blends into the answer: every line carries the `> ` prefix (the
-      // old single-prefix form lost the quote after the first line).
-      const lines = block.text.split('\n').map(line => `> ${line}`)
-      parts.push([`> ${thinkLabel}`, ...lines, `> ${thinkEndLabel}`].join('\n'))
+      // Reasoning keeps the content VERBATIM between bold open/close markers —
+      // no per-line transformation (a blockquote prefix would re-interpret the
+      // content and could lose structure inside the reasoning text).
+      parts.push(`**${thinkLabel}**\n\n${block.text}\n\n**${thinkEndLabel}**`)
     }
     else if (block.type === 'image') parts.push(imageLabel)
   }
