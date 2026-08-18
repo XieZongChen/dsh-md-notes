@@ -107,7 +107,7 @@ export function registerNoteContextInjection(ctx: Context): () => void {
     const injected = fresh.map(note => createUserMessage({
       content: [{
         type: 'text',
-        text: `[笔记内容]\n\n引用约定：回答中如需引用本笔记，请用 markdown 链接格式 [标题](路径)，路径沿用你看到的引用路径（如 [3333](../dsh-work/.dsh-notes/3333.md)）。\n\n${note.content}`,
+        text: `[笔记内容 / Note content]\n\n引用约定：回答中如需引用本笔记，请用 markdown 链接格式 [标题](路径)，路径沿用你看到的引用路径（如 [3333](../dsh-work/.dsh-notes/3333.md)）。\nCitation convention: when citing this note in your answer, use the markdown link form [title](path), reusing the reference path you see (e.g. [3333](../dsh-work/.dsh-notes/3333.md)).\n\n${note.content}`,
       }],
       source: { kind: NOTE_CONTEXT_SOURCE, path: note.path },
     }))
