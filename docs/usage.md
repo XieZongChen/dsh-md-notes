@@ -40,7 +40,10 @@ Click **+** on a workspace row. A note is created with an auto title
 ### Editing & previewing
 
 - **Edit** tab: write markdown source.
-- **Preview** tab: see the rendered result.
+- **Preview** tab: see the rendered result (GFM tables / task lists / math /
+   code highlighting). A note name wrapped in backticks (e.g. `` `3333.md` `` or
+   `` `note title` ``) becomes a clickable **note jump** that opens that note in
+   the editor.
 - **Save**: writes to the local `.md` file and refreshes the list.
 
 ### Deleting a note
