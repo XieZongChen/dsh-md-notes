@@ -1,6 +1,6 @@
 ---
 name: release-version
-description: 发版。用户说"发版"、"发布新版本"、"要发版"时触发——执行 changelog 检查补足（需用户确认）、版本号替换（package.json 与 CHANGELOG）、build 检验、提交并 push，最后让用户手动执行 npm publish。版本号缺失时先询问用户。
+description: 发版。用户说"发版"、"发布新版本"、"要发版"时触发——执行 changelog 检查补足（需用户确认）、版本号替换（package.json 与 CHANGELOG）、build 检验、提交并 push、打 tag（详情含双语变动，先英文再中文）并推送，最后让用户手动执行 npm publish。版本号缺失时先询问用户。
 ---
 
 # 发版（Release）
@@ -14,7 +14,8 @@ dsh-md-notes 的发版流程。**最后一步（npm publish）由用户手动执
 3. 替换版本号（package.json + CHANGELOG 的 NEXT_VERSION）
 4. build 检验
 5. 提交 + push
-6. 让用户手动执行 `npm publish`
+6. 打 tag（annotated tag，详情 = 该版本双语变动，先英文再中文）+ push tag
+7. 让用户手动执行 `npm publish`
 
 ## 1. 确认版本号
 
@@ -134,9 +135,44 @@ git commit -m "chore: 发布 v<版本号> — CHANGELOG 定版、package.json �
 git push
 ```
 
-## 6. 交给用户手动发布
+## 6. 打 tag（含双语变动详情）
 
-推送到 main 后，**告知用户手动执行发布**（本 skill 不代替执行）：
+提交 + push 之后，**打 annotated tag 并推送**。tag 详情写入本次版本的变动摘要，
+**格式为：先英文、再中文**（内容来自刚定版的 CHANGELOG）。
+
+1. 从两份 CHANGELOG 提取本次版本的块内容（`## [<版本号>]` 到下一个 `## [` 之前）：
+
+   ```sh
+   # 英文块（CHANGELOG.md）
+   awk '/^## \[<版本号>\]/{f=1;next} /^## \[/{f=0} f' CHANGELOG.md
+   # 中文块（CHANGELOG.zh.md）
+   awk '/^## \[<版本号>\]/{f=1;next} /^## \[/{f=0} f' CHANGELOG.zh.md
+   ```
+
+2. 组装 tag message：首行 `v<版本号>`，空行后放**英文块**，再空行、`---` 分隔线、
+   空行后放**中文块**（分类标题如 `### Added` / `### Fixed` 保留，使用文档链接可保留）。
+
+3. 创建并推送 tag（用 `-a` annotated tag 承载多行详情；`-F` 从文件读入，避免引号转义问题）：
+
+   ```sh
+   # 把组装好的内容写入临时文件 /tmp/tag-msg-<版本号>.txt，然后：
+   git tag -a v<版本号> -F /tmp/tag-msg-<版本号>.txt
+   git push origin v<版本号>
+   ```
+
+   tag 指向当前 HEAD（即刚提交的发版 commit）。若 tag 已存在（如重复发版），
+   先确认目标后删除重建：`git tag -d v<版本号> && git push origin :v<版本号>`。
+
+4. 验证：
+
+   ```sh
+   git tag -l "v<版本号>" && git show v<版本号> --no-patch
+   git ls-remote --tags origin | grep "v<版本号>"
+   ```
+
+## 7. 交给用户手动发布
+
+推送到 main 并打好 tag 后，**告知用户手动执行发布**（本 skill 不代替执行）：
 
 ```sh
 npm publish
@@ -144,8 +180,8 @@ npm publish
 
 并提醒：
 - `prepublishOnly` 会自动再跑一次 `npm run build`
-- 发布后若维护 GitHub Releases，可参考 `.release-notes/` 或 CHANGELOG 生成双语 release notes
-- 发布成功后可打 git tag：`git tag v<版本号> && git push origin v<版本号>`
+- tag 已由流程打好并推送（`v<版本号>`，含双语变动详情）；发布成功后可基于该 tag
+  维护 GitHub Releases（参考 `.release-notes/` 或 CHANGELOG 生成双语 release notes）
 
 ## 注意事项
 
@@ -155,3 +191,5 @@ npm publish
 - **CHANGELOG 不写操作介绍**：功能条目 = 功能名/一句话 + 使用文档锚点链接（精确到标题）；
   操作用法只存在于使用文档（缺失先补文档再引用）。
 - **用户确认点**：① 版本号（若缺失）② changelog 草稿（补充/修改）③ 发布由用户手动执行。
+- **tag 在流程内打**：提交 + push 后立即打 annotated tag 并推送（详情先英文再中文，
+  取自 CHANGELOG 该版本块）；不需要用户等 publish 完成再手动打。tag 打在发版 commit 上。
