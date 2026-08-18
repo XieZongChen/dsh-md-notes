@@ -44,23 +44,20 @@ export function blocksToText(
   thinkLabel = '💭 Think',
   thinkEndLabel = '💭 Think end',
 ): string {
-  // Reasoning blocks are collected separately and always emitted BEFORE the
-  // answer text (matching how dsh shows Think above the answer), regardless of
-  // the content array's stream order — some providers deliver reasoning after
-  // the text. Reasoning keeps its content VERBATIM between bold open/close
-  // markers (no per-line transformation that could lose structure).
-  const reasoning: string[] = []
-  const body: string[] = []
+  const parts: string[] = []
   for (const b of blocks ?? []) {
     if (b === null || typeof b !== 'object') continue
     const block = b as { type?: string; text?: string }
-    if (block.type === 'text' && typeof block.text === 'string') body.push(block.text)
+    if (block.type === 'text' && typeof block.text === 'string') parts.push(block.text)
     else if (block.type === 'reasoning' && typeof block.text === 'string') {
-      reasoning.push(`**${thinkLabel}**\n\n${block.text}\n\n**${thinkEndLabel}**`)
+      // Reasoning keeps its content VERBATIM between bold open/close markers
+      // (no per-line transformation that could lose structure). Order follows
+      // dsh's stream order (whatever order the model delivered the blocks in).
+      parts.push(`**${thinkLabel}**\n\n${block.text}\n\n**${thinkEndLabel}**`)
     }
-    else if (block.type === 'image') body.push(imageLabel)
+    else if (block.type === 'image') parts.push(imageLabel)
   }
-  return [...reasoning, ...body].join('\n\n').trim()
+  return parts.join('\n\n').trim()
 }
 
 async function readMeta(dir: string): Promise<Meta> {
