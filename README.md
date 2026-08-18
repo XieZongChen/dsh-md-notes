@@ -118,26 +118,8 @@ There are **no environment variables and no secrets** in this plugin's configura
 
 Rollback: `dsh plugin --profile web remove dsh-md-notes` restores the previous state (notes files are untouched).
 
-## Development
-
-```sh
-npm install --legacy-peer-deps   # first time or after dependency changes
-npm run link-deps                # link deepseek-harness checkout types (before changing code)
-npm run build                    # build lib/index.js + lib/client.js
-```
-
-After changing code and building successfully, restart dsh web for it to take effect.
-
-Common scripts:
-
-| Command | Purpose |
-|---|---|
-| `npm run build` | Full build (tsc host → tsc client → tsdown) |
-| `npm run typecheck` | Type-check only (both programs) |
-| `npm run link-deps` | Re-link `@deepseek-ai/*` types to the checkout |
-| `npm run bundle` | Build only the client bundle |
-
-Contributions are welcome: open an issue to discuss, then a PR. Design docs: [docs/features.md](docs/features.md) · [docs/architecture.md](docs/architecture.md).
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Repository structure
 

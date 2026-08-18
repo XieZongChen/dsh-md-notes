@@ -118,26 +118,8 @@ dsh plugin --profile web remove dsh-md-notes
 
 回滚：`dsh plugin --profile web remove dsh-md-notes` 即可恢复（笔记文件不受影响）。
 
-## 开发（Development）
-
-```sh
-npm install --legacy-peer-deps   # 首次或依赖变化后
-npm run link-deps                # 链接 deepseek-harness checkout 类型（改代码前）
-npm run build                    # 构建 lib/index.js + lib/client.js
-```
-
-改完代码、构建成功后，重启 dsh web 生效。
-
-常用脚本：
-
-| 命令 | 作用 |
-|---|---|
-| `npm run build` | 完整构建（tsc host → tsc client → tsdown） |
-| `npm run typecheck` | 仅类型检查（两个 program） |
-| `npm run link-deps` | 重链 `@deepseek-ai/*` 类型到 checkout |
-| `npm run bundle` | 仅构建 client bundle |
-
-欢迎贡献：先开 issue 讨论，再提 PR。设计文档：[docs/features.md](docs/features.md) · [docs/architecture.md](docs/architecture.md)。
+## 贡献（Contributing）
+详细内容见 [CONTRIBUTING.zh.md](CONTRIBUTING.zh.md)。
 
 ## 仓库结构（Repository structure）
 
