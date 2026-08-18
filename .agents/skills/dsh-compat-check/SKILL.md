@@ -1,6 +1,6 @@
 ---
 name: dsh-compat-check
-description: dsh 兼容性校验。用户说"dsh 兼容性校验"、"兼容性检查"、"校验 dsh 兼容性"、"检查 dsh 兼容性"时触发——先拉取 dsh main（master）分支代码，对比插件 README 兼容性章节最后验证的 deepseek-harness 版本到当前最新版本的变更，判断是否影响插件功能：有影响则将影响范围写成兼容 todo 放入 TODO 文档最上方；无影响则更新 README 兼容性章节（验证插件版本 = 当前最新非 NEXT_VERSION 版本，验证 dsh 版本 = 最新 dsh 版本）。
+description: dsh 兼容性校验。用户说"dsh 兼容性校验"、"兼容性检查"、"校验 dsh 兼容性"、"检查 dsh 兼容性"时触发——先拉取 dsh main（master）分支代码，对比插件 README 兼容性章节最后验证的 deepseek-harness 版本到当前最新版本的变更，判断是否影响插件功能：有影响则将影响范围写成兼容 todo 放入 TODO 文档最上方；无影响则更新 README 兼容性章节（已验证插件版本 = 当前最新非 NEXT_VERSION 版本，已验证 dsh 版本 = 最新 dsh 版本）。
 ---
 
 # dsh 兼容性校验（Compatibility Check）
@@ -48,8 +48,8 @@ git -C "$DSH" log --oneline -5 --grep="release(dsh)"
 
 以**中文版为准**（`README.zh.md` 的 `## 兼容性`），该章节**只有两项**：
 
-- **验证插件版本**——插件版本；
-- **验证dsh版本：deepseek-harness mainline <版本>**——上次验证的 dsh 版本。
+- **已验证插件版本**——插件版本；
+- **已验证dsh版本：deepseek-harness mainline <版本>**——上次验证的 dsh 版本。
 
 英文版（`README.md`）不单独维护字段结构：**跟随中文版原样翻译即可**
 （中文版两项 → 英文版两项）。
@@ -123,14 +123,14 @@ git -C "$DSH" log --oneline <START>..origin/master -- apps/web packages
 
 中文版 `README.zh.md`（`## 兼容性`，只有两项）：
 
-- **验证插件版本**：写**当前最新非 NEXT_VERSION 版本**——取 `package.json` 的 `version`
+- **已验证插件版本**：写**当前最新非 NEXT_VERSION 版本**——取 `package.json` 的 `version`
   （发版流程保证其与 CHANGELOG 最新 `## [x.y.z]` 一致）；若 `package.json` 版本落后于
   CHANGELOG 最新版本（异常状态），以 CHANGELOG 最新为准。
-- **验证dsh版本**：写第 1 步拉取到的最新 dsh 版本（`package.json` version 或最近
+- **已验证dsh版本**：写第 1 步拉取到的最新 dsh 版本（`package.json` version 或最近
   `release(dsh)` 版本）。
 
 英文版 `README.md`：中文版定稿后**跟随中文版原样翻译**——把中文版的两项
-（「验证插件版本」「验证dsh版本」）直接翻译成英文即可。
+（「已验证插件版本」「已验证dsh版本」）直接翻译成英文即可。
 
 ## 6. 提交 + push
 
