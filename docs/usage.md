@@ -73,9 +73,9 @@ A picker opens:
    ### 🤖 <assistant label>
    <answer>
 
-   > 💭 Think
-   > <reasoning content>
-   > 💭 Think end
+   **💭 Think**
+   <reasoning content (kept verbatim)>
+   **💭 Think end**
    ```
 
 ## 4. Referencing notes in a conversation (@)
