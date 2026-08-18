@@ -48,8 +48,6 @@ export const en: { [K in keyof typeof zh]: string } = {
   'picker.labelAssistant': 'DSH',
   'picker.labelEmpty': '(none)',
   'picker.labelImage': '[image]',
-  'picker.think': '💭 Think',
-  'picker.thinkEnd': '💭 Think end',
   'picker.needSelect': 'Select or create a note first.',
   'git.title': 'Git sync',
   'git.branch': 'Branch',

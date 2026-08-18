@@ -38,24 +38,15 @@ export function titleOf(content: string | undefined, fallback: string): string {
 }
 
 /** Render message content blocks to plain markdown text. */
-export function blocksToText(
-  blocks: readonly unknown[] | undefined,
-  imageLabel = '[image]',
-  thinkLabel = '💭 Think',
-  thinkEndLabel = '💭 Think end',
-): string {
+export function blocksToText(blocks: readonly unknown[] | undefined, imageLabel = '[image]'): string {
   const parts: string[] = []
   for (const b of blocks ?? []) {
     if (b === null || typeof b !== 'object') continue
     const block = b as { type?: string; text?: string }
     if (block.type === 'text' && typeof block.text === 'string') parts.push(block.text)
-    else if (block.type === 'reasoning' && typeof block.text === 'string') {
-      // Reasoning keeps its content VERBATIM between bold open/close markers
-      // (no per-line transformation that could lose structure). Order follows
-      // dsh's stream order (whatever order the model delivered the blocks in).
-      parts.push(`**${thinkLabel}**\n\n${block.text}\n\n**${thinkEndLabel}**`)
-    }
     else if (block.type === 'image') parts.push(imageLabel)
+    // reasoning blocks are intentionally skipped — only the final answer is
+    // kept, matching how dsh surfaces the response (Think is transient).
   }
   return parts.join('\n\n').trim()
 }
@@ -176,7 +167,7 @@ export async function appendConversation(
   sessionId: string,
   messageId: string,
   sessionQuery: SessionQueryEngine | undefined,
-  labels?: { user?: string; assistant?: string; empty?: string; image?: string; think?: string; thinkEnd?: string },
+  labels?: { user?: string; assistant?: string; empty?: string; image?: string },
 ): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
   if (!sessionId || !messageId) return { ok: false, error: 'missing session/message id' }
   if (sessionQuery === undefined) return { ok: false, error: 'sessionQuery unavailable' }
@@ -207,10 +198,10 @@ export async function appendConversation(
     } | undefined
     if (data === undefined) continue
     if (ev.type === 'user/message') {
-      if (data.source?.kind === 'user') userText = blocksToText(data.content, labels?.image, labels?.think, labels?.thinkEnd)
+      if (data.source?.kind === 'user') userText = blocksToText(data.content, labels?.image)
     } else if (ev.type === 'assistant/message') {
       if (data.message?.id === messageId) {
-        assistantText = blocksToText(data.message.content, labels?.image, labels?.think, labels?.thinkEnd)
+        assistantText = blocksToText(data.message.content, labels?.image)
         break
       }
     }

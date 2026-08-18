@@ -107,8 +107,6 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
         assistant: t('picker.labelAssistant'),
         empty: t('picker.labelEmpty'),
         image: t('picker.labelImage'),
-        think: t('picker.think'),
-        thinkEnd: t('picker.thinkEnd'),
       },
     }).then((res) => {
       setBusy(false)
