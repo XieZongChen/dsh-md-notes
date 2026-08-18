@@ -15,9 +15,10 @@ dsh 发版后需校验：自 README 兼容性章节上次验证的 deepseek-harn
 2. 读取插件 README（中英两份）兼容性章节，确定上次验证的 dsh 版本
 3. 收集「上次验证版本 → 当前最新」区间内 dsh 的变更
 4. 分析这些变更是否影响插件功能（对照插件依赖的 dsh 契约面）
-5. 分支处理：
+5. 分支处理（**以中文版为主，英文版在中文版定稿后对照翻译**）：
    - **有影响** → 在 `docs/TODO.md` 最上方写入兼容 todo（受影响功能 + 影响范围）
-   - **无影响** → 更新 `README.md` / `README.zh.md` 兼容性章节
+   - **无影响** → 更新 README 兼容性章节：**先写 `README.zh.md`（中文为主）**，
+     **再对照中文翻译 `README.md`（英文）**
 6. 提交 + push，向用户汇报判定与改动
 
 ## 1. 拉取 dsh 最新代码
@@ -120,17 +121,25 @@ git -C "$DSH" log --oneline <START>..origin/master -- apps/web packages
 
 风格参考 `docs/TODO.md` 现有条目（目标 / 现状 / 设想 / 验收标准）。写完后保留原条目不动。
 
-### 5.2 无影响 → 更新 README 兼容性章节（中英两份）
+### 5.2 无影响 → 更新 README 兼容性章节（以中文版为主）
 
-- **验证插件版本**（英文 `Plugin version`）：写**当前最新非 NEXT_VERSION 版本**——
-  取 `package.json` 的 `version`（发版流程保证其与 CHANGELOG 最新 `## [x.y.z]` 一致）；
-  若 `package.json` 版本落后于 CHANGELOG 最新版本（异常状态），以 CHANGELOG 最新为准。
-- **验证 dsh 版本**（英文 `against deepseek-harness mainline <版本>`）：写第 1 步拉取到的
-  最新 dsh 版本（`package.json` version 或最近 `release(dsh)` 版本）。
-- 英文版同步更新 `Last verified` 日期为当天。
+**先更新 `README.zh.md`（中文为主），定稿后再对照翻译 `README.md`（英文）。**
+
+中文版 `README.zh.md` 更新：
+
+- **验证插件版本**：写**当前最新非 NEXT_VERSION 版本**——取 `package.json` 的 `version`
+  （发版流程保证其与 CHANGELOG 最新 `## [x.y.z]` 一致）；若 `package.json` 版本落后于
+  CHANGELOG 最新版本（异常状态），以 CHANGELOG 最新为准。
+- **验证dsh版本**：写第 1 步拉取到的最新 dsh 版本（`package.json` version 或最近
+  `release(dsh)` 版本）。
+- 其余内容（插件未绑定 commit 说明、peer 依赖说明）保持不变。
+
+英文版 `README.md` 在中文版定稿后**对照翻译**：
+
+- `Plugin version` = 中文版「验证插件版本」；`against deepseek-harness mainline <版本>` =
+  中文版「验证dsh版本」。
+- 同步更新 `Last verified` 日期为当天。
 - 其余内容（`Requires`、未绑定 commit 说明、peer 依赖说明）保持不变。
-
-中英两份都要改，英文按中文（或原英文）合理化翻译，格式与现有章节一致。
 
 ## 6. 提交 + push
 
@@ -158,6 +167,8 @@ git push
   找不到对应 release 提交时先确认起点，不要跳过。
 - **保守判定**：影响与否拿不准时按「有影响」处理，写进 todo 并标注待验证，
   不要静默更新 README 声称已验证。
-- **中英同步**：README 与 TODO 的中英两份 / 对应文档要一起维护。
+- **中英顺序：以中文版为主**：README 兼容性章节先写/更新中文版（`README.zh.md`），
+  英文版（`README.md`）在中文版定稿后对照翻译，不要先写英文或两份并行臆造。
+  TODO 兼容条目本身只有中文版（`docs/TODO.md`），无需英文翻译。
 - **不改 NEXT_VERSION**：README 写的是**已发布**的插件版本，与 CHANGELOG 的
   `NEXT_VERSION`（未发布）无关；不要写 NEXT_VERSION。
