@@ -1,5 +1,7 @@
 # 贡献指南（Contributing）
 
+> 中文 · [English](CONTRIBUTING.md)
+
 欢迎为 **dsh-md-notes** 贡献代码、文档或建议。设计文档见 [docs/](docs/)。
 
 ## 开发环境

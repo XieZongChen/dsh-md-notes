@@ -1,5 +1,7 @@
 # dsh-md-notes User Guide
 
+> [中文](usage.zh.md) · English
+
 A note-taking plugin for DeepSeek Harness (DSH). This guide covers **everything**
 the plugin can do — from your first note to syncing notes with Git. It assumes
 the plugin is installed (see [README](../README.md)).

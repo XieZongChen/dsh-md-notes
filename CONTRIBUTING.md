@@ -1,5 +1,7 @@
 # Contributing
 
+> [中文](CONTRIBUTING.zh.md) · English
+
 Welcome to **dsh-md-notes** — code, docs, and suggestions are all welcome.
 Design docs live in [docs/](docs/).
 

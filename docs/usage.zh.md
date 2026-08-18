@@ -1,5 +1,7 @@
 # dsh-md-notes 使用文档
 
+> 中文 · [English](usage.md)
+
 一个面向 DeepSeek Harness（DSH）的笔记插件。本文档**从零开始**讲清楚插件的
 所有功能与用法——从写第一篇笔记，到用 Git 同步笔记。假定插件已安装
 （安装见 [README](../README.zh.md)）。
