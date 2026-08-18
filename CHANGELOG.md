@@ -31,10 +31,9 @@ Only user-visible functional changes are recorded (no documentation, code refact
 - **Append-section format** (记入笔记): the timestamp heading is now
   `## <session title> -- <timestamp>` and role labels are h3 subsection
   headings `### 👤 <user>` / `### 🤖 <assistant>`, so the question and the
-  answer read as distinct blocks in the preview; reasoning is kept as a
-  wrapped in bold 💭 open/close markers (`💭 Think` / `💭 Think end` in EN, `💭 思考` /
-  `💭 思考结束` in ZH), clearly separated from the answer — the reasoning text
-  is kept verbatim (no per-line transformation).
+  answer read as distinct blocks in the preview; reasoning is intentionally
+  NOT captured — only the final answer is recorded, matching how dsh surfaces
+  the response (Think is transient).
 - **Note references serialize as standard markdown links**: a referenced note now
   appears in the message as `引用笔记 [title](path)` / `Referenced note
   [title](path)` — the title and path bind as one structured token the model
