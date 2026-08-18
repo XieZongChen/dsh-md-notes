@@ -52,7 +52,7 @@ git -C "$DSH" log --oneline -5 --grep="release(dsh)"
 - **验证dsh版本：deepseek-harness mainline <版本>**——上次验证的 dsh 版本。
 
 英文版（`README.md`）不单独维护字段结构：**跟随中文版原样翻译即可**
-（中文版两项 → 英文版两项，不保留 `Requires` / `Last verified` 等历史遗留字段）。
+（中文版两项 → 英文版两项）。
 
 ## 3. 收集 dsh 变更（版本区间）
 
@@ -130,8 +130,7 @@ git -C "$DSH" log --oneline <START>..origin/master -- apps/web packages
   `release(dsh)` 版本）。
 
 英文版 `README.md`：中文版定稿后**跟随中文版原样翻译**——把中文版的两项
-（「验证插件版本」「验证dsh版本」）直接翻译成英文即可，**不保留也不新增**
-中文版没有的字段（如 `Requires`、`Last verified` 等历史遗留内容）。
+（「验证插件版本」「验证dsh版本」）直接翻译成英文即可。
 
 ## 6. 提交 + push
 
@@ -161,7 +160,6 @@ git push
   不要静默更新 README 声称已验证。
 - **中英顺序：以中文版为主**：README 兼容性章节先写/更新中文版（`README.zh.md`），
   英文版（`README.md`）在中文版定稿后**原样翻译**（中文版两项 → 英文版两项），
-  不要先写英文或两份并行臆造，也不保留中文版没有的历史遗留字段。
-  TODO 兼容条目本身只有中文版（`docs/TODO.md`），无需英文翻译。
+  不要先写英文或两份并行臆造。TODO 兼容条目本身只有中文版（`docs/TODO.md`），无需英文翻译。
 - **不改 NEXT_VERSION**：README 写的是**已发布**的插件版本，与 CHANGELOG 的
   `NEXT_VERSION`（未发布）无关；不要写 NEXT_VERSION。
