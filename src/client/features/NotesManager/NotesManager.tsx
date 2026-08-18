@@ -179,6 +179,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         setFlash('manager.created')
         refresh()
         open(res.name, wsId)
+        setMode('edit') // newly created note opens in the editor, not preview
         window.setTimeout(() => setFlash(''), 1500)
       } else {
         setFlash('manager.createFailed')
