@@ -40,7 +40,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const [selectedWsId, setSelectedWsId] = React.useState<string | null>(null)
   const [selected, setSelected] = React.useState<string | null>(null)
   const [content, setContent] = React.useState('')
-  const [mode, setMode] = React.useState<'edit' | 'preview'>('edit')
+  const [mode, setMode] = React.useState<'edit' | 'preview'>('preview')
   const [saving, setSaving] = React.useState(false)
   const [flash, setFlash] = React.useState<'' | MdNotesKey>('')
   const [statusByWs, setStatusByWs] = React.useState<Record<string, GitStatusData | null>>({})
@@ -120,7 +120,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     selectionRef.current = { wsId, name }
     setSelectedWsId(wsId)
     setSelected(name)
-    setMode('edit')
+    setMode('preview')
     setContent('') // clear the previous note's content so switching never flashes it
     setGitMsg('')
     setRemoteChanged(null)
@@ -459,14 +459,14 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                   <div className={styles.editorHead}>
                     <button
                       type="button"
-                      className={mode === 'edit' ? `${styles.tab} ${styles.tabActive}` : styles.tab}
-                      onClick={() => setMode('edit')}
-                    >{t('manager.tabEdit')}</button>
-                    <button
-                      type="button"
                       className={mode === 'preview' ? `${styles.tab} ${styles.tabActive}` : styles.tab}
                       onClick={() => setMode('preview')}
                     >{t('manager.tabPreview')}</button>
+                    <button
+                      type="button"
+                      className={mode === 'edit' ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+                      onClick={() => setMode('edit')}
+                    >{t('manager.tabEdit')}</button>
                     <span className={styles.editorName}>{selected}</span>
                     <span className={styles.flash}>{flash === '' ? '' : t(flash)}</span>
                     {showEditorGit && remoteChanged !== null && remoteChanged.length > 0 && (
