@@ -10,7 +10,6 @@
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconRefreshOutline16, IconSendOutline16, IconSettingsOutline16, IconTriangleRightFill14, MarkdownText, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { MarkdownFileMentions } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData, WorkspaceNotes } from '../api.ts'
 import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
@@ -156,33 +155,8 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     })
   }
 
-  // Markdown inline-code file mentions: a `` `笔记名` `` token that matches a
-  // known note (file name or title; current workspace first) becomes a
-  // clickable jump that opens that note in the editor.
-  const fileMentions = React.useMemo<MarkdownFileMentions>(() => ({
-    resolve(value: string) {
-      const token = value.trim().replace(/\.md$/i, '')
-      if (token === '') return undefined
-      const hit = (wsId: string | null): { name: string; title: string; wsId: string } | undefined => {
-        for (const ws of workspaces) {
-          if (wsId !== null && ws.workspaceId !== wsId) continue
-          const note = ws.notes.find((n) =>
-            n.name.replace(/\.md$/i, '') === token || n.title === token)
-          if (note !== undefined) return { name: note.name, title: note.title, wsId: ws.workspaceId }
-        }
-        return undefined
-      }
-      const found = hit(selectedWsId) ?? hit(null)
-      if (found === undefined) return undefined
-      return {
-        open: () => open(found.name, found.wsId),
-        label: t('manager.openNote', { name: found.title }),
-        title: found.title,
-      }
-    },
-  }), [workspaces, selectedWsId, t])
-
-  const save = (): void => {    const wsId = currentWsId()
+  const save = (): void => {
+    const wsId = currentWsId()
     if (!selected || wsId === null) return
     setSaving(true)
     void api('write', { name: selected, content, workspaceId: wsId }).then((res) => {
@@ -538,7 +512,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     ? <div className={styles.editorLoading}><LoadingIndicator label={t('git.loading')} /></div>
                     : mode === 'edit'
                       ? <textarea className={styles.textarea} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
-                      : <div className={styles.preview}><MarkdownText text={content} fileMentions={fileMentions} /></div>}
+                      : <div className={styles.preview}><MarkdownText text={content} /></div>}
                 </>
               )}
           </div>

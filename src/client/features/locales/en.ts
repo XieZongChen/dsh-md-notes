@@ -17,7 +17,6 @@ export const en: { [K in keyof typeof zh]: string } = {
   'manager.close': 'Close',
   'manager.settings': 'Settings',
   'manager.untitled': 'Untitled note {date}',
-  'manager.openNote': 'Open note {name}',
   'manager.new': 'New',
   'manager.creating': 'Creating…',
   'manager.empty': 'No notes yet',

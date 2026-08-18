@@ -31,8 +31,7 @@ Only user-visible functional changes are recorded (no documentation, code refact
 - **Note preview uses dsh's `MarkdownText`**: the notes-manager preview now renders
   with dsh's own MarkdownText (micromark stack: GFM tables / task lists / ordered
   lists, TeX math, code highlighting, built-in XSS safety), matching the chat
-  rendering; a `` `note name` `` in backticks becomes a clickable jump that opens
-  that note in the editor (`fileMentions`). See
+  rendering. See
   [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
 
 ## [0.4.0] - 2026-08-18
