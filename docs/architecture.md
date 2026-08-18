@@ -130,9 +130,10 @@ dsh-md-notes/
   `ctx.get('inputTriggers')?.registerSource(...)`（挂 `ctx.effect`，HMR 安全）注册
   `trigger: '@'`、`name: 'notes'` 的引用源：`candidates` 默认取当前会话工作区笔记、
   部分工作区名出现模糊**工作区行**（`{ text }` 自动补全 `@工作区名/` + re-track 重触发）
-  切换跨工作区（ASCII）；`onPick` 返回 `ReferenceInsert`（`ref` = **会话工作区相对路径**：
-  同工作区 `.dsh-notes/xxx.md`、跨工作区 `../<目录>/…`，`label` = 前置截断标题）；
-  `codec.serialize` 提交时校验笔记仍存在并输出本地化可读行，失效则抛本地化错误阻断发送；
+  切换跨工作区（中文名已支持，仅空格受限，见 TODO 2.3）；`onPick` 返回 `ReferenceInsert`
+  （`ref` = **会话工作区相对路径**：同工作区 `.dsh-notes/xxx.md`、跨工作区 `../<目录>/…`，
+  `label` = 前置截断标题）；`codec.serialize` 提交时校验笔记仍存在并输出**标准 markdown
+  链接** `[标题](路径)`，失效则抛本地化错误阻断发送；
   `warm`/`lexicon`/`subscribeLexicon` 提供纯文本装饰热快照。无 `inputTriggers` 时特性静默
   禁用（console.warn）。序列化格式与交互细节见 [context.md](context.md)。
   序列化格式与交互细节见 [context.md](context.md)。
