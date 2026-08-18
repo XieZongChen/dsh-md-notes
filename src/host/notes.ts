@@ -211,7 +211,11 @@ export async function appendConversation(
   const userLabel = labels?.user ?? 'User'
   const assistantLabel = labels?.assistant ?? 'DSH'
   const emptyText = labels?.empty ?? '(none)'
-  const section = `\n\n---\n\n## ${stamp}${sessionTitle ? ` · ${sessionTitle}` : ''}\n\n**${userLabel}**：\n\n${userText || emptyText}\n\n**${assistantLabel}**：\n\n${assistantText}\n`
+  // Section heading `<会话标题> -- <时间戳>` (timestamp only when the session
+  // has no title); role labels are h3 subsection headings with role emoji so
+  // the preview clearly separates the user question from the assistant answer.
+  const heading = sessionTitle !== '' ? `## ${sessionTitle} -- ${stamp}` : `## ${stamp}`
+  const section = `\n\n---\n\n${heading}\n\n### 👤 ${userLabel}\n\n${userText || emptyText}\n\n### 🤖 ${assistantLabel}\n\n${assistantText}\n`
 
   await mkdir(dir, { recursive: true })
   let content = ''

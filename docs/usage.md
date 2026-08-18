@@ -65,12 +65,12 @@ A picker opens:
    ```markdown
    ---
 
-   ## <timestamp> · <session title>
+   ## <session title> -- <timestamp>
 
-   **<user label>**:
+   ### 👤 <user label>
    <question>
 
-   **<assistant label>**:
+   ### 🤖 <assistant label>
    <answer>
    ```
 

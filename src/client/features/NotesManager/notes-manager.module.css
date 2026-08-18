@@ -202,7 +202,14 @@
 }
 .preview h1 { font-size: 20px; }
 .preview h2 { font-size: 17px; }
-.preview h3 { font-size: 15px; }
+/* Role subsection headings (### 👤 用户 / ### 🤖 DSH) read as labeled blocks. */
+.preview h3 {
+  font-size: 14px;
+  margin: 14px 0 6px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--dsw-alias-border-inverted, rgba(0, 0, 0, 0.12));
+  color: var(--dsw-alias-label-secondary, #555);
+}
 .preview pre {
   background: var(--dsw-alias-bg-layer-1, #f5f5f5);
   padding: 10px 12px;
