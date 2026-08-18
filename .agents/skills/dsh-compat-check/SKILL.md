@@ -15,7 +15,7 @@ dsh 发版后需校验：自 README 兼容性章节上次验证的 deepseek-harn
 2. 读取插件 README（中英两份）兼容性章节，确定上次验证的 dsh 版本
 3. 收集「上次验证版本 → 当前最新」区间内 dsh 的变更
 4. 分析这些变更是否影响插件功能（对照插件依赖的 dsh 契约面）
-5. 分支处理（**以中文版为主，英文版在中文版定稿后对照翻译**）：
+5. 分支处理（**以中文版为主，英文版在中文版定稿后原样翻译**）：
    - **有影响** → 在 `docs/TODO.md` 最上方写入兼容 todo（受影响功能 + 影响范围）
    - **无影响** → 更新 README 兼容性章节：**先写 `README.zh.md`（中文为主）**，
      **再对照中文翻译 `README.md`（英文）**
@@ -46,24 +46,13 @@ git -C "$DSH" log --oneline -5 --grep="release(dsh)"
 
 ## 2. 读取插件 README 兼容性章节
 
-读两份 README 的兼容性章节，提取**上次验证的 dsh 版本**：
+以**中文版为准**（`README.zh.md` 的 `## 兼容性`），该章节**只有两项**：
 
-```sh
-grep -n -A4 "## Compatibility" README.md        # 英文
-grep -n -A4 "## 兼容性" README.zh.md             # 中文
-```
+- **验证插件版本**——插件版本；
+- **验证dsh版本：deepseek-harness mainline <版本>**——上次验证的 dsh 版本。
 
-字段对应关系（两份都要看，以内容为准）：
-
-- 英文（`## Compatibility`）：
-  - `Plugin version` —— 插件版本（第 5.2 步更新目标）；
-  - `Requires` —— 所需环境说明（dsh CLI + `web` profile），校验时保持不变；
-  - `Last verified: <日期>, against deepseek-harness mainline <版本>` —— **最后验证日期 +
-    dsh 版本**，`<日期>` 与 `<版本>` 都是第 5.2 步的更新目标；
-  - 末段（未绑定 commit / peer 依赖说明）保持不变。
-- 中文（`## 兼容性`）：
-  - 「验证插件版本」—— 插件版本；
-  - 「验证dsh版本：deepseek-harness mainline <版本>」—— dsh 版本。
+英文版（`README.md`）不单独维护字段结构：**跟随中文版原样翻译即可**
+（中文版两项 → 英文版两项，不保留 `Requires` / `Last verified` 等历史遗留字段）。
 
 ## 3. 收集 dsh 变更（版本区间）
 
@@ -129,23 +118,20 @@ git -C "$DSH" log --oneline <START>..origin/master -- apps/web packages
 
 ### 5.2 无影响 → 更新 README 兼容性章节（以中文版为主）
 
-**先更新 `README.zh.md`（中文为主），定稿后再对照翻译 `README.md`（英文）。**
+**先更新 `README.zh.md`（中文为主，只有两项），定稿后英文版 `README.md` 跟随中文版
+原样翻译（同样两项）。**
 
-中文版 `README.zh.md` 更新：
+中文版 `README.zh.md`（`## 兼容性`，只有两项）：
 
 - **验证插件版本**：写**当前最新非 NEXT_VERSION 版本**——取 `package.json` 的 `version`
   （发版流程保证其与 CHANGELOG 最新 `## [x.y.z]` 一致）；若 `package.json` 版本落后于
   CHANGELOG 最新版本（异常状态），以 CHANGELOG 最新为准。
 - **验证dsh版本**：写第 1 步拉取到的最新 dsh 版本（`package.json` version 或最近
   `release(dsh)` 版本）。
-- 其余内容（插件未绑定 commit 说明、peer 依赖说明）保持不变。
 
-英文版 `README.md` 在中文版定稿后**对照翻译**：
-
-- `Plugin version` = 中文版「验证插件版本」；`against deepseek-harness mainline <版本>` =
-  中文版「验证dsh版本」。
-- 同步更新 `Last verified` 日期为当天。
-- 其余内容（`Requires`、未绑定 commit 说明、peer 依赖说明）保持不变。
+英文版 `README.md`：中文版定稿后**跟随中文版原样翻译**——把中文版的两项
+（「验证插件版本」「验证dsh版本」）直接翻译成英文即可，**不保留也不新增**
+中文版没有的字段（如 `Requires`、`Last verified` 等历史遗留内容）。
 
 ## 6. 提交 + push
 
@@ -174,7 +160,8 @@ git push
 - **保守判定**：影响与否拿不准时按「有影响」处理，写进 todo 并标注待验证，
   不要静默更新 README 声称已验证。
 - **中英顺序：以中文版为主**：README 兼容性章节先写/更新中文版（`README.zh.md`），
-  英文版（`README.md`）在中文版定稿后对照翻译，不要先写英文或两份并行臆造。
+  英文版（`README.md`）在中文版定稿后**原样翻译**（中文版两项 → 英文版两项），
+  不要先写英文或两份并行臆造，也不保留中文版没有的历史遗留字段。
   TODO 兼容条目本身只有中文版（`docs/TODO.md`），无需英文翻译。
 - **不改 NEXT_VERSION**：README 写的是**已发布**的插件版本，与 CHANGELOG 的
   `NEXT_VERSION`（未发布）无关；不要写 NEXT_VERSION。
