@@ -209,9 +209,8 @@ npm run build
 - Git 仓库由 URL 驱动：`cloneDirFor(remote)` 哈希 URL 得本地 clone 目录，同一 URL 共用。
 - `appendConversation` 只取消息 content 的 `text`（`reasoning` 以引用块、`image` 以占位符呈现）。
 - 删除文件用 `node:fs/promises` 的 `rm`；目录创建用 `mkdir({ recursive: true })`。
-- `blocksToText`：reasoning 块以**粗体 💭 起止标记行包裹原样内容**、按 dsh 的流式块到达顺序拼接（不做
-  逐行变换，避免
-  引用块前缀改写内容造成结构丢失）；image 以占位符呈现；标签文案由 client 本地化传入。
+- `blocksToText`：**reasoning 块跳过不记入**（只保留最终回答，与 dsh 界面一致）；image
+  以占位符呈现；标签文案由 client 本地化传入。
 - 样式使用主题 CSS 变量（`--dsw-alias-*`），同时带静态兜底值，明暗主题均可读；
   主按钮/输入框/下拉框配色与 dsh 一致（`--dsw-alias-button-primary-fill`、
   `--dsw-alias-label-primary-foreground`、`--dsw-alias-bg-layer-1` 等）。
