@@ -55,9 +55,15 @@ grep -n -A4 "## 兼容性" README.zh.md             # 中文
 
 字段对应关系（两份都要看，以内容为准）：
 
-- 英文：`Plugin version`（插件版本）、`Last verified: <日期>, against deepseek-harness
-  mainline <版本>`（dsh 版本）。
-- 中文：「验证插件版本」「验证dsh版本：deepseek-harness mainline <版本>」。
+- 英文（`## Compatibility`）：
+  - `Plugin version` —— 插件版本（第 5.2 步更新目标）；
+  - `Requires` —— 所需环境说明（dsh CLI + `web` profile），校验时保持不变；
+  - `Last verified: <日期>, against deepseek-harness mainline <版本>` —— **最后验证日期 +
+    dsh 版本**，`<日期>` 与 `<版本>` 都是第 5.2 步的更新目标；
+  - 末段（未绑定 commit / peer 依赖说明）保持不变。
+- 中文（`## 兼容性`）：
+  - 「验证插件版本」—— 插件版本；
+  - 「验证dsh版本：deepseek-harness mainline <版本>」—— dsh 版本。
 
 ## 3. 收集 dsh 变更（版本区间）
 
