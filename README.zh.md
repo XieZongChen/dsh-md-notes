@@ -35,9 +35,8 @@
 
 ## 兼容性（Compatibility）
 
-- **插件版本**：0.3.0（历史见 [CHANGELOG.zh.md](CHANGELOG.zh.md)）。
-- **要求**：`dsh` CLI（含 `plugin` 子命令）与 `web` profile。
-- **最后验证**：2026-08-16，针对 deepseek-harness mainline `0.1.0-rc.7`。
+- **验证插件版本**：0.4.0（历史见 [CHANGELOG.zh.md](CHANGELOG.zh.md)）。
+- **验证dsh版本**：deepseek-harness mainline `0.1.0-rc.7`。
 - 插件未绑定具体 mainline commit；如需固定组合，请在安装时固定插件版本。运行时依赖（`@deepseek-ai/*`、`react`）以可选 peer 依赖声明，从 dsh 安装中解析。
 
 ## 安装 / 卸载（Install / Uninstall）

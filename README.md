@@ -35,7 +35,7 @@ A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 ## Compatibility
 
-- **Verified plugin version**: 0.3.0 (see [CHANGELOG.md](CHANGELOG.md) for history).
+- **Verified plugin version**: 0.4.0 (see [CHANGELOG.md](CHANGELOG.md) for history).
 - **Verified dsh version**: deepseek-harness mainline `0.1.0-rc.7`.
 - The plugin is not pinned to a specific mainline commit; pin the plugin version at install time if you need a fixed combination. Runtime dependencies (`@deepseek-ai/*`, `react`) are declared as optional peer dependencies and resolve from the dsh installation.
 
