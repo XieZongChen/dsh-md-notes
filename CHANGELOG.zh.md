@@ -24,6 +24,9 @@
 
 ### Added
 
+- **引用笔记序列化为标准 markdown 链接**：被引用笔记在消息里显示为
+  `引用笔记 [标题](路径)`（中）/ `Referenced note [title](path)`（英）——标题与路径绑定为
+  结构化 token，模型解析可靠，任何 markdown 渲染器（包括未来的笔记跳转功能）都能识别为链接。
 - **笔记预览改用 dsh `MarkdownText`**：笔记管理器的预览 Tab 改用 dsh 自带的
   MarkdownText 渲染（micromark 生态：GFM 表格 / 任务列表 / 有序列表、TeX 公式、代码高亮，
   XSS 安全内置），与 dsh 聊天渲染一致。见

@@ -102,10 +102,10 @@ the model can see and cite the note without you having to tell it to read files.
 
 Two things:
 
-1. **Your message keeps a readable reference line** — e.g. `Referenced note "title":
-   .dsh-notes/note.md` (same workspace) or `Referenced note "title":
-   ../other-dir/.dsh-notes/note.md` (cross-workspace) — it tells the model (and
-   you) which note was referenced;
+1. **Your message keeps a readable reference line** (standard markdown link
+   syntax) — e.g. `Referenced note [title](.dsh-notes/note.md)` (same workspace)
+   or `Referenced note [title](../other-dir/.dsh-notes/note.md)` (cross-workspace)
+   — it tells the model (and you) which note was referenced;
 2. **The host injects the note's content into the model context** — a collapsible
    "context injection" row (source `md-notes`) appears in the chat; expand it to
    see the injected content. The model gets the content directly — it does **not**

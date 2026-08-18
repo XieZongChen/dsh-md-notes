@@ -28,6 +28,11 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Added
 
+- **Note references serialize as standard markdown links**: a referenced note now
+  appears in the message as `引用笔记 [title](path)` / `Referenced note
+  [title](path)` — the title and path bind as one structured token the model
+  parses reliably and any markdown renderer (including a future note-jump
+  feature) recognizes as a link.
 - **Note preview uses dsh's `MarkdownText`**: the notes-manager preview now renders
   with dsh's own MarkdownText (micromark stack: GFM tables / task lists / ordered
   lists, TeX math, code highlighting, built-in XSS safety), matching the chat

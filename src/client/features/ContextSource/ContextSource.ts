@@ -363,11 +363,14 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
           const basename = ref.slice(ref.lastIndexOf('/') + 1).replace(/\.md$/i, '')
           throw new Error(t('context.noteMissing', { name: basename }))
         }
-        // Localized, readable path reference: the title in 「」 and the
-        // workspace-qualified path after the colon. The model reads the note
-        // from this path (absolute reads and cross-workspace reads pass
-        // through the sandbox).
-        return t('context.reference', { title: note.title, path: ref })
+        // Standard markdown file-reference syntax: `[标题](路径)` binds the
+        // title and the path as one structured token — the model extracts the
+        // path reliably, and any markdown renderer (including a future note
+        // jump feature) recognizes it as a link. The title is escaped for
+        // markdown link syntax (brackets/parens); the path is the same
+        // workspace-relative reference as before.
+        const title = note.title.replace(/]/g, '\\]').replace(/\(/g, '\\(')
+        return t('context.reference', { title, path: ref })
       },
     },
     warm(session) {

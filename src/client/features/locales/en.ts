@@ -118,7 +118,7 @@ export const en: { [K in keyof typeof zh]: string } = {
   'git.tipWhereSuffix': "; git sync only pushes them to / pulls them from a remote repo and never changes where notes are stored locally.",
   'context.noteMissing': '{name} could not be found. Remove the reference.',
   'context.errCheck': 'Failed to check the note reference. Please retry.',
-  'context.reference': 'Referenced note "{title}": {path}',
+  'context.reference': 'Referenced note [{title}]({path})',
   'context.workspaceRow': 'Workspace',
 
 }
