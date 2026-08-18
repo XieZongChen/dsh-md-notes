@@ -25,13 +25,14 @@ A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 **Current features**:
 
 - **Sidebar notes entry** → full-screen notes manager: per-workspace note list (grouped, collapsible), markdown edit/preview, save, delete (in-page confirm), create with one click.
-- **Assistant-message action** (next to copy) → pick or create a note and append that conversation (user question + answer) to it, with localized section labels.
+- **Assistant-message action** (next to copy) → pick or create a note and append that conversation (user question + answer) to it, with localized section labels (reasoning is not captured — only the final answer).
+- **Reference notes in chat (`@`)**: type `@` to pick notes (cross-workspace included); on send the host injects each note's content into the model context, so the model can cite it without being asked to read files.
 - **Git sync** (optional, URL-driven): **shared repo** mode (one repo for all workspaces, per-workspace folders) or **own repos** mode (per workspace: URL + branch + subpath). Push = mirror-sync (deletions included), Update = pull with conflict confirmation, auto-pull on open, merge-remote-and-retry.
 - **Settings panel** (dsh Settings → MD Notes): mode, repo URL/branch/subpath, auto-pull, commit author — with dsh-styled form controls.
 - **Theme & i18n**: token-based colors (light/dark), UI copy follows dsh's language (Chinese / English), error messages localized.
 - **Update notifications**: a yellow "Update available" tag appears when a newer npm version exists.
 
-**On the roadmap** (see [docs/TODO.md](docs/TODO.md)): restyle the note picker with cross-workspace capture, reference notes as conversation context, and visual Git conflict rendering & resolution.
+**On the roadmap** (see [docs/TODO.md](docs/TODO.md)): visual Git conflict rendering & resolution, note capability enhancements (search / TOC / wiki links), and interaction UX polish (unpushed-changes reminders, async capture, etc.).
 
 ## Compatibility
 
@@ -71,8 +72,9 @@ dsh plugin --profile web remove dsh-md-notes
 ## Quick start
 
 1. Install the plugin (above), restart dsh web.
-2. **Create a note**: click the notes entry at the bottom of the sidebar (above Settings) → enter a title in the "New note title…" field → **New** → type in the editor → **Save**.
-3. **Capture a conversation**: below any assistant answer, click the notes icon (next to copy) → pick a target note (or create one on the spot) → **Write to note**. The user question + answer are appended to the note with a timestamped section.
+2. **Create a note**: click the notes entry at the bottom of the sidebar (above Settings) → click **+** on a workspace row (an "Untitled note <date>" title is generated) → type in the editor → **Save**.
+3. **Capture a conversation**: below any assistant answer, click the notes icon (next to copy) → pick a target note (or create one on the spot) → **Write to note**. The user question + answer are appended to the note as a "<session title> -- <timestamp>" section.
+4. **Reference a note**: type `@` in the chat input to pick a note (cross-workspace included); on send the note's content enters the model context automatically.
 
 Note files live in each workspace's `.dsh-notes/` directory (`<workspace>/.dsh-notes`); you can open and edit them directly with any editor. Git sync is optional — point the plugin at a repo URL and it keeps notes in sync (shared repo or per-workspace repo).
 
@@ -93,6 +95,8 @@ All options are plugin Config keys, overridable in the profile's `cordis.patch.y
 | Key | Default | Meaning |
 |---|---|---|
 | `route` | `/plugins/md-notes` | HTTP API prefix served by the plugin; also hosts the icon at `<route>/icon.svg`. |
+| `gitMode` | `'off'` | Git sync mode: `'off'` off / `'shared'` shared repo / `'own'` per-workspace repos. |
+| `gitAutoPull` | `true` | Pull the remote before opening a note. |
 
 There are **no environment variables and no secrets** in this plugin's configuration.
 
@@ -140,7 +144,7 @@ Contributions are welcome: open an issue to discuss, then a PR. Design docs: [do
 | Path | Contents |
 |---|---|
 | `src/` | Source code (host half + client half) |
-| `src/host/` | Notes domain logic (`notes.ts`) + HTTP layer (`http.ts`) |
+| `src/host/` | Notes domain (`notes.ts`) + Git (`git.ts`) + HTTP layer (`http.ts`) + context injection (`context-inject.ts`) |
 | `src/client/` | Browser half: entry (`index.ts`) + feature modules under `features/` |
 | `src/client/features/locales/` | zh/en UI dictionaries (dsh locale namespace `md-notes`) |
 | `assets/` | Plugin icon (SVG source + PNG) |
