@@ -152,7 +152,7 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       // The client localizes the section labels (User/DSH/empty) so note
       // content follows the UI language.
       const labels = typeof req.labels === 'object' && req.labels !== null
-        ? (req.labels as { user?: string; assistant?: string; empty?: string; image?: string })
+        ? (req.labels as { user?: string; assistant?: string; empty?: string; image?: string; think?: string; thinkEnd?: string })
         : undefined
       return appendConversation(
         dir,

@@ -45,6 +45,8 @@ export const zh = {
   'picker.labelAssistant': 'DSH',
   'picker.labelEmpty': '（无）',
   'picker.labelImage': '[图片]',
+  'picker.think': '💭 思考',
+  'picker.thinkEnd': '💭 思考结束',
   'picker.needSelect': '请先选择或新建一篇笔记',
   'git.title': 'Git 同步',
   'git.branch': '分支',

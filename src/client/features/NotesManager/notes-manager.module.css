@@ -225,8 +225,10 @@
 .preview pre code { background: transparent; padding: 0; }
 .preview blockquote {
   margin: 8px 0;
-  padding: 2px 12px;
+  padding: 6px 12px;
   border-left: 3px solid var(--dsw-alias-border-l2, #ccc);
+  border-radius: 0 6px 6px 0;
+  background: var(--dsw-alias-bg-layer-1, #f5f5f5);
   color: var(--dsw-alias-label-secondary, #666);
 }
 .preview a { color: var(--dsw-alias-brand-primary, #4a7bff); }

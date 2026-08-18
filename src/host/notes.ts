@@ -38,13 +38,24 @@ export function titleOf(content: string | undefined, fallback: string): string {
 }
 
 /** Render message content blocks to plain markdown text. */
-export function blocksToText(blocks: readonly unknown[] | undefined, imageLabel = '[image]'): string {
+export function blocksToText(
+  blocks: readonly unknown[] | undefined,
+  imageLabel = '[image]',
+  thinkLabel = '💭 Think',
+  thinkEndLabel = '💭 Think end',
+): string {
   const parts: string[] = []
   for (const b of blocks ?? []) {
     if (b === null || typeof b !== 'object') continue
     const block = b as { type?: string; text?: string }
     if (block.type === 'text' && typeof block.text === 'string') parts.push(block.text)
-    else if (block.type === 'reasoning' && typeof block.text === 'string') parts.push(`> ${block.text}`)
+    else if (block.type === 'reasoning' && typeof block.text === 'string') {
+      // Reasoning renders as a fenced blockquote with open/close markers so it
+      // never blends into the answer: every line carries the `> ` prefix (the
+      // old single-prefix form lost the quote after the first line).
+      const lines = block.text.split('\n').map(line => `> ${line}`)
+      parts.push([`> ${thinkLabel}`, ...lines, `> ${thinkEndLabel}`].join('\n'))
+    }
     else if (block.type === 'image') parts.push(imageLabel)
   }
   return parts.join('\n\n').trim()
@@ -166,7 +177,7 @@ export async function appendConversation(
   sessionId: string,
   messageId: string,
   sessionQuery: SessionQueryEngine | undefined,
-  labels?: { user?: string; assistant?: string; empty?: string; image?: string },
+  labels?: { user?: string; assistant?: string; empty?: string; image?: string; think?: string; thinkEnd?: string },
 ): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
   if (!sessionId || !messageId) return { ok: false, error: 'missing session/message id' }
   if (sessionQuery === undefined) return { ok: false, error: 'sessionQuery unavailable' }
@@ -197,10 +208,10 @@ export async function appendConversation(
     } | undefined
     if (data === undefined) continue
     if (ev.type === 'user/message') {
-      if (data.source?.kind === 'user') userText = blocksToText(data.content, labels?.image)
+      if (data.source?.kind === 'user') userText = blocksToText(data.content, labels?.image, labels?.think, labels?.thinkEnd)
     } else if (ev.type === 'assistant/message') {
       if (data.message?.id === messageId) {
-        assistantText = blocksToText(data.message.content, labels?.image)
+        assistantText = blocksToText(data.message.content, labels?.image, labels?.think, labels?.thinkEnd)
         break
       }
     }
