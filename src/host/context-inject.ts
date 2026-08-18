@@ -99,8 +99,16 @@ export function registerNoteContextInjection(ctx: Context): () => void {
       && (message.source as { path?: string } | undefined)?.path === note.path))
     if (fresh.length === 0) return decision
 
+    // Injected context carries a one-line citation convention so the model
+    // cites notes in the standard markdown link form `[标题](路径)` (the same
+    // syntax the user message uses) instead of free-form prose — structured
+    // citations any renderer can recognize. Instructions are best-effort
+    // guidance, not a guarantee.
     const injected = fresh.map(note => createUserMessage({
-      content: [{ type: 'text', text: `[笔记内容]\n${note.content}` }],
+      content: [{
+        type: 'text',
+        text: `[笔记内容]\n\n引用约定：回答中如需引用本笔记，请用 markdown 链接格式 [标题](路径)，路径沿用你看到的引用路径（如 [3333](../dsh-work/.dsh-notes/3333.md)）。\n\n${note.content}`,
+      }],
       source: { kind: NOTE_CONTEXT_SOURCE, path: note.path },
     }))
 
