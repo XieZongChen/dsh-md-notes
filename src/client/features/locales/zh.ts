@@ -14,6 +14,7 @@ export const zh = {
   'manager.close': '关闭',
   'manager.settings': '设置',
   'manager.untitled': '未命名笔记 {date}',
+  'manager.openNote': '打开笔记 {name}',
   'manager.new': '新建',
   'manager.creating': '创建中…',
   'manager.empty': '暂无笔记',
