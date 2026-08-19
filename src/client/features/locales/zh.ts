@@ -9,7 +9,7 @@ export const zh = {
   'sidebar.label': '笔记',
   'sidebar.updateTag': '有新版本需要更新',
   'sidebar.updateTitle': '有新版本 {latest} 可用，请前往升级',
-  'sidebar.writingTitle': '{count} 个文件正在写入',
+  'sidebar.writingTitle': '{count} 个笔记正在写入',
   'action.tooltip': '发送到笔记',
   'manager.title': 'MD 笔记',
   'manager.close': '关闭',

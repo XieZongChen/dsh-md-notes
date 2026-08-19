@@ -28,7 +28,7 @@
   写入期间，任何会话对其再写都会被拒绝（host 键控锁，错误码 `note-writing`）；写入中状态
   全界面可见：记入弹窗中该笔记不可选中并显示行尾 loading，管理器行尾 loading（隐藏删除）、
   编辑 / 更新 / 保存 / 推送禁用并提示「正在写入文件」，笔记入口显示 loading 且 hover
-  提示「{count} 个文件正在写入」。写入完成后所有位置自动还原。设计见
+  提示「{count} 个笔记正在写入」。写入完成后所有位置自动还原。设计见
   [docs/write-lock.md](docs/write-lock.md)；状态约定见 [docs/state.md](docs/state.md)。
 
 ## [0.5.0] - 2026-08-19

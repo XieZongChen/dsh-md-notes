@@ -34,7 +34,7 @@ Only user-visible functional changes are recorded (no documentation, code refact
   in-progress state is surfaced everywhere: the picker disables the note with a row
   loading, the manager shows a row loading (delete hidden) and disables edit/update/
   save/push with a "Writing file…" hint, and the sidebar entry shows a loading with a
-  "{count} file(s) writing" tooltip. All positions restore automatically when the write
+  "{count} note(s) writing" tooltip. All positions restore automatically when the write
   finishes. Design: [docs/write-lock.md](docs/write-lock.md); state conventions:
   [docs/state.md](docs/state.md).
 

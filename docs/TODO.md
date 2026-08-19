@@ -174,7 +174,7 @@ name 解析与 @ 引用逻辑；新 UI 文案进 `md-notes` 字典（中英）�
 - **5.5 笔记写入互斥（写锁）+ 全局写入状态**（高）：✅ 已实现（NEXT_VERSION）——host 通用
   `KeyedLock`（write / appendConversation / delete 三操作互斥，冲突返回 `note-writing`）+
   client 通用 busy 切片（`store.busy` + `BusyTracker`，域前缀 `note/<ws>/<name>`，可扩展至
-  git / export 等未来任务域）；笔记入口 loading + tooltip「X 个文件正在写入」、记入弹窗
+  git / export 等未来任务域）；笔记入口 loading + tooltip「X 个笔记正在写入」、记入弹窗
   不可选中 + 行尾 loading、管理器行 loading + 隐藏删除 + 操作栏禁用 + 「正在写入文件」提示
   三处联动，写入完成自动还原。方案 [write-lock.md](write-lock.md)，状态总纲 [state.md](state.md)。
 - （可按需扩展：保存成功定位、操作 loading 统一、多标签编辑等。）

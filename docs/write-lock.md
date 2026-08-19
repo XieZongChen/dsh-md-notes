@@ -21,7 +21,7 @@
 | 位置 | 写入中表现 |
 |---|---|
 | 记入笔记弹窗（NotePicker） | 正在写入的笔记**不可选中**，行尾显示 loading |
-| 笔记入口（NotesEntry） | 只要有**任一**笔记在写 → 入口尾部显示 loading（位于「有新版本」tag **前面**）；hover tooltip「X 个文件正在写入」 |
+| 笔记入口（NotesEntry） | 只要有**任一**笔记在写 → 入口尾部显示 loading（位于「有新版本」tag **前面**）；hover tooltip「X 个笔记正在写入」 |
 | 笔记面板（NotesManager）左栏行 | 该笔记行尾显示 loading 且**隐藏删除按钮**；仍可点击选中查看 |
 | 笔记面板右侧操作栏 | 「编辑」Tab、更新、保存、推送**全部禁用**；更新按钮前方的提示位显示「**正在写入文件**」 |
 | 写入结束（成功或失败） | 上述所有位置**自动还原**（无手动操作） |
@@ -240,7 +240,7 @@ api('write', {...}).finally(release).then(...)
 
 | key | 中文 | 英文 |
 |---|---|---|
-| `sidebar.writingTitle` | `{count} 个文件正在写入` | `{count} file(s) writing` |
+| `sidebar.writingTitle` | `{count} 个笔记正在写入` | `{count} note(s) writing` |
 | `manager.writingFile` | `正在写入文件` | `Writing file…` |
 | `git.noteWriting`（错误码 `note-writing`） | `该笔记正在写入，请稍后再试` | `This note is being written — try again shortly` |
 

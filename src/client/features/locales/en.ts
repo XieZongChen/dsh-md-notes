@@ -12,7 +12,7 @@ export const en: { [K in keyof typeof zh]: string } = {
   'sidebar.label': 'Notes',
   'sidebar.updateTag': 'Update available',
   'sidebar.updateTitle': 'Version {latest} is available — please upgrade',
-  'sidebar.writingTitle': '{count} file(s) writing',
+  'sidebar.writingTitle': '{count} note(s) writing',
   'action.tooltip': 'Add to note',
   'manager.title': 'MD Notes',
   'manager.close': 'Close',
