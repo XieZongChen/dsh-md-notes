@@ -126,11 +126,11 @@ dsh plugin --profile web remove dsh-md-notes
 | 路径 | 内容 |
 |---|---|
 | `src/` | 源码（host 半 + client 半） |
-| `src/host/` | 笔记领域（`notes.ts`）+ Git（`git.ts`）+ HTTP 层（`http.ts`）+ 上下文注入（`context-inject.ts`） |
+| `src/host/` | 笔记领域（`notes.ts`）+ Git（`git.ts`）+ HTTP 层（`http.ts`）+ 上下文注入（`context-inject.ts`）+ 写入互斥（`keyed-lock.ts`） |
 | `src/client/` | 浏览器半：入口（`index.ts`）+ `features/` 下的功能模块 |
 | `src/client/features/locales/` | 中/英 UI 字典（dsh locale 命名空间 `md-notes`） |
 | `assets/` | 插件图标（SVG 源文件 + PNG） |
-| `docs/` | 设计文档：`features.md`（功能）、`architecture.md`（架构）、`TODO.md` |
+| `docs/` | 文档：`usage.md`/`usage.zh.md`（使用）、`features.md`（功能）、`architecture.md`（架构）、`context.md`（@ 引用）、`git.md`（Git 同步）、`state.md` / `write-lock.md`（状态与写锁设计）、`TODO.md` |
 | `scripts/` | 开发工具（如 `link-deps.mjs`） |
 | `lib/` | 构建产物（gitignored；npm 发布内容） |
 

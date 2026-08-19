@@ -126,11 +126,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 | Path | Contents |
 |---|---|
 | `src/` | Source code (host half + client half) |
-| `src/host/` | Notes domain (`notes.ts`) + Git (`git.ts`) + HTTP layer (`http.ts`) + context injection (`context-inject.ts`) |
+| `src/host/` | Notes domain (`notes.ts`) + Git (`git.ts`) + HTTP layer (`http.ts`) + context injection (`context-inject.ts`) + write mutex (`keyed-lock.ts`) |
 | `src/client/` | Browser half: entry (`index.ts`) + feature modules under `features/` |
 | `src/client/features/locales/` | zh/en UI dictionaries (dsh locale namespace `md-notes`) |
 | `assets/` | Plugin icon (SVG source + PNG) |
-| `docs/` | Design docs: `features.md` (functional), `architecture.md`, `TODO.md` |
+| `docs/` | Docs: `usage.md`/`usage.zh.md` (user guide), `features.md` (functional), `architecture.md`, `context.md` (@ references), `git.md` (Git sync), `state.md` / `write-lock.md` (state & write-mutex design), `TODO.md` |
 | `scripts/` | Dev tooling (e.g. `link-deps.mjs`) |
 | `lib/` | Build output (gitignored; what npm publishes) |
 
