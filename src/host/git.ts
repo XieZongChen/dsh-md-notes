@@ -322,9 +322,21 @@ async function resolveIdentity(
  * Returns the git run result; callers must check `.code`.
  */
 async function ensureBranch(ctx: Context, repo: ResolvedRepo): Promise<GitRunResult> {
-  // Explicit fetch first: moves refs/remotes/origin/<branch> to the remote tip.
-  const fetch = await runGit(ctx, repo.repoDir, ['fetch', 'origin'])
+  const fetch = await fetchOrigin(ctx, repo)
   if (fetch.code !== 0) return fetch
+  return checkoutBranch(ctx, repo)
+}
+
+/** Fetch `origin` and return the git run result (callers check `.code`). */
+async function fetchOrigin(ctx: Context, repo: ResolvedRepo): Promise<GitRunResult> {
+  return runGit(ctx, repo.repoDir, ['fetch', 'origin'])
+}
+
+/**
+ * Check `repo.branch` out from `origin/<branch>` (assumes origin was already
+ * fetched), or create it locally when the remote branch is absent.
+ */
+async function checkoutBranch(ctx: Context, repo: ResolvedRepo): Promise<GitRunResult> {
   const remoteBranch = `origin/${repo.branch}`
   const hasRemoteBranch = await runGit(ctx, repo.repoDir, ['show-ref', '--verify', `refs/remotes/${remoteBranch}`])
   if (hasRemoteBranch.code === 0) {
@@ -488,12 +500,16 @@ export async function gitPull(
   ctx: Context, repo: ResolvedRepo, notesDir: string, force: boolean,
 ): Promise<{ ok: boolean; code?: string; error?: string; skipped?: number; changed?: string[] }> {
   await gitInit(ctx, repo, repo.branch)
-  const branch = await ensureBranch(ctx, repo)
-  if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
+  const fetch = await fetchOrigin(ctx, repo)
+  if (fetch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${fetch.stderr || fetch.stdout}` }
   // Does the remote actually have new commits? Judged by git refs (fetch has
-  // already moved origin/<branch> to the remote tip), NOT by content diff —
-  // a local edit that was never pushed differs from the clone without the
-  // remote having any update, and must not be reported as "remote updated".
+  // moved origin/<branch> to the remote tip), NOT by content diff — a local
+  // edit that was never pushed differs from the clone without the remote
+  // having any update, and must not be reported as "remote updated".
+  //
+  // MUST run before checkoutBranch: `checkout -B branch origin/branch` resets
+  // the local branch onto the remote tip, which would make this count always
+  // zero and silently skip every pull.
   const ahead = await runGit(ctx, repo.repoDir, ['rev-list', '--count', `${repo.branch}..origin/${repo.branch}`])
   const remoteAhead = ahead.code === 0 && Number(ahead.stdout.trim()) > 0
   if (!remoteAhead) {
@@ -503,6 +519,8 @@ export async function gitPull(
     // no "remote updated" hint.
     return { ok: true, skipped: 0, changed: force ? undefined : [] }
   }
+  const branch = await checkoutBranch(ctx, repo)
+  if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
   const target = repoTargetDir(repo)
   const { skipped } = await syncNotes(target, notesDir, force)
   // In the conservative (auto-pull) path, notes differing on both sides were
