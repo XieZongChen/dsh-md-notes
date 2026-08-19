@@ -31,6 +31,13 @@
   提示「{count} 个笔记正在写入」。写入完成后所有位置自动还原。设计见
   [docs/write-lock.md](docs/write-lock.md)；状态约定见 [docs/state.md](docs/state.md)。
 
+### Fixed
+
+- **记入笔记即时响应、不再卡住面板**：提问 / 回答 / 会话标题改为 client 端从浏览器
+  会话快照提取（与复制按钮同源）后随请求传给 host，host 只做格式化 + 写文件——此前
+  的 `sessionQuery.readSession` 会全量读会话日志（深拷贝 + replay 校验），长会话时同步
+  阻塞事件循环，导致面板的列表 / 内容请求一直 loading 直到写入完成。
+
 ## [0.5.0] - 2026-08-19
 
 ### Added

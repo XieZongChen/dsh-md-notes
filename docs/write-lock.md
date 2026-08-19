@@ -170,9 +170,9 @@ export function noteKey(workspaceId: string, name: string): string {
 ### 6.3 调用点改造
 
 ```ts
-// NotePicker.send()：记入笔记
+// NotePicker.send()：记入笔记（文本由 client 从会话快照提取，见 docs/context.md §3.5）
 const release = tracker.begin(key)
-api('appendConversation', {...})
+api('appendConversation', { noteName, workspaceId, questionText, answerText, sessionTitle, labels })
   .finally(release)          // 成功/失败都还原状态
   .then(res => { if (res.ok) { /* 现有 900ms 后关窗 */ } })
 

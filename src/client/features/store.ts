@@ -19,7 +19,12 @@ import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client
 /** Which overlay is open, and the conversation a note picker was opened for. */
 export interface NotesUiState {
   managerOpen: boolean
-  picker: { sessionId: string; messageId: string } | null
+  /**
+   * Open note picker: the captured question/answer texts + session title
+   * (client-side, see docs/context.md — the host no longer reads the session
+   * log for appends).
+   */
+  picker: { questionText: string; answerText: string; sessionTitle: string } | null
   /**
    * In-flight async tasks, keyed by `<domain>/<resource>` (generic busy
    * slice — see docs/state.md §4; notes domain: `note/<workspaceId>/<name>`).

@@ -8,7 +8,6 @@
 
 import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { SessionQueryEngine } from '@deepseek-ai/dsh-session-query'
 import {
   appendConversation, createNote, deleteNote, listNotes, readNote, writeNote,
 } from './notes.ts'
@@ -89,8 +88,6 @@ export interface NotesApiDeps {
   git: GitApi
   /** Process-scoped write mutex (notes domain key: `<workspaceId>/<name>`). */
   lock: KeyedLock
-  /** Optional session query service (for appendConversation). */
-  sessionQuery?: SessionQueryEngine | undefined
 }
 
 /** Dispatch one `{ method, ...args }` body. */
@@ -158,17 +155,18 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'appendConversation': {
       const dir = deps.resolveDir(workspaceId)
       if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
-      // The client localizes the section labels (User/DSH/empty) so note
-      // content follows the UI language.
+      // The client localizes the section labels (User/DSH/empty) and captures
+      // the question/answer texts + session title from the browser snapshot —
+      // the host only formats and writes the file (docs/context.md).
       const labels = typeof req.labels === 'object' && req.labels !== null
         ? (req.labels as { user?: string; assistant?: string; empty?: string; image?: string })
         : undefined
       const lock = await deps.lock.with(`${workspaceId}/${String(req.noteName ?? '')}`, () => appendConversation(
         dir,
         String(req.noteName ?? ''),
-        String(req.sessionId ?? ''),
-        String(req.messageId ?? ''),
-        deps.sessionQuery,
+        String(req.questionText ?? ''),
+        String(req.answerText ?? ''),
+        String(req.sessionTitle ?? ''),
         labels,
       ))
       return lock.acquired

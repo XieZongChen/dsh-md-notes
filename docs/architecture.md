@@ -107,7 +107,7 @@ dsh-md-notes/
 | `write` | `{ workspaceId?, name, content }` | `{ ok, name }` |
 | `create` | `{ workspaceId?, title }` | `{ ok, name }`（空标题自动用 Untitled note） |
 | `delete` | `{ workspaceId?, name }` | `{ ok, name }` |
-| `appendConversation` | `{ noteName, sessionId, messageId }` | `{ ok, name }` |
+| `appendConversation` | `{ noteName, questionText, answerText, sessionTitle? }` | `{ ok, name }`（文本由 client 从会话快照提取，host 只写文件） |
 | `gitStatus` | `{ workspaceId? }` | `{ ok, status: { repoDir, subdir, branch, uncommitted, lastCommit?, remote } }` |
 | `gitInit` | `{ workspaceId? }` | `{ ok }`（按 URL clone） |
 | `gitPush` | `{ workspaceId?, message, overwrite? }` | `{ ok }` 或 `{ ok:false, code, changed? }` |
@@ -208,10 +208,8 @@ npm run build
 - 笔记是普通 `.md` 文件，可直接在文件系统编辑；`meta.json` 为最佳努力缓存，不入库。
 - **笔记位置恒定** `<工作区>/.dsh-notes`（git 模式/仓库配置不影响本地位置）。
 - Git 仓库由 URL 驱动：`cloneDirFor(remote)` 哈希 URL 得本地 clone 目录，同一 URL 共用。
-- `appendConversation` 只取消息 content 的 `text`（`reasoning` 以引用块、`image` 以占位符呈现）。
+- `appendConversation` 的文本（提问/回答/会话标题）由 **client 从浏览器会话快照提取**（`note-text.ts`，与复制按钮同源），host 只做格式化 + 写文件——不再 `sessionQuery.readSession` 全量读会话（长会话会同步阻塞事件循环，卡住面板请求）。
 - 删除文件用 `node:fs/promises` 的 `rm`；目录创建用 `mkdir({ recursive: true })`。
-- `blocksToText`：**reasoning 块跳过不记入**（只保留最终回答，与 dsh 界面一致）；image
-  以占位符呈现；标签文案由 client 本地化传入。
 - 样式使用主题 CSS 变量（`--dsw-alias-*`），同时带静态兜底值，明暗主题均可读；
   主按钮/输入框/下拉框配色与 dsh 一致（`--dsw-alias-button-primary-fill`、
   `--dsw-alias-label-primary-foreground`、`--dsw-alias-bg-layer-1` 等）。

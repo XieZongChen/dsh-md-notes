@@ -38,6 +38,16 @@ Only user-visible functional changes are recorded (no documentation, code refact
   finishes. Design: [docs/write-lock.md](docs/write-lock.md); state conventions:
   [docs/state.md](docs/state.md).
 
+### Fixed
+
+- **Note append is instant and no longer blocks the manager**: the question/answer
+  text + session title are captured client-side from the browser conversation
+  snapshot (same source as the copy button) and sent to the host, which only
+  writes the file — the previous `sessionQuery.readSession` read the whole
+  session log (deep-cloning + replay-validating it), which synchronously blocked
+  the event loop on long sessions and froze the manager's list/read requests
+  until the write finished.
+
 ## [0.5.0] - 2026-08-19
 
 ### Added

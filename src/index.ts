@@ -238,7 +238,6 @@ export function apply(ctx: Context, config: Config): void {
     checkUpdate,
     git,
     lock: createKeyedLock(),
-    sessionQuery: ctx.get('sessionQuery'),
   }
   const handler = notesApiHandler(deps)
   // lib/../assets/dsh-md-notes.svg — the packaged icon, served as-is.

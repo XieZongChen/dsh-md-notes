@@ -184,6 +184,11 @@
 | 对话 → 笔记 | ✅ 已实现（`appendConversation`，回答下方 📝） |
 | 笔记 → 对话 | ✅ 已实现（`@` 引用 + 路径序列化 + host 内容注入） |
 
+记入笔记的文本（提问 / 回答 / 会话标题）由 **client 从浏览器会话快照提取**
+（`features/note-text.ts`，与复制按钮同源），host 的 `appendConversation` 只做格式化 +
+写文件——不再调用 `sessionQuery.readSession`（该 API 会全量读会话日志 + 深拷贝 + replay
+校验，长会话时同步阻塞事件循环，卡住面板的 list/read 请求）。
+
 ### 3.6 跨工作区引用的授权说明
 
 - dsh 的 fs 沙箱**只约束写入**（`workspace-write` 拒绝在工作区外写文件），**读取全放行**。

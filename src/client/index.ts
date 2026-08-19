@@ -8,7 +8,7 @@
  */
 
 import * as React from 'react'
-import type { ClientContext, SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { ClientContext, SessionId, ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
 // Declaration-merge triggers for slot maps + the ctx.locale service.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
@@ -17,7 +17,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-general/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { InputTriggerServiceContract } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
-import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { createNotesUiStore, type NotesUiState, type NotesUiStore } from './features/store.ts'
 import { createBusyTracker, type BusyTracker } from './features/busy.ts'
 import { en, zh } from './features/locales/index.ts'
@@ -45,8 +45,9 @@ function NotesOverlay(props: {
   if (s.managerOpen) return React.createElement(NotesManager, { store: props.store, tracker: props.tracker, t: props.t })
   if (s.picker) {
     return React.createElement(NotePicker, {
-      sessionId: s.picker.sessionId,
-      messageId: s.picker.messageId,
+      questionText: s.picker.questionText,
+      answerText: s.picker.answerText,
+      sessionTitle: s.picker.sessionTitle,
       store: props.store,
       tracker: props.tracker,
       t: props.t,
@@ -66,6 +67,13 @@ export function apply(ctx: ClientContext): void {
   const tracker = createBusyTracker(store)
   const t = ctx.locale.bind('md-notes')
   ctx.effect(() => ctx.locale.register('md-notes', { zh, en }), 'dsh-md-notes: locale dicts')
+
+  // Session title for the append section heading — read from the client-side
+  // sessions list (in-memory, no host round-trip), see docs/context.md.
+  const getSessionTitle = (sessionId: string): string => {
+    const sessions = ctx.get('sessions') as { list?: { getSnapshot(): { byId?: Record<string, { title?: string }> } } } | undefined
+    return sessions?.list?.getSnapshot().byId?.[sessionId]?.title ?? ''
+  }
 
   // '@' reference source: notes as conversation context (docs/context.md).
   // Registered under ctx.effect so HMR/unmount clears the per-session caches.
@@ -106,10 +114,12 @@ export function apply(ctx: ClientContext): void {
 
   ctx.effect(() => ctx.slots.inject('conversation.chat.assistant-actions', () => ctx.slots.register(
     { name: 'conversation.chat.assistant-actions', id: 'dsh-notes-save', order: 20, label: t('action.tooltip'), locale: 'md-notes' },
-    (props: { sessionId: SessionId; messageId: string; t: TranslateNS<'md-notes'> }) =>
+    (props: { sessionId: SessionId; messageId: string; useSession: SnapshotSelectorHook<ConversationSnapshot>; t: TranslateNS<'md-notes'> }) =>
       React.createElement(NoteAction, {
         sessionId: String(props.sessionId),
         messageId: props.messageId,
+        useSession: props.useSession,
+        getSessionTitle,
         store,
         t: props.t,
       }),

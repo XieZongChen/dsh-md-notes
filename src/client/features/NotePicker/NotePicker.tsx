@@ -28,8 +28,12 @@ type Status = '' | { key: MdNotesKey; params?: Record<string, unknown> }
 interface Selection { workspaceId: string; name: string }
 
 export interface NotePickerProps {
-  sessionId: string
-  messageId: string
+  /** Captured question text (client-side; the host no longer reads the session log). */
+  questionText: string
+  /** Captured answer text (client-side). */
+  answerText: string
+  /** Session title for the append heading (client-side; '' → timestamp only). */
+  sessionTitle: string
   /** Shared store; closing the picker clears `picker`. */
   store: NotesUiStore
   /** In-flight write tracker: busy notes are not selectable (docs/write-lock.md §7.2). */
@@ -42,7 +46,7 @@ export interface NotePickerProps {
  * The note-selection popup.
  */
 export function NotePicker(props: NotePickerProps): React.ReactElement {
-  const { sessionId, messageId, store, tracker, t } = props
+  const { questionText, answerText, sessionTitle, store, tracker, t } = props
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [noWorkspaces, setNoWorkspaces] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
@@ -106,8 +110,9 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
     void tracker.run(key, () => api('appendConversation', {
       noteName: selected.name,
       workspaceId: selected.workspaceId,
-      sessionId,
-      messageId,
+      questionText,
+      answerText,
+      sessionTitle,
       labels: {
         user: t('picker.labelUser'),
         assistant: t('picker.labelAssistant'),

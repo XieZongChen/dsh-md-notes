@@ -7,8 +7,6 @@
 
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { SessionQueryEngine } from '@deepseek-ai/dsh-session-query'
-import type { SessionId } from '@deepseek-ai/dsh-session/types'
 
 const META_NAME = 'meta.json'
 
@@ -35,20 +33,6 @@ export function sanitizeName(input: string | undefined): string {
 export function titleOf(content: string | undefined, fallback: string): string {
   const m = String(content ?? '').match(/^\s*#\s+(.+)$/m)
   return m !== null && m[1] !== undefined && m[1].trim() !== '' ? m[1].trim() : fallback
-}
-
-/** Render message content blocks to plain markdown text. */
-export function blocksToText(blocks: readonly unknown[] | undefined, imageLabel = '[image]'): string {
-  const parts: string[] = []
-  for (const b of blocks ?? []) {
-    if (b === null || typeof b !== 'object') continue
-    const block = b as { type?: string; text?: string }
-    if (block.type === 'text' && typeof block.text === 'string') parts.push(block.text)
-    else if (block.type === 'image') parts.push(imageLabel)
-    // reasoning blocks are intentionally skipped — only the final answer is
-    // kept, matching how dsh surfaces the response (Think is transient).
-  }
-  return parts.join('\n\n').trim()
 }
 
 async function readMeta(dir: string): Promise<Meta> {
@@ -156,57 +140,23 @@ export async function deleteNote(dir: string, rawName: string): Promise<{ ok: tr
 }
 
 /**
- * Append the user question + assistant answer for one message to a note.
- * Section labels (`userLabel` / `assistantLabel` / `emptyText`) come from the
- * caller (the client localizes them) so the note content follows the UI
- * language; default to neutral English when omitted.
+ * Append the captured question + answer texts to a note. The client extracts
+ * the texts from the browser conversation snapshot (docs/context.md) — this
+ * function only formats and writes the file, so the host never re-reads the
+ * session log (previously `sessionQuery.readSession`, heavy on long sessions
+ * and blocking the event loop). Section labels (`userLabel` / `assistantLabel`
+ * / `emptyText`) come from the caller (the client localizes them) so the note
+ * content follows the UI language; default to neutral English when omitted.
  */
 export async function appendConversation(
   dir: string,
   noteName: string,
-  sessionId: string,
-  messageId: string,
-  sessionQuery: SessionQueryEngine | undefined,
+  questionText: string,
+  answerText: string,
+  sessionTitle = '',
   labels?: { user?: string; assistant?: string; empty?: string; image?: string },
 ): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
-  if (!sessionId || !messageId) return { ok: false, error: 'missing session/message id' }
-  if (sessionQuery === undefined) return { ok: false, error: 'sessionQuery unavailable' }
-
-  let events: readonly { type?: string; data?: unknown }[] = []
-  let sessionTitle = ''
-  try {
-    const snap = await sessionQuery.readSession(sessionId as SessionId)
-    events = snap.events ?? []
-    try {
-      const t = await sessionQuery.readTitle(sessionId as SessionId)
-      sessionTitle = t?.title ?? ''
-    } catch {
-      /* optional */
-    }
-  } catch {
-    return { ok: false, error: 'cannot read session' }
-  }
-
-  let userText = ''
-  let assistantText = ''
-  for (const ev of events) {
-    if (ev.type !== 'user/message' && ev.type !== 'assistant/message') continue
-    const data = ev.data as {
-      content?: readonly unknown[]
-      source?: { kind?: string }
-      message?: { id?: string; content?: readonly unknown[] }
-    } | undefined
-    if (data === undefined) continue
-    if (ev.type === 'user/message') {
-      if (data.source?.kind === 'user') userText = blocksToText(data.content, labels?.image)
-    } else if (ev.type === 'assistant/message') {
-      if (data.message?.id === messageId) {
-        assistantText = blocksToText(data.message.content, labels?.image)
-        break
-      }
-    }
-  }
-  if (assistantText === '') return { ok: false, error: 'assistant message not found' }
+  if (answerText === '') return { ok: false, error: 'assistant message not found' }
 
   const stamp = new Date().toLocaleString()
   const userLabel = labels?.user ?? 'User'
@@ -216,7 +166,7 @@ export async function appendConversation(
   // has no title); role labels are h3 subsection headings with role emoji so
   // the preview clearly separates the user question from the assistant answer.
   const heading = sessionTitle !== '' ? `## ${sessionTitle} -- ${stamp}` : `## ${stamp}`
-  const section = `\n\n---\n\n${heading}\n\n### 👤 ${userLabel}\n\n${userText || emptyText}\n\n### 🤖 ${assistantLabel}\n\n${assistantText}\n`
+  const section = `\n\n---\n\n${heading}\n\n### 👤 ${userLabel}\n\n${questionText || emptyText}\n\n### 🤖 ${assistantLabel}\n\n${answerText}\n`
 
   await mkdir(dir, { recursive: true })
   let content = ''
