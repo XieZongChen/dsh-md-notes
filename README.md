@@ -26,7 +26,6 @@ A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 - **Sidebar notes entry** → full-screen notes manager: per-workspace note list (grouped, collapsible), markdown edit/preview, save, delete (in-page confirm), create with one click.
 - **Assistant-message action** (next to copy) → pick or create a note and append that conversation (user question + answer) to it **instantly** — the text is captured from the conversation itself, so there's no waiting; section labels are localized (reasoning is not captured — only the final answer).
-- **Write mutex**: a note being written (save / capture / delete) is locked **across all sessions** — the sidebar entry, the picker and the manager reflect the in-flight write (loading, disabled actions) and restore automatically when it finishes.
 - **Reference notes in chat (`@`)**: type `@` to pick notes (cross-workspace included); on send the host injects each note's content into the model context, so the model can cite it without being asked to read files.
 - **Git sync** (optional, URL-driven): **shared repo** mode (one repo for all workspaces, per-workspace folders) or **own repos** mode (per workspace: URL + branch + subpath). Push = mirror-sync (deletions included), Update = pull with conflict confirmation, auto-pull on open, merge-remote-and-retry.
 - **Settings panel** (dsh Settings → MD Notes): mode, repo URL/branch/subpath, auto-pull, commit author — with dsh-styled form controls.
