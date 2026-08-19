@@ -13,7 +13,7 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconTriangleRightFill14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { WorkspaceNotes } from '../api.ts'
 import { api, ICON_URL } from '../api.ts'
-import type { NotesStore } from '../store.ts'
+import type { NotesUiStore } from '../store.ts'
 import type { MdNotesKey } from '../locales/index.ts'
 import { fmtTime } from '../markdown.ts'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
@@ -30,7 +30,7 @@ export interface NotePickerProps {
   sessionId: string
   messageId: string
   /** Shared store; closing the picker clears `picker`. */
-  store: NotesStore
+  store: NotesUiStore
   /** Framework-injected locale seat (`md-notes` namespace). */
   t: TranslateNS<'md-notes'>
 }
@@ -112,14 +112,14 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
       setBusy(false)
       if (res.ok) {
         setStatus({ key: 'picker.written' })
-        window.setTimeout(() => store.set({ picker: null }), 900)
+        window.setTimeout(() => store.update((d) => { d.picker = null }), 900)
       } else {
         setStatus({ key: 'picker.writeFailed', params: { error: res.error } })
       }
     })
   }
 
-  const close = (): void => store.set({ picker: null })
+  const close = (): void => store.update((d) => { d.picker = null })
 
   return (
     <Modal

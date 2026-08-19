@@ -18,7 +18,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings-general/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { InputTriggerServiceContract } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { NotesStore } from './features/store.ts'
+import { createNotesUiStore, type NotesUiState, type NotesUiStore } from './features/store.ts'
 import { en, zh } from './features/locales/index.ts'
 import { NotesEntry } from './features/NotesEntry/NotesEntry.tsx'
 import { NoteAction } from './features/NoteAction/NoteAction.tsx'
@@ -29,19 +29,17 @@ import { createNotesSource } from './features/ContextSource/ContextSource.ts'
 
 export const inject = ['slots', 'locale']
 
-/** React hook: re-render on every store change. */
-function useStore(store: NotesStore): void {
-  const [, setTick] = React.useState(0)
-  React.useEffect(() => store.subscribe(() => setTick((t) => t + 1)), [store])
+/** React hook: subscribe to the store via uSES, re-render on snapshot change. */
+function useStore(store: NotesUiStore): NotesUiState {
+  return React.useSyncExternalStore(store.subscribe, store.getSnapshot)
 }
 
 /** Overlay host: renders the manager or the picker based on store state. */
 function NotesOverlay(props: {
-  store: NotesStore
+  store: NotesUiStore
   t: TranslateNS<'md-notes'>
 }): React.ReactElement | null {
-  useStore(props.store)
-  const s = props.store.get()
+  const s = useStore(props.store)
   if (s.managerOpen) return React.createElement(NotesManager, { store: props.store, t: props.t })
   if (s.picker) {
     return React.createElement(NotePicker, {
@@ -57,11 +55,11 @@ function NotesOverlay(props: {
 /**
  * Client plugin body: register the locale namespace, then the sidebar entry,
  * the notes manager overlay, and the assistant-message note action — all
- * sharing one NotesStore and the `md-notes` locale seat.
+ * sharing one NotesUiStore and the `md-notes` locale seat.
  * @param ctx - client cordis context.
  */
 export function apply(ctx: ClientContext): void {
-  const store = new NotesStore()
+  const store = createNotesUiStore()
   const t = ctx.locale.bind('md-notes')
   ctx.effect(() => ctx.locale.register('md-notes', { zh, en }), 'dsh-md-notes: locale dicts')
 

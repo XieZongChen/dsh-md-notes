@@ -9,7 +9,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NotesStore } from '../store.ts'
+import type { NotesUiStore } from '../store.ts'
 import { ICON_URL } from '../api.ts'
 import { useUpdateAvailable } from '../update.ts'
 import styles from './notes-entry.module.css'
@@ -18,7 +18,7 @@ export interface NotesEntryProps {
   /** Whether the sidebar renders wide content (false = 56px rail). */
   wide: boolean
   /** Shared store; opening the manager sets `managerOpen`. */
-  store: NotesStore
+  store: NotesUiStore
   /** Framework-injected locale seat (`md-notes` namespace). */
   t: TranslateNS<'md-notes'>
 }
@@ -56,7 +56,7 @@ export function NotesEntry(props: NotesEntryProps): React.ReactElement {
         className={wide ? styles.entry : `${styles.entry} ${styles.entryRail}`}
         title={t('sidebar.entry')}
         aria-label={t('sidebar.entry')}
-        onClick={() => store.set({ managerOpen: true })}
+        onClick={() => store.update((d) => { d.managerOpen = true })}
       >
         <span className={styles.entryMain}>
           <img

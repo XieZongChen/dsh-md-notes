@@ -15,14 +15,14 @@ import type { GitStatusData, WorkspaceNotes } from '../api.ts'
 import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
 import { useUpdateAvailable } from '../update.ts'
 import { fmtTime } from '../markdown.ts'
-import type { NotesStore } from '../store.ts'
+import type { NotesUiStore } from '../store.ts'
 import type { MdNotesKey } from '../locales/index.ts'
 import shared from '../styles.module.css'
 import styles from './notes-manager.module.css'
 
 export interface NotesManagerProps {
   /** Shared store; closing the manager clears `managerOpen`. */
-  store: NotesStore
+  store: NotesUiStore
   /** Framework-injected locale seat (`md-notes` namespace). */
   t: TranslateNS<'md-notes'>
 }
@@ -330,7 +330,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
 
   const busy = updating || saving || pushing
 
-  const close = (): void => store.set({ managerOpen: false })
+  const close = (): void => store.update((d) => { d.managerOpen = false })
   /**
    * Open dsh's own settings panel and jump to the "MD 笔记" section. The
    * settings shell owns its open state locally and exposes no external API,

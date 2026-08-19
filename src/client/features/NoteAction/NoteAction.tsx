@@ -9,7 +9,7 @@
 import * as React from 'react'
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NotesStore } from '../store.ts'
+import type { NotesUiStore } from '../store.ts'
 import { ICON_URL } from '../api.ts'
 import styles from './note-action.module.css'
 
@@ -17,7 +17,7 @@ export interface NoteActionProps {
   sessionId: string
   messageId: string
   /** Shared store; opening the picker sets `picker`. */
-  store: NotesStore
+  store: NotesUiStore
   /** Framework-injected locale seat (`md-notes` namespace). */
   t: TranslateNS<'md-notes'>
 }
@@ -33,7 +33,7 @@ export function NoteAction(props: NoteActionProps): React.ReactElement {
         type="button"
         className={styles.action}
         aria-label={t('action.tooltip')}
-        onClick={() => store.set({ picker: { sessionId, messageId } })}
+        onClick={() => store.update((d) => { d.picker = { sessionId, messageId } })}
       >
         <img src={ICON_URL} width={16} height={16} alt="" className={styles.actionSvg} />
       </button>
