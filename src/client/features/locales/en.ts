@@ -32,6 +32,7 @@ export const en: { [K in keyof typeof zh]: string } = {
   'manager.updated': 'Updated ✓',
   'manager.saveFailed': 'Save failed',
   'manager.writingFile': 'Writing file…',
+  'manager.listSep': ', ',
   'manager.created': 'Created ✓',
   'manager.createFailed': 'Create failed',
   'picker.title': 'Add to note',

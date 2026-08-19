@@ -278,7 +278,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       } else if (res.code === 'remote-changed') {
         // The remote has notes newer/different from the local ones — ask the
         // user whether to overwrite them with the local version before pushing.
-        const names = (res.changed ?? []).join(', ')
+        const names = (res.changed ?? []).join(t('manager.listSep'))
         setConfirmState({
           title: t('git.pushRemoteChangedTitle'),
           description: t('git.pushRemoteChanged', { names }),
@@ -484,7 +484,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     <span className={styles.editorName}>{selected}</span>
                     <span className={styles.flash}>{flash === '' ? '' : t(flash)}</span>
                     {showEditorGit && (writingThis || (remoteChanged !== null && remoteChanged.length > 0)) && (
-                      <span className={styles.remoteHint} title={writingThis ? '' : remoteChanged?.join('、')}>
+                      <span className={styles.remoteHint} title={writingThis ? '' : remoteChanged?.join(t('manager.listSep'))}>
                         {writingThis ? t('manager.writingFile') : t('git.remoteUpdated')}
                       </span>
                     )}

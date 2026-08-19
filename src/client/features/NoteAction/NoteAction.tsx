@@ -43,7 +43,8 @@ export function NoteAction(props: NoteActionProps): React.ReactElement {
   const openPicker = (): void => {
     // Capture the text in the browser (like the copy button) — the host
     // append then only writes the file, no session query (docs/context.md).
-    const captured = captureMessageText(snap.chat.legacy.nodes, messageId)
+    // Image placeholder follows the UI language ([图片] / [image]).
+    const captured = captureMessageText(snap.chat.legacy.nodes, messageId, t('picker.labelImage'))
     if (captured === null) return
     store.update((d) => {
       d.picker = {

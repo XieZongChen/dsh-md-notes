@@ -29,6 +29,7 @@ export const zh = {
   'manager.updated': '已更新 ✓',
   'manager.saveFailed': '保存失败',
   'manager.writingFile': '正在写入文件',
+  'manager.listSep': '、',
   'manager.created': '已创建 ✓',
   'manager.createFailed': '创建失败',
   'picker.title': '记入笔记',
