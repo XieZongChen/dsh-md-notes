@@ -24,6 +24,20 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## NEXT_VERSION
+
+### Added
+
+- **Note write mutex (write lock)**: writes to a note (save / append-from-conversation
+  / delete) are mutually exclusive **across sessions** — while a note is being written,
+  writes to it from any session are rejected (host keyed lock, `note-writing`), and the
+  in-progress state is surfaced everywhere: the picker disables the note with a row
+  loading, the manager shows a row loading (delete hidden) and disables edit/update/
+  save/push with a "Writing file…" hint, and the sidebar entry shows a loading with a
+  "{count} file(s) writing" tooltip. All positions restore automatically when the write
+  finishes. Design: [docs/write-lock.md](docs/write-lock.md); state conventions:
+  [docs/state.md](docs/state.md).
+
 ## [0.5.0] - 2026-08-19
 
 ### Added

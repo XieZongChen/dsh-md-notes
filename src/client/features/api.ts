@@ -171,6 +171,7 @@ export function gitErrorText(t: TranslateNS<'md-notes'>, code: string | undefine
     case 'remote-changed': return t('git.errRemoteChanged', { names: detail ?? '' })
     case 'non-fast-forward': return t('git.errNonFastForward')
     case 'merge-unrelated': return t('git.errMergeUnrelated', { detail: detail ?? '' })
+    case 'note-writing': return t('git.errNoteWriting')
     default: return t('git.failed', { error: detail ?? code ?? '' })
   }
 }

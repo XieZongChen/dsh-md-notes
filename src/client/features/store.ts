@@ -20,12 +20,19 @@ import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client
 export interface NotesUiState {
   managerOpen: boolean
   picker: { sessionId: string; messageId: string } | null
+  /**
+   * In-flight async tasks, keyed by `<domain>/<resource>` (generic busy
+   * slice — see docs/state.md §4; notes domain: `note/<workspaceId>/<name>`).
+   * Future domains (git worktrees, exports) add keys here without store
+   * changes. Transient by design: never persisted.
+   */
+  busy: Record<string, true>
 }
 
 /** The shared store: immutable snapshot source + immer-draft writes. */
 export type NotesUiStore = SnapshotStore<NotesUiState>
 
-const INITIAL: NotesUiState = { managerOpen: false, picker: null }
+const INITIAL: NotesUiState = { managerOpen: false, picker: null, busy: {} }
 
 /** Create the root-scope notes UI store (one instance per plugin apply). */
 export function createNotesUiStore(): NotesUiStore {

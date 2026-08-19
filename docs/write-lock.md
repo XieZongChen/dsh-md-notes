@@ -33,12 +33,12 @@
 
 ```
                     ┌────────────────────────────────────────┐
-  NotePicker ──────▶│ client: NotesUiStore.writing: Record    │◀── useSyncExternalStore
+  NotePicker ──────▶│ client: NotesUiStore.busy: Record       │◀── useSyncExternalStore
   NotesManager ────▶│   noteKey → true                        │     订阅（3 个位置）
   （begin/end）     └───────────────┬────────────────────────┘
                                     │ API 调用
                     ┌───────────────▼────────────────────────┐
-                    │ host: writeLocks: Map<noteKey, true>   │  权威互斥
+                    │ host: KeyedLock（进程内按 key 互斥）   │  权威互斥
                     │   write / appendConversation / delete  │  冲突返回 code:'note-writing'
                     │   acquire → 执行 → finally release     │
                     └────────────────────────────────────────┘
@@ -68,45 +68,41 @@
 
 ## 5. Host 端：权威写锁
 
-### 5.1 锁表
+### 5.1 锁（src/host/keyed-lock.ts，通用键控互斥）
 
 ```ts
-// src/host/notes.ts 或新文件 src/host/write-lock.ts（apply 闭包内实例化，随插件卸载销毁）
-const writeLocks = new Map<string, true>()
-
-function tryAcquire(key: string): boolean {
-  if (writeLocks.has(key)) return false
-  writeLocks.set(key, true)
-  return true
+// 进程内按 string key 互斥；笔记域 key = `${workspaceId}/${name}`（跨会话唯一）。
+// 通用设计：未来其他资源域（git 工作树、导出）复用同一把锁，仅换 key 约定。
+export interface KeyedLock {
+  with<T>(key: string, task: () => Promise<T>): Promise<{ acquired: true; value: T } | { acquired: false }>
+  isHeld(key: string): boolean
 }
-
-function release(key: string): void {
-  writeLocks.delete(key)
-}
-
-/** 包装一次按 note 定位的写操作：加锁 → 执行 → finally 释放。 */
-export async function withNoteLock<T>(key: string, task: () => Promise<T>): Promise<T | { ok: false; code: 'note-writing'; error: string }> {
-  if (!tryAcquire(key)) {
-    return { ok: false, code: 'note-writing', error: 'The note is being written, try again later' }
-  }
-  try {
-    return await task()
-  } finally {
-    release(key)
+export function createKeyedLock(): KeyedLock {
+  const held = new Set<string>()
+  return {
+    isHeld: (key) => held.has(key),
+    async with(key, task) {
+      if (held.has(key)) return { acquired: false }
+      held.add(key)
+      try { return { acquired: true, value: await task() } } finally { held.delete(key) }
+    },
   }
 }
 ```
 
+实例在 apply 闭包创建（随插件卸载销毁），经 `NotesApiDeps.lock` 传入 handler。
+
 ### 5.2 接线点（src/host/http.ts）
 
-`write` / `appendConversation` / `delete` 三个 case 改为先解析 noteKey 再走
-`withNoteLock`：
+`write` / `appendConversation` / `delete` 三个 case 先解析 noteKey 再走 `deps.lock.with`，
+未获锁（`acquired: false`）返回 `note-writing`：
 
 ```ts
 case 'write': {
   const dir = deps.resolveDir(workspaceId)
   if (dir === undefined) return { ok: false, code: 'no-workspace', ... }
-  return withNoteLock(`${workspaceId}/${name}`, () => writeNote(dir, name, String(req.content ?? '')))
+  const lock = await deps.lock.with(`${workspaceId}/${name}`, () => writeNote(dir, name, String(req.content ?? '')))
+  return lock.acquired ? lock.value : { ok: false, code: 'note-writing', error: 'The note is being written, try again later' }
 }
 // appendConversation / delete 同构
 ```
@@ -123,46 +119,53 @@ case 'write': {
 
 ## 6. Client 端：状态镜像（NotesUiStore 扩展）
 
-### 6.1 状态定义（src/client/features/store.ts）
+### 6.1 状态定义（src/client/features/store.ts）——通用 busy 切片（可扩展，见 state.md §4）
 
 ```ts
 export interface NotesUiState {
   managerOpen: boolean
   picker: { sessionId: string; messageId: string } | null
-  /** 正在写入的笔记集合：noteKey → true（详见 docs/write-lock.md） */
-  writing: Record<string, true>
+  /** 进行中任务：<域>/<资源> → true；笔记域键 note/<workspaceId>/<name>（详见 docs/state.md §4） */
+  busy: Record<string, true>
 }
 
-// 派生只读量（选择器计算，不入 state）：
-// writingCount = Object.keys(s.writing).length
-// isWriting(s, noteKey) = s.writing[noteKey] === true
+// 派生只读量（busy.ts 提供，选择器计算，不入 state）：
+// busyCount(s) = Object.keys(s.busy).length
+// tracker.isBusy(noteKey(wsId, name))
 ```
 
-### 6.2 写入口包装（新文件 src/client/features/write-track.ts）
+### 6.2 写入口包装（src/client/features/busy.ts，通用 BusyTracker）
 
 ```ts
 /**
- * 异步写跟踪器：begin/end 成对 + finally 保证清理 + 聚合派生。
- * 「笔记正在写入」的 client 镜像（host 锁见 docs/write-lock.md §5）。
+ * 通用异步任务跟踪器（域无关，见 docs/state.md §4.2）：begin/end 幂等计数 +
+ * finally 保证清理 + 聚合派生。笔记域经 `noteKey(wsId, name)` 接入；未来
+ * git / export / 图片上传等任务域复用同一 tracker，仅换 key 前缀。
  */
-export interface WriteTracker {
-  /** 发起写：把 noteKey 标记为 writing（幂等）。返回用于结束的 release。 */
+export interface BusyTracker {
+  /** 把 key 标记为 busy（同 key 幂等，计数制）。返回用于结束的 release。 */
   begin(key: string): () => void
-  /** 执行一次受跟踪的写：begin → task → finally release。 */
+  /** 执行一次受跟踪的任务：begin → task → finally release。 */
   run<T>(key: string, task: () => Promise<T>): Promise<T>
-  /** noteKey 是否正在写。 */
-  isWriting(key: string): boolean
-  /** 正在写的笔记总数。 */
+  /** key 是否正在执行。 */
+  isBusy(key: string): boolean
+  /** 正在执行的任务总数（全域）。 */
   count(): number
+}
+
+/** 笔记域资源键：note/<workspaceId>/<name>（跨会话唯一）。 */
+export function noteKey(workspaceId: string, name: string): string {
+  return `note/${workspaceId}/${name}`
 }
 ```
 
 实现要点：
 
 - `begin` 幂等（同 key 重复 begin 只记一次，计数器制，避免嵌套调用提前释放）；
+- 与 store 的关系：tracker 持有 store，begin/release 内部 `store.update(d => …)`（immer draft 增删 `d.busy[key]`）；组件只读 store，不直接碰 tracker 内部态。
 - `run` 用 `try/finally` 保证成功、失败、异常三条路径都释放；
 - 与 store 的关系：tracker 持有 store，`begin/release` 内部 `store.update(d => …)`
-  （immer draft 增删 `d.writing[key]`）；组件只读 store，不直接碰 tracker 内部态。
+  （immer draft 增删 `d.busy[key]`）；组件只读 store，不直接碰 tracker 内部态。
 
 ### 6.3 调用点改造
 
@@ -186,8 +189,8 @@ api('write', {...}).finally(release).then(...)
 
 ### 7.1 笔记入口（NotesEntry）
 
-- 订阅 store 的 `writingCount`（NotesEntry 由「只写」变为「读写」，新增
-  `useSyncExternalStore` 选择器 `s => Object.keys(s.writing).length`）。
+- 订阅 store 的 `busyCount`（NotesEntry 由「只写」变为「读写」，新增
+  `useSyncExternalStore` 订阅，选择器为 busy.ts 导出的 `busyCount`）。
 - 渲染：`entryMain` 之后、`updateTag` **之前**：
 
 ```tsx
@@ -202,7 +205,7 @@ api('write', {...}).finally(release).then(...)
 
 ### 7.2 记入笔记弹窗（NotePicker）
 
-- 行渲染：`isWriting(key)` 的笔记行——点击不选中（`onClick` 直接 return）、加禁用
+- 行渲染：`tracker.isBusy(noteKey(...))` 的笔记行——点击不选中（`onClick` 直接 return）、加禁用
   样式（如降低不透明度）、行尾（`noteTime` 之后）渲染 `<LoadingIndicator size={12} />`。
 - 「写入笔记」按钮无需额外处理（现有 `busy` 已覆盖发起后的态）；选中检查与禁用
   样式见验收标准。
@@ -243,7 +246,7 @@ api('write', {...}).finally(release).then(...)
 
 ## 8. 状态还原与失败处理
 
-- **成功**：`.finally(release)` → store 移除 writing → 三个位置（入口 loading、弹窗
+- **成功**：`.finally(release)` → store 移除 busy 项 → 三个位置（入口 loading、弹窗
   禁用、面板行/操作栏）随 uSES 订阅自动还原，无需手动刷新。
 - **失败**：同路径还原（finally 保证）；错误提示仍按现有 `picker.writeFailed` /
   `manager.saveFailed` 展示。

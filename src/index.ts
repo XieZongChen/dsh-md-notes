@@ -27,6 +27,7 @@ import {
   type ResolvedRepo, type WorkspaceInfo,
 } from './host/git.ts'
 import { iconHandler, notesApiHandler, type GitApi, type NotesApiDeps, type WorkspaceEntry } from './host/http.ts'
+import { createKeyedLock } from './host/keyed-lock.ts'
 import { MdNotesSettingsSchema, mergeSettings, MD_NOTES_NS, type MdNotesSettings } from './host/settings.ts'
 import { registerNoteContextInjection } from './host/context-inject.ts'
 
@@ -236,6 +237,7 @@ export function apply(ctx: Context, config: Config): void {
     },
     checkUpdate,
     git,
+    lock: createKeyedLock(),
     sessionQuery: ctx.get('sessionQuery'),
   }
   const handler = notesApiHandler(deps)

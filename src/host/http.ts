@@ -15,6 +15,7 @@ import {
 import {
   GitError, type GitStatusView, type ResolvedRepo,
 } from './git.ts'
+import type { KeyedLock } from './keyed-lock.ts'
 
 /** Read a JSON request body (bounded). */
 export async function readBody(req: IncomingMessage): Promise<unknown> {
@@ -86,6 +87,8 @@ export interface NotesApiDeps {
   checkUpdate(): Promise<{ ok: true; current: string; latest: string; hasUpdate: boolean } | { ok: false }>
   /** Bound git operations. */
   git: GitApi
+  /** Process-scoped write mutex (notes domain key: `<workspaceId>/<name>`). */
+  lock: KeyedLock
   /** Optional session query service (for appendConversation). */
   sessionQuery?: SessionQueryEngine | undefined
 }
@@ -134,7 +137,10 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'write': {
       const dir = deps.resolveDir(workspaceId)
       if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
-      return writeNote(dir, name, String(req.content ?? ''))
+      const lock = await deps.lock.with(`${workspaceId}/${name}`, () => writeNote(dir, name, String(req.content ?? '')))
+      return lock.acquired
+        ? lock.value
+        : { ok: false, code: 'note-writing', error: 'The note is being written, try again later' }
     }
     case 'create': {
       const dir = deps.resolveDir(workspaceId)
@@ -144,7 +150,10 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'delete': {
       const dir = deps.resolveDir(workspaceId)
       if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
-      return deleteNote(dir, name)
+      const lock = await deps.lock.with(`${workspaceId}/${name}`, () => deleteNote(dir, name))
+      return lock.acquired
+        ? lock.value
+        : { ok: false, code: 'note-writing', error: 'The note is being written, try again later' }
     }
     case 'appendConversation': {
       const dir = deps.resolveDir(workspaceId)
@@ -154,14 +163,17 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       const labels = typeof req.labels === 'object' && req.labels !== null
         ? (req.labels as { user?: string; assistant?: string; empty?: string; image?: string })
         : undefined
-      return appendConversation(
+      const lock = await deps.lock.with(`${workspaceId}/${String(req.noteName ?? '')}`, () => appendConversation(
         dir,
         String(req.noteName ?? ''),
         String(req.sessionId ?? ''),
         String(req.messageId ?? ''),
         deps.sessionQuery,
         labels,
-      )
+      ))
+      return lock.acquired
+        ? lock.value
+        : { ok: false, code: 'note-writing', error: 'The note is being written, try again later' }
     }
 
     // ---- git domain ----

@@ -16,6 +16,7 @@ import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi
 import { useUpdateAvailable } from '../update.ts'
 import { fmtTime } from '../markdown.ts'
 import type { NotesUiStore } from '../store.ts'
+import { noteKey, type BusyTracker } from '../busy.ts'
 import type { MdNotesKey } from '../locales/index.ts'
 import shared from '../styles.module.css'
 import styles from './notes-manager.module.css'
@@ -23,6 +24,8 @@ import styles from './notes-manager.module.css'
 export interface NotesManagerProps {
   /** Shared store; closing the manager clears `managerOpen`. */
   store: NotesUiStore
+  /** In-flight write tracker: busy note rows/actions lock (docs/write-lock.md §7.3). */
+  tracker: BusyTracker
   /** Framework-injected locale seat (`md-notes` namespace). */
   t: TranslateNS<'md-notes'>
 }
@@ -31,7 +34,7 @@ export interface NotesManagerProps {
  * The full-screen notes manager.
  */
 export function NotesManager(props: NotesManagerProps): React.ReactElement {
-  const { store, t } = props
+  const { store, tracker, t } = props
   const updateInfo = useUpdateAvailable()
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [noWorkspaces, setNoWorkspaces] = React.useState(false)
@@ -159,8 +162,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     const wsId = currentWsId()
     if (!selected || wsId === null) return
     setSaving(true)
-    void api('write', { name: selected, content, workspaceId: wsId }).then((res) => {
-      setSaving(false)
+    void tracker.run(noteKey(wsId, selected), () => api('write', { name: selected, content, workspaceId: wsId })).then((res) => {
       if (res.ok) {
         setFlash('manager.saved')
         refresh()
@@ -168,7 +170,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       } else {
         setFlash('manager.saveFailed')
       }
-    })
+    }).finally(() => setSaving(false))
   }
 
   const createIn = (wsId: string): void => {
@@ -196,7 +198,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       danger: true,
       onConfirm: () => {
         setConfirmState(null)
-        void api('delete', { name, workspaceId: wsId }).then((res) => {
+        void tracker.run(noteKey(wsId, name), () => api('delete', { name, workspaceId: wsId })).then((res) => {
           if (res.ok) {
             if (selected === name && selectedWsId === wsId) { setSelected(null); setContent('') }
             refresh()
@@ -210,7 +212,6 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     setUpdating(true)
     setGitMsg('')
     void gitPullApi(wsId, force).then((res) => {
-      setUpdating(false)
       if (res.ok) {
         setRemoteChanged(null)
         refreshStatus(wsId)
@@ -227,7 +228,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       } else {
         setGitMsg(gitErrorText(t, res.code, res.error))
       }
-    })
+    }).finally(() => setUpdating(false))
   }
 
   const updateClick = (wsId: string): void => {
@@ -237,7 +238,6 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     setUpdating(true)
     setGitMsg('')
     void gitPullApi(wsId, false).then((res) => {
-      setUpdating(false)
       if (!res.ok) {
         setGitMsg(gitErrorText(t, res.code, res.error))
         return
@@ -264,13 +264,12 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         cancelLabel: t('git.cancel'),
         onConfirm: () => { setConfirmState(null); doUpdate(wsId, true) },
       })
-    })
+    }).finally(() => setUpdating(false))
   }
   const runPush = (wsId: string, message: string, overwrite = false): void => {
     setPushing(true)
     setGitMsg('')
     void gitPushApi(wsId, message, overwrite).then((res) => {
-      setPushing(false)
       if (res.ok) {
         setPushOpen(false)
         setPushMsg('')
@@ -296,7 +295,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       } else {
         setGitMsg(gitErrorText(t, res.code, res.error))
       }
-    })
+    }).finally(() => setPushing(false))
   }
 
   const doPush = (wsId: string): void => {
@@ -317,18 +316,24 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     if (pushConflict === null) return
     setPushing(true)
     setGitMsg('')
+    // ok 分支把 pushing 的生命周期交给 runPush（它重新 setPushing(true) 并在
+    // 自己的 finally 里复位）；此处只在失败路径复位，避免与 runPush 竞争。
+    let handedOff = false
     void gitSyncApi(pushConflict.wsId).then((res) => {
       if (res.ok) {
         setPushConflict(null)
+        handedOff = true
         runPush(pushConflict.wsId, pushConflict.message)
       } else {
-        setPushing(false)
         setGitMsg(gitErrorText(t, res.code, res.error))
       }
-    })
+    }).finally(() => { if (!handedOff) setPushing(false) })
   }
 
-  const busy = updating || saving || pushing
+  /** Whether the currently selected note is being written (any session — docs/write-lock.md §7.3). */
+  const writingThis = selected !== null && selectedWsId !== null && tracker.isBusy(noteKey(selectedWsId, selected))
+
+  const busy = updating || saving || pushing || writingThis
 
   const close = (): void => store.update((d) => { d.managerOpen = false })
   /**
@@ -430,24 +435,31 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     )}
                     {!collapsed[ws.workspaceId] && (ws.notes.length === 0 && grouped
                       ? <div className={`${shared.empty} ${styles.wsEmpty}`}>{t('manager.empty')}</div>
-                      : ws.notes.map((n) => (
-                        <div
-                          key={n.name}
-                          className={selected === n.name && selectedWsId === ws.workspaceId ? `${styles.noteItem} ${styles.noteItemActive}` : styles.noteItem}
-                          onClick={() => open(n.name, ws.workspaceId)}
-                        >
-                          <div className={styles.noteMain}>
-                            <div className={styles.noteTitle}>{n.title}</div>
-                            <div className={styles.noteTime}>{fmtTime(n.updatedAt)}</div>
+                      : ws.notes.map((n) => {
+                        const writing = tracker.isBusy(noteKey(ws.workspaceId, n.name))
+                        return (
+                          <div
+                            key={n.name}
+                            className={selected === n.name && selectedWsId === ws.workspaceId ? `${styles.noteItem} ${styles.noteItemActive}` : styles.noteItem}
+                            onClick={() => open(n.name, ws.workspaceId)}
+                          >
+                            <div className={styles.noteMain}>
+                              <div className={styles.noteTitle}>{n.title}</div>
+                              <div className={styles.noteTime}>{fmtTime(n.updatedAt)}</div>
+                            </div>
+                            {writing
+                              ? <span className={styles.noteWriting}><LoadingIndicator size={12} /></span>
+                              : (
+                                <button
+                                  type="button"
+                                  className={styles.noteDel}
+                                  title={t('manager.delete')}
+                                  onClick={(e) => { e.stopPropagation(); remove(n.name, ws.workspaceId) }}
+                                >🗑</button>
+                              )}
                           </div>
-                          <button
-                            type="button"
-                            className={styles.noteDel}
-                            title={t('manager.delete')}
-                            onClick={(e) => { e.stopPropagation(); remove(n.name, ws.workspaceId) }}
-                          >🗑</button>
-                        </div>
-                      )))}
+                        )
+                      }))}
                   </div>
                 ))}
             </div>
@@ -466,13 +478,14 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     <button
                       type="button"
                       className={mode === 'edit' ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+                      disabled={writingThis}
                       onClick={() => setMode('edit')}
                     >{t('manager.tabEdit')}</button>
                     <span className={styles.editorName}>{selected}</span>
                     <span className={styles.flash}>{flash === '' ? '' : t(flash)}</span>
-                    {showEditorGit && remoteChanged !== null && remoteChanged.length > 0 && (
-                      <span className={styles.remoteHint} title={remoteChanged.join('、')}>
-                        {t('git.remoteUpdated')}
+                    {showEditorGit && (writingThis || (remoteChanged !== null && remoteChanged.length > 0)) && (
+                      <span className={styles.remoteHint} title={writingThis ? '' : remoteChanged?.join('、')}>
+                        {writingThis ? t('manager.writingFile') : t('git.remoteUpdated')}
                       </span>
                     )}
                     {showEditorGit && (

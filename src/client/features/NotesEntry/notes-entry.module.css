@@ -80,3 +80,11 @@
   background: color-mix(in srgb, var(--dsw-alias-state-warn-primary, #f0b429) 20%, transparent);
   white-space: nowrap;
 }
+
+/* In-flight write indicator (sits left of the update tag — docs/write-lock.md §7.1). */
+.writingIndicator {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  margin-right: 6px;
+}

@@ -9,9 +9,12 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NotesUiStore } from '../store.ts'
+import { busyCount } from '../busy.ts'
 import { ICON_URL } from '../api.ts'
 import { useUpdateAvailable } from '../update.ts'
+import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import styles from './notes-entry.module.css'
 
 export interface NotesEntryProps {
@@ -29,6 +32,12 @@ export interface NotesEntryProps {
 export function NotesEntry(props: NotesEntryProps): React.ReactElement {
   const { wide, store, t } = props
   const update = useUpdateAvailable()
+  // Any in-flight write shows here (busy slice counts all domains; note
+  // writes are the only domain today — see docs/write-lock.md §7.1).
+  const writingCount = React.useSyncExternalStore(
+    store.subscribe,
+    () => busyCount(store.getSnapshot()),
+  )
   const rowRef = React.useRef<HTMLDivElement | null>(null)
 
   React.useEffect(() => {
@@ -68,6 +77,11 @@ export function NotesEntry(props: NotesEntryProps): React.ReactElement {
           />
           {wide ? <span className={styles.entryLabel}>{t('sidebar.label')}</span> : null}
         </span>
+        {wide && writingCount > 0 && (
+          <Tooltip label={t('sidebar.writingTitle', { count: writingCount })} side="bottom">
+            <span className={styles.writingIndicator}><LoadingIndicator size={12} /></span>
+          </Tooltip>
+        )}
         {wide && update !== null && (
           <span className={styles.updateTag} title={t('sidebar.updateTitle', { latest: update.latest })}>
             {t('sidebar.updateTag')}

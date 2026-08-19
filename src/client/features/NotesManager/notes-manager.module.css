@@ -118,6 +118,14 @@
   opacity: 1;
 }
 
+/* In-flight write: row-tail loading replaces the delete button (docs/write-lock.md §7.3). */
+.noteWriting {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+}
+
 .editor {
   flex: 1;
   display: flex;
@@ -179,6 +187,10 @@
   background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.18));
   color: var(--dsw-alias-label-primary, #222);
   font-weight: 600;
+}
+.tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .textarea {

@@ -139,6 +139,20 @@
   background: var(--dsw-alias-interactive-bg-hover);
 }
 
+/* Busy note: not selectable, row-tail loading (docs/write-lock.md §7.2). */
+.noteItemDisabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.noteItemDisabled:hover {
+  background: transparent;
+}
+.noteWriting {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+}
+
 .noteItemActive .noteTitle {
   font-weight: 600;
 }

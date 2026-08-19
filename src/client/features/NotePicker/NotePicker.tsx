@@ -14,6 +14,7 @@ import { IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconTriangleRig
 import type { WorkspaceNotes } from '../api.ts'
 import { api, ICON_URL } from '../api.ts'
 import type { NotesUiStore } from '../store.ts'
+import { noteKey, type BusyTracker } from '../busy.ts'
 import type { MdNotesKey } from '../locales/index.ts'
 import { fmtTime } from '../markdown.ts'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
@@ -31,6 +32,8 @@ export interface NotePickerProps {
   messageId: string
   /** Shared store; closing the picker clears `picker`. */
   store: NotesUiStore
+  /** In-flight write tracker: busy notes are not selectable (docs/write-lock.md §7.2). */
+  tracker: BusyTracker
   /** Framework-injected locale seat (`md-notes` namespace). */
   t: TranslateNS<'md-notes'>
 }
@@ -39,7 +42,7 @@ export interface NotePickerProps {
  * The note-selection popup.
  */
 export function NotePicker(props: NotePickerProps): React.ReactElement {
-  const { sessionId, messageId, store, t } = props
+  const { sessionId, messageId, store, tracker, t } = props
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [noWorkspaces, setNoWorkspaces] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
@@ -95,9 +98,12 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
   const send = (): void => {
     if (noWorkspaces) { setStatus({ key: 'picker.noWorkspaces' }); return }
     if (selected === null) { setStatus({ key: 'picker.needSelect' }); return }
+    const key = noteKey(selected.workspaceId, selected.name)
     setBusy(true)
     setStatus({ key: 'picker.writing' })
-    void api('appendConversation', {
+    // tracker.run marks the note busy (docs/write-lock.md §6.3) so the entry,
+    // this picker and the manager all reflect it; finally clears on any path.
+    void tracker.run(key, () => api('appendConversation', {
       noteName: selected.name,
       workspaceId: selected.workspaceId,
       sessionId,
@@ -108,15 +114,14 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
         empty: t('picker.labelEmpty'),
         image: t('picker.labelImage'),
       },
-    }).then((res) => {
-      setBusy(false)
+    })).then((res) => {
       if (res.ok) {
         setStatus({ key: 'picker.written' })
         window.setTimeout(() => store.update((d) => { d.picker = null }), 900)
       } else {
         setStatus({ key: 'picker.writeFailed', params: { error: res.error } })
       }
-    })
+    }).finally(() => setBusy(false))
   }
 
   const close = (): void => store.update((d) => { d.picker = null })
@@ -171,20 +176,30 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
                 {!collapsed[ws.workspaceId] && (
                   ws.notes.length === 0
                     ? <div className={`${shared.empty} ${styles.wsEmpty}`}>{t('picker.empty')}</div>
-                    : ws.notes.map((n) => (
-                      <div
-                        key={n.name}
-                        className={selected !== null && selected.workspaceId === ws.workspaceId && selected.name === n.name
-                          ? `${styles.noteItem} ${styles.noteItemActive}`
-                          : styles.noteItem}
-                        onClick={() => setSelected({ workspaceId: ws.workspaceId, name: n.name })}
-                      >
-                        <div className={styles.noteMain}>
-                          <div className={styles.noteTitle}>{n.title}</div>
-                          <div className={styles.noteTime}>{fmtTime(n.updatedAt)}</div>
+                    : ws.notes.map((n) => {
+                      const writing = tracker.isBusy(noteKey(ws.workspaceId, n.name))
+                      return (
+                        <div
+                          key={n.name}
+                          className={
+                            writing
+                              ? `${styles.noteItem} ${styles.noteItemDisabled}`
+                              : selected !== null && selected.workspaceId === ws.workspaceId && selected.name === n.name
+                                ? `${styles.noteItem} ${styles.noteItemActive}`
+                                : styles.noteItem
+                          }
+                          onClick={() => { if (!writing) setSelected({ workspaceId: ws.workspaceId, name: n.name }) }}
+                        >
+                          <div className={styles.noteMain}>
+                            <div className={styles.noteTitle}>{n.title}</div>
+                            <div className={styles.noteTime}>{fmtTime(n.updatedAt)}</div>
+                          </div>
+                          {writing && (
+                            <span className={styles.noteWriting}><LoadingIndicator size={12} /></span>
+                          )}
                         </div>
-                      </div>
-                    ))
+                      )
+                    })
                 )}
               </div>
                 ))}

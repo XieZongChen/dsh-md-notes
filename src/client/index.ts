@@ -19,6 +19,7 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type { InputTriggerServiceContract } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { createNotesUiStore, type NotesUiState, type NotesUiStore } from './features/store.ts'
+import { createBusyTracker, type BusyTracker } from './features/busy.ts'
 import { en, zh } from './features/locales/index.ts'
 import { NotesEntry } from './features/NotesEntry/NotesEntry.tsx'
 import { NoteAction } from './features/NoteAction/NoteAction.tsx'
@@ -37,15 +38,17 @@ function useStore(store: NotesUiStore): NotesUiState {
 /** Overlay host: renders the manager or the picker based on store state. */
 function NotesOverlay(props: {
   store: NotesUiStore
+  tracker: BusyTracker
   t: TranslateNS<'md-notes'>
 }): React.ReactElement | null {
   const s = useStore(props.store)
-  if (s.managerOpen) return React.createElement(NotesManager, { store: props.store, t: props.t })
+  if (s.managerOpen) return React.createElement(NotesManager, { store: props.store, tracker: props.tracker, t: props.t })
   if (s.picker) {
     return React.createElement(NotePicker, {
       sessionId: s.picker.sessionId,
       messageId: s.picker.messageId,
       store: props.store,
+      tracker: props.tracker,
       t: props.t,
     })
   }
@@ -60,6 +63,7 @@ function NotesOverlay(props: {
  */
 export function apply(ctx: ClientContext): void {
   const store = createNotesUiStore()
+  const tracker = createBusyTracker(store)
   const t = ctx.locale.bind('md-notes')
   ctx.effect(() => ctx.locale.register('md-notes', { zh, en }), 'dsh-md-notes: locale dicts')
 
@@ -114,7 +118,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register(
     { name: 'shell.overlay', id: 'dsh-notes-overlay', order: 100, label: t('sidebar.entry'), locale: 'md-notes' },
     (props: { t: TranslateNS<'md-notes'> }) =>
-      React.createElement(NotesOverlay, { store, t: props.t }),
+      React.createElement(NotesOverlay, { store, tracker, t: props.t }),
   )), 'dsh-md-notes: overlay')
 
   ctx.effect(() => ctx.slots.inject('settings.section', () => ctx.slots.register(
