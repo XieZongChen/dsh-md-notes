@@ -47,6 +47,15 @@ Only user-visible functional changes are recorded (no documentation, code refact
   session log (deep-cloning + replay-validating it), which synchronously blocked
   the event loop on long sessions and froze the manager's list/read requests
   until the write finished.
+- **Git sync pull/update no longer fails**: gitPull is no longer short-circuited
+  by a premature remoteAhead check (the check now runs before checkout), and a
+  manual update can pull remote content when "local is behind but git refs are
+  in sync". See
+  [User guide §5 — Git sync](docs/usage.md#5-git-sync-optional).
+- **Cross-workspace `@` reference no longer reports "note not found"**: path
+  resolution failed for cross-workspace / nested-workspace references, breaking
+  serialization — fixed. See
+  [User guide §4.2 — Referencing notes from other workspaces](docs/usage.md#42-referencing-notes-from-other-workspaces).
 
 ## [0.5.0] - 2026-08-19
 
