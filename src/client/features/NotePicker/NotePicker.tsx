@@ -210,7 +210,9 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
                 ))}
               </div>
             )}
-        <div className={styles.status}>{status !== '' && status.key !== 'picker.written' ? t(status.key, status.params) : ''}</div>
+        {/* writing shows on the button; written shows beside the button — keep
+            this line height-stable so the dialog never jumps (docs/write-lock.md). */}
+        <div className={styles.status}>{status !== '' && status.key !== 'picker.writing' && status.key !== 'picker.written' ? t(status.key, status.params) : ''}</div>
       </div>
       <div className={styles.dialogFoot}>
         {status !== '' && status.key === 'picker.written' && (

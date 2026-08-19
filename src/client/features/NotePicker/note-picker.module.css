@@ -182,7 +182,10 @@
 .status {
   font-size: 12px;
   color: var(--dsw-alias-label-secondary);
-  min-height: 0;
+  /* Fixed line height reserves space even when empty — status toggles must
+     not change the dialog height (the write flow previously jumped). */
+  min-height: 18px;
+  line-height: 18px;
   padding: 2px 8px;
 }
 
