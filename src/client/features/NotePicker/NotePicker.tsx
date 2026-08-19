@@ -210,9 +210,12 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
                 ))}
               </div>
             )}
-        <div className={styles.status}>{status === '' ? '' : t(status.key, status.params)}</div>
+        <div className={styles.status}>{status !== '' && status.key !== 'picker.written' ? t(status.key, status.params) : ''}</div>
       </div>
       <div className={styles.dialogFoot}>
+        {status !== '' && status.key === 'picker.written' && (
+          <span className={styles.writeOk}>{t('picker.written')}</span>
+        )}
         <button type="button" className={`${shared.btn} ${shared.btnPrimary}`} onClick={send} disabled={busy || selected === null || noWorkspaces}>
           {busy ? t('picker.writing') : t('picker.write')}
         </button>

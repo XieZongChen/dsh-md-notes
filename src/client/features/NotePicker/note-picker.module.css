@@ -191,6 +191,14 @@
   border-top: 1px solid var(--dsw-alias-border-l1);
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+}
+
+/* "Written" feedback sits left of the write button, success-colored. */
+.writeOk {
+  font-size: 12px;
+  color: var(--dsw-alias-state-success-primary, #2e8b57);
+  margin-right: 12px;
 }
 
 /* Loading state while the note list is being fetched. */
