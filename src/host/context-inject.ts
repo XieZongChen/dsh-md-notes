@@ -35,10 +35,12 @@ declare module '@deepseek-ai/dsh-llm' {
 
 /**
  * Matches a serialized note path: `[../][dir/]*.dsh-notes/<name>.md`.
- * `\w` with the u flag covers CJK file names; the path runs until whitespace
- * or a colon/quote, so it extracts cleanly from the readable reference line.
+ * `\p{L}\p{N}` with the u flag covers CJK file names, and the space class in
+ * the name keeps names with spaces intact; the match stops at whitespace
+ * beyond the name or a colon/quote, so it extracts cleanly from the readable
+ * reference line.
  */
-const NOTE_PATH_RE = /(?:\.\.\/)?\/?(?:[\p{L}\p{N}_.\-]+\/)*\.dsh-notes\/[\p{L}\p{N}_.\-]+\.md/gu
+const NOTE_PATH_RE = /(?:\.\.\/)?\/?(?:[\p{L}\p{N}_.\-]+\/)*\.dsh-notes\/[\p{L}\p{N}_.\- ]+\.md/gu
 
 /** Note paths referenced by one message's text blocks (deduped per message). */
 function referencedPaths(message: UserMessage): string[] {

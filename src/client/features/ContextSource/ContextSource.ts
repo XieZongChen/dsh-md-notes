@@ -64,13 +64,20 @@ function relFrom(fromDir: string, target: string): string {
   return ups === 0 ? down : `${'../'.repeat(ups)}${down}`
 }
 
-/** Canonicalize a POSIX path (collapse `.` / `..` segments) for exact compares. */
-function canon(p: string): string {
+/**
+ * Canonicalize a POSIX path (collapse `.` / `..` segments) for exact compares.
+ * Returns null when `..` escapes above the root — such a path is invalid, not
+ * a real location (an out-of-range `..` must never be silently dropped and
+ * then accidentally match).
+ */
+function canon(p: string): string | null {
   const out: string[] = []
   for (const seg of p.split('/')) {
     if (seg === '' || seg === '.') continue
-    if (seg === '..') out.pop()
-    else out.push(seg)
+    if (seg === '..') {
+      if (out.length === 0) return null
+      out.pop()
+    } else out.push(seg)
   }
   return out.length === 0 ? '/' : `/${out.join('/')}`
 }
@@ -336,6 +343,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
           warnStaleHost()
           throw new Error(t('context.errCheck'))
         }
+        const workspaces = list.workspaces
         // Resolve the ref to its owning workspace + note. Refs are relative to
         // a workspace root (`.dsh-notes/<name>` or `../<dir>/.dsh-notes/<name>`)
         // — resolve against every workspace root and require an exact notesDir
@@ -344,19 +352,43 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
         let owner: WorkspaceNotes | undefined
         let name = ''
         if (ref.startsWith('/')) {
-          owner = list.workspaces.find((ws) =>
+          owner = workspaces.find((ws) =>
             ref.startsWith(ws.notesDir.endsWith('/') ? ws.notesDir : `${ws.notesDir}/`))
           name = owner === undefined ? '' : ref.slice(owner.notesDir.length + (owner.notesDir.endsWith('/') ? 0 : 1))
         } else if (ref.startsWith('.')) {
+          // Relative ref (`.dsh-notes/<name>` or `../<dir>/.dsh-notes/<name>`),
+          // generated relative to the SESSION's workspace root. The resolving
+          // base and the target workspace can differ (cross-workspace refs):
+          // find a workspace that owns a note with this name, then require
+          // that SOME workspace root resolves the ref to exactly that note's
+          // absolute path. Resolving against the target's own root would break
+          // whenever the workspaces sit at different depths (the ref's `..`
+          // count matches the session root, not the target root).
           name = ref.slice(ref.lastIndexOf('/') + 1)
-          owner = list.workspaces.find((ws) =>
-            canon(`${parentDir(ws.notesDir)}/${ref}`) === canon(`${ws.notesDir}/${name}`)
-            && ws.notes.some((n) => n.name === name))
+          owner = workspaces.find((ws) => {
+            if (!ws.notes.some((n) => n.name === name)) return false
+            const target = canon(`${ws.notesDir}/${name}`)
+            return target !== null && workspaces.some((base) =>
+              canon(`${parentDir(base.notesDir)}/${ref}`) === target)
+          })
         } else {
+          // `<wsName>/…` fallback pick (no session root at pick time) — or a
+          // relative ref that does not start with `.` (target UNDER the
+          // session workspace, relFrom ups=0 yields `dir/.dsh-notes/<name>`).
+          // Try the workspace-name form first, then the generic relative
+          // resolution.
           const slash = ref.indexOf('/')
           const wsName = slash === -1 ? '' : ref.slice(0, slash)
           name = ref.slice(ref.lastIndexOf('/') + 1)
-          owner = list.workspaces.find((ws) => ws.name === wsName)
+          owner = workspaces.find((ws) => ws.name === wsName)
+          if (owner === undefined) {
+            owner = workspaces.find((ws) => {
+              if (!ws.notes.some((n) => n.name === name)) return false
+              const target = canon(`${ws.notesDir}/${name}`)
+              return target !== null && workspaces.some((base) =>
+                canon(`${parentDir(base.notesDir)}/${ref}`) === target)
+            })
+          }
         }
         const note = owner?.notes.find((n) => n.name === name)
         if (owner === undefined || note === undefined) {
