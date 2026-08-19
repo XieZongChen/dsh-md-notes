@@ -24,7 +24,7 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
-## NEXT_VERSION
+## [0.6.0] - 2026-08-20
 
 ### Added
 
