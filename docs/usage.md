@@ -55,17 +55,8 @@ confirmation (deleting cannot be undone).
 
 ### While a note is being written
 
-A note being written (saved, or appended from a conversation) is locked
-**across all sessions** — while it is being written:
-
-- its row shows a **loading spinner** instead of the delete button (you can
-  still click it to view);
-- the editor's **Edit** tab, **Update**, **Save** and **Push** are disabled and
-  the hint next to Update reads "**Writing file…**";
-- the **sidebar entry** shows a loading spinner with a "{count} note(s)
-  writing" tooltip (before the update-available tag).
-
-Everything restores automatically when the write finishes.
+While a note is being written (save / capture), that note **cannot be edited**
+(locked across sessions) until the write finishes.
 
 ## 3. Capturing a conversation into a note
 
