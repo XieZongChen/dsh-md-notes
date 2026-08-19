@@ -3,6 +3,36 @@
 > 未来功能规划清单，按优先级排序。每项实现后请移入 [CHANGELOG.md](../CHANGELOG.md)
 > （只记用户可见的功能性改动）。
 
+## dsh 兼容性（dsh 0.1.0-rc.7 → 0.1.0-rc.8，2026-08-20）
+
+**状态**：⏳ 待验证（兼容性检查 2026-08-20：rc.8 相对 rc.7 有 537 个提交，判为有影响待实测）。
+
+**受影响功能与影响范围**（符号级已确认兼容，运行时待实测）：
+
+- **已确认兼容**（静态比对 rc.7 vs rc.8）：
+  - host 侧契约零变更：`agent/pre-step`（`PreStepDecision`）、`contextProvenance`/`contextForm`
+    注入机制、`notesApiHandler` 契约、`dsh-host-webserver` 均无改动；
+  - client 关键契约保留：`createSnapshotStore` 签名一致、`InputTriggerServiceContract` 零 diff、
+    `MarkdownText`/`Modal`/图标组件保留、locale `TranslateNS` 保留；
+  - 插件 4 个 slot 注入点全部保留（`sidebar.footer.action` / `conversation.chat.assistant-actions`
+    / `shell.overlay` / `settings.section`）；ui-conversation slots 契约**纯新增**（attachment、
+    brand slots），无删改。
+- **待实测的风险点**（rc.8 触及插件子系统 / client 加载装配体系的重构）：
+  - **client 加载模型重构**：web 渲染改为动态插件（`ui-renderer`）、模块系统与包边界强制
+    （`verify-client-packages`）——插件 bundle 的加载/装配时序、HMR 行为可能变化；
+  - **附件 UI 插件化**：attachment 展示改为 slot 组合——插件若依赖 composer/消息渲染面
+    需确认无回归。
+
+**需要的动作**：在 deepseek-harness `0.1.0-rc.8` 环境实测插件全部功能
+（侧边栏入口、@ 引用候选/chip/注入、记入笔记、笔记管理器增删改查与预览、Git 同步、写锁互斥、
+设置面板），确认无回归后：① 更新 `docs/TODO.md` 本条状态为 ✅；② 更新 README 兼容性章节
+（已验证插件版本 0.6.0、已验证dsh版本 0.1.0-rc.8，中英同步）。
+
+**阻塞项 / 待验证**：插件是否在 rc.8 环境可安装加载（`dsh plugin add`）、三处 UI 是否正常装配、
+@ 引用注入是否生效。
+
+**验收标准**：插件全部功能在 rc.8 上行为正常；README 兼容性章节更新到 rc.8。
+
 ## 2. 笔记加入对话上下文（@ 引用）
 
 **状态**：✅ 已实现（0.4.0 + NEXT_VERSION）：`@` 候选/chip/跨工作区、序列化为标准 markdown
