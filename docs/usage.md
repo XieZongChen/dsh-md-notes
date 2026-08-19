@@ -53,6 +53,20 @@ Click **+** on a workspace row. A note is created with an auto title
 Hover a note in the list and click the 🗑 icon. A confirmation dialog asks for
 confirmation (deleting cannot be undone).
 
+### While a note is being written
+
+A note being written (saved, or appended from a conversation) is locked
+**across all sessions** — while it is being written:
+
+- its row shows a **loading spinner** instead of the delete button (you can
+  still click it to view);
+- the editor's **Edit** tab, **Update**, **Save** and **Push** are disabled and
+  the hint next to Update reads "**Writing file…**";
+- the **sidebar entry** shows a loading spinner with a "{count} note(s)
+  writing" tooltip (before the update-available tag).
+
+Everything restores automatically when the write finishes.
+
 ## 3. Capturing a conversation into a note
 
 Below any assistant answer, click the **notes icon** (next to the copy button).
@@ -61,10 +75,14 @@ A picker opens:
 1. Choose an existing note — the list shows **all workspaces' notes**, grouped
    by workspace (fold/collapse a workspace row to browse; the current
    workspace's notes are included), or create a new one on the spot with the
-   **+** button on any workspace row.
-2. Click **Write to note**. The user question + the answer are appended to the
-   note as a timestamped section (the picker closes itself ~1 second after a
-   successful write):
+   **+** button on any workspace row. A note that is currently being written
+   is **not selectable** (it shows a row loading) — writes are mutually
+   exclusive per note across sessions.
+2. Click **Write to note**. The question + answer text is captured from the
+   conversation itself (instant, no waiting) and appended to the note as a
+   timestamped section; while the write runs the button reads "Writing…", and
+   on success a green "Written ✓" appears left of the button before the picker
+   closes:
 
    ```markdown
    ---
