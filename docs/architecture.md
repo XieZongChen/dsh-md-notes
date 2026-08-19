@@ -111,7 +111,7 @@ dsh-md-notes/
 | `gitStatus` | `{ workspaceId? }` | `{ ok, status: { repoDir, subdir, branch, uncommitted, lastCommit?, remote } }` |
 | `gitInit` | `{ workspaceId? }` | `{ ok }`（按 URL clone） |
 | `gitPush` | `{ workspaceId?, message, overwrite? }` | `{ ok }` 或 `{ ok:false, code, changed? }` |
-| `gitPull` | `{ workspaceId?, force? }` | `{ ok, skipped?, changed? }` |
+| `gitPull` | `{ workspaceId?, force?, manual? }` | `{ ok, skipped?, changed? }`（manual=手动更新始终同步；自动拉取按远端提交领先短路，见 git.md §5.2） |
 | `gitSync` | `{ workspaceId? }` | `{ ok }`（合并远端，用户触发） |
 | `gitSettings` | — | `{ ok, settings }`（L3 原始值，设置表单用） |
 | `gitConfig` | 白名单 L3 keys | `{ ok }`（写设置） |

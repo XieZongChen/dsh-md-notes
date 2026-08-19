@@ -5,7 +5,8 @@
 
 ## 0. 实现状态
 
-> 最后更新 2026-08-19（复核：Git 功能自上次更新无变化）。✅ 已实现；🚧 设计已定、未实现；⏳ 待实测确认。
+> 最后更新 2026-08-20（复核：`gitPull` 语义更新——手动「更新」始终同步 clone→本地，自动拉取
+> 按远端提交领先短路；`manual` 参数区分两类调用，见 §5.2/§5.4）。✅ 已实现；🚧 设计已定、未实现；⏳ 待实测确认。
 
 ### 已实现
 
@@ -160,7 +161,7 @@ resolveNotesDir(ws) = <ws.path>/.dsh-notes        // 永远（笔记深度绑定
 |---|---|---|
 | `gitStatus` | `{ workspaceId? }` | 目标仓库状态：`{ ok, repoDir, subdir, branch, uncommitted, lastCommit?, remote }` |
 | `gitPush` | `{ workspaceId?, message }` | 把该工作区 `.dsh-notes` 的 `.md` 同步到仓库目标目录 → commit → push `branch` |
-| `gitPull` | `{ workspaceId? }` | 拉取远端分支 → 把目标目录 `.md` 复制回本地（**不覆盖本地已修改文件**） |
+| `gitPull` | `{ workspaceId?, force?, manual? }` | 拉取远端分支 → 把目标目录 `.md` 复制回本地。`manual`（手动更新）**始终同步**；自动拉取（manual=false）仅远端有**新提交**时同步（`rev-list` 领先判断在 checkout 之前），否则短路跳过。`force=false` 不覆盖本地已修改文件 |
 | `gitInit` | `{ workspaceId? }` | 按 URL 确保 clone 存在（缺 `.git` 时自动 `git clone`） |
 | `gitSync` | `{ workspaceId? }` | 用户触发：合并远端（`--allow-unrelated-histories` 兜底） |
 | `gitConfig` | 白名单 L3 keys | 保存设置（`gitMode`/`gitCentral`/`gitRepos`） |
@@ -172,7 +173,7 @@ resolveNotesDir(ws) = <ws.path>/.dsh-notes        // 永远（笔记深度绑定
 |---|---|---|
 | **保存** | 当前笔记写入本地 `<ws>/.dsh-notes/*.md` | 只写本地，不碰 git |
 | **推送** | 本地 `.dsh-notes` **镜像同步**到仓库目标目录（覆盖 + 删除本地已删文件）→ commit → push `branch`（先弹 commit 面板） | 首次自动 clone；推送前检测远端差异 |
-| **更新** | 先 `fetch` 对齐分支 → 目标目录 `.md` → 复制回本地 | 手动「更新」force 覆盖（确认后）；自动拉取保守跳过本地修改 |
+| **更新** | 先 `fetch` → 对齐分支 → 目标目录 `.md` 复制回本地 | 手动「更新」**始终同步**（`manual=true`，不受远端提交领先限制；clone 内容比本地新也能拉回）；自动拉取（`manual=false`）仅远端有**新提交**时同步 |
 
 > **冲突交用户决定**：
 > - 推送前检测到远端同名笔记不同/远端独有文件 → 弹页面内 Modal「远端有以下笔记与本地不同或
@@ -197,6 +198,9 @@ resolveNotesDir(ws) = <ws.path>/.dsh-notes        // 永远（笔记深度绑定
   拉取成功后重新 `list`，远端新增笔记立即出现在左侧面板。
 - 自动拉取失败/跳过（本地有修改）**不阻断打开**：显示提示，仍读取本地版本；
   同名内容不同时在更新按钮左侧提示「远端有更新，需手动更新」。
+- **远端无新提交时短路**：自动拉取（`manual=false`）用 `rev-list` 判断远端是否领先（在
+  checkout 对齐分支**之前**计算——对齐会把本地分支重置到远端 tip 使计数恒为 0）；无新提交
+  则跳过同步与提示（本地未推送的改动不算「远端更新」，不误报、不覆盖）。
 
 ### 5.5 dsh 设置面板「MD 笔记」分区
 
