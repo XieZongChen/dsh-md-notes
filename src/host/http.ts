@@ -50,7 +50,7 @@ export interface GitApi {
   status(repo: ResolvedRepo): Promise<GitStatusView>
   init(repo: ResolvedRepo): Promise<void>
   push(repo: ResolvedRepo, notesDir: string, message: string, overwrite: boolean): Promise<{ ok: boolean; error?: string; code?: string; changed?: string[] }>
-  pull(repo: ResolvedRepo, notesDir: string, force: boolean): Promise<{ ok: boolean; error?: string; skipped?: number; changed?: string[] }>
+  pull(repo: ResolvedRepo, notesDir: string, force: boolean, manual: boolean): Promise<{ ok: boolean; error?: string; skipped?: number; changed?: string[] }>
   sync(repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }>
 }
 
@@ -211,7 +211,9 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       if (notesDir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
       // Manual "Update" (force=true) pulls the remote version over local files;
       // the auto-pull on open omits force → conservative (never overwrites).
-      return deps.git.pull(repo, notesDir, req.force === true)
+      // `manual` distinguishes a user-initiated Update (always syncs) from the
+      // implicit auto-pull (short-circuits when the remote has no new commits).
+      return deps.git.pull(repo, notesDir, req.force === true, req.manual === true)
     }
     case 'gitSync': {
       // User-initiated conflict resolution after a rejected push.

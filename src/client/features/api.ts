@@ -120,8 +120,8 @@ export function gitPushApi(workspaceId: string | undefined, message: string, ove
  * locally-different files with the remote version; the auto-pull on open
  * omits it → conservative (never overwrites local changes).
  */
-export function gitPullApi(workspaceId: string | undefined, force?: boolean): Promise<ApiResult> {
-  return api('gitPull', workspaceId === undefined ? { force: force === true } : { workspaceId, force: force === true })
+export function gitPullApi(workspaceId: string | undefined, force?: boolean, manual?: boolean): Promise<ApiResult> {
+  return api('gitPull', workspaceId === undefined ? { force: force === true, manual: manual === true } : { workspaceId, force: force === true, manual: manual === true })
 }
 
 /** User-initiated conflict resolution: merge the remote into the local branch. */

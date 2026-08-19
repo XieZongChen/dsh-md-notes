@@ -211,7 +211,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const doUpdate = (wsId: string, force: boolean): void => {
     setUpdating(true)
     setGitMsg('')
-    void gitPullApi(wsId, force).then((res) => {
+    void gitPullApi(wsId, force, true).then((res) => {
       if (res.ok) {
         setRemoteChanged(null)
         refreshStatus(wsId)
@@ -237,7 +237,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     // whether to replace the local versions — never overwrite silently.
     setUpdating(true)
     setGitMsg('')
-    void gitPullApi(wsId, false).then((res) => {
+    void gitPullApi(wsId, false, true).then((res) => {
       if (!res.ok) {
         setGitMsg(gitErrorText(t, res.code, res.error))
         return

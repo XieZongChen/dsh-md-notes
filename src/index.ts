@@ -167,7 +167,7 @@ export function apply(ctx: Context, config: Config): void {
       name: readSettings().gitAuthorName ?? '',
       email: readSettings().gitAuthorEmail ?? '',
     }, overwrite),
-    pull: (repo, notesDir, force) => gitPull(ctx, repo, notesDir, force),
+    pull: (repo, notesDir, force, manual) => gitPull(ctx, repo, notesDir, force, manual),
     sync: (repo) => gitSync(ctx, repo),
   }
 

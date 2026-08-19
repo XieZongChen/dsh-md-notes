@@ -489,42 +489,49 @@ export async function gitPush(
 /**
  * Refresh a workspace's notes from the repo: ensure the branch is up to date
  * with the remote, then copy the repo's `<subdir>` `.md` notes back into the
- * local notes dir. `force` distinguishes the two callers:
- * - manual "Update" button → force = true: the remote version wins, replacing
- *   a locally-different file (the user explicitly asked to pull remote notes);
- * - auto-pull on open → force = false: conservative, never overwrites a
- *   locally-modified file; `changed` reports notes that exist on BOTH sides
- *   with different content (a conflict the user should resolve manually).
+ * local notes dir.
+ *
+ * `force` controls overwrite: true = the remote/clone version wins (the user
+ * explicitly confirmed overwriting a locally-different file); false =
+ * conservative — a locally-different file is skipped and reported in
+ * `skipped`/`changed`.
+ *
+ * `manual` distinguishes a user-initiated Update from the implicit auto-pull
+ * on open: a manual Update ALWAYS syncs the clone into the local dir (the user
+ * asked for exactly that), while auto-pull short-circuits when the remote has
+ * no new commits (no needless fetch/sync, and no false "remote updated" hint
+ * for a mere unpushed local edit). The short-circuit must NOT apply to a
+ * manual update: the clone can hold newer content than the local dir even when
+ * its git branch already matches origin (e.g. the local file was reverted
+ * after a push), and that is exactly what the user wants pulled back.
  */
 export async function gitPull(
-  ctx: Context, repo: ResolvedRepo, notesDir: string, force: boolean,
+  ctx: Context, repo: ResolvedRepo, notesDir: string, force: boolean, manual = false,
 ): Promise<{ ok: boolean; code?: string; error?: string; skipped?: number; changed?: string[] }> {
   await gitInit(ctx, repo, repo.branch)
   const fetch = await fetchOrigin(ctx, repo)
   if (fetch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${fetch.stderr || fetch.stdout}` }
-  // Does the remote actually have new commits? Judged by git refs (fetch has
-  // moved origin/<branch> to the remote tip), NOT by content diff — a local
-  // edit that was never pushed differs from the clone without the remote
-  // having any update, and must not be reported as "remote updated".
-  //
-  // MUST run before checkoutBranch: `checkout -B branch origin/branch` resets
-  // the local branch onto the remote tip, which would make this count always
-  // zero and silently skip every pull.
-  const ahead = await runGit(ctx, repo.repoDir, ['rev-list', '--count', `${repo.branch}..origin/${repo.branch}`])
-  const remoteAhead = ahead.code === 0 && Number(ahead.stdout.trim()) > 0
-  if (!remoteAhead) {
-    // Remote has no new commits: any local-vs-clone difference is an unpushed
-    // local edit. Copy nothing and overwrite nothing (a manual Update must
-    // not roll the local edit back to the older mirror content) and surface
-    // no "remote updated" hint.
-    return { ok: true, skipped: 0, changed: force ? undefined : [] }
+  if (!manual) {
+    // Auto-pull only: does the remote actually have new commits? Judged by git
+    // refs (fetch has moved origin/<branch> to the remote tip), NOT by content
+    // diff — a local edit that was never pushed differs from the clone without
+    // the remote having any update, and must not be reported as "remote updated".
+    //
+    // MUST run before checkoutBranch: `checkout -B branch origin/branch` resets
+    // the local branch onto the remote tip, which would make this count always
+    // zero and silently skip every pull.
+    const ahead = await runGit(ctx, repo.repoDir, ['rev-list', '--count', `${repo.branch}..origin/${repo.branch}`])
+    const remoteAhead = ahead.code === 0 && Number(ahead.stdout.trim()) > 0
+    if (!remoteAhead) {
+      return { ok: true, skipped: 0, changed: force ? undefined : [] }
+    }
   }
   const branch = await checkoutBranch(ctx, repo)
   if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
   const target = repoTargetDir(repo)
   const { skipped } = await syncNotes(target, notesDir, force)
-  // In the conservative (auto-pull) path, notes differing on both sides were
-  // skipped — surface them so the UI can hint that a manual update is needed.
+  // In the conservative path, notes differing on both sides were skipped —
+  // surface them so the UI can hint that a manual update is needed.
   const changed = force ? undefined : await changedNotes(target, notesDir)
   return { ok: true, skipped, changed }
 }
