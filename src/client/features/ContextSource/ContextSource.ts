@@ -314,10 +314,13 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
       const sessionRoot = sessionWs !== undefined && typeof sessionWs.notesDir === 'string'
         ? parentDir(sessionWs.notesDir)
         : undefined
-      const dir = ref.ws.notesDir.split('/').filter(Boolean).pop() ?? '.dsh-notes'
+      // Fallback when the session workspace is unknown (its list fetch never
+      // settled): use the ABSOLUTE note path (directory name, never the title
+      // — a workspace title can be renamed while its directory stays fixed, so
+      // a title-derived path would point at a nonexistent location).
       const path = sessionRoot !== undefined
         ? relFrom(sessionRoot, refPath(ref.ws, ref.note))
-        : `${ref.ws.name}/${dir}/${ref.note.name}`
+        : refPath(ref.ws, ref.note)
       const insert: ReferenceInsert = {
         source: NOTES_SOURCE,
         ref: path,
