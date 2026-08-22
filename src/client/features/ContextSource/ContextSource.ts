@@ -19,7 +19,7 @@ import type {
   InputTriggerCandidate, InputTriggerSource, ReferenceInsert,
 } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { NoteSummary, WorkspaceNotes } from '../api.ts'
+import type { ApiResult, NoteSummary, WorkspaceNotes } from '../api.ts'
 import { api } from '../api.ts'
 
 /** Source identity: the menu group title and the chip `source` field. */
@@ -182,6 +182,37 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
     return promise
   }
 
+  /**
+   * Fetch (and cache) the full cross-workspace list. Unlike `fetchCurrent`,
+   * this has no session key and backs the fuzzy workspace rows + cross-workspace
+   * path resolution. A short TTL stops the `@` menu from re-reading every
+   * workspace's notes on each keystroke (the host `list` walks each notes dir)
+   * while staying fresh across separate `@` sessions. As with `fetchCurrent`,
+   * the shared promise is NOT bound to any per-call signal; callers check
+   * `signal.aborted` after awaiting.
+   */
+  const ALL_TTL_MS = 3000
+  let allFetch: Promise<ApiResult> | null = null
+  let allSettled: { at: number; workspaces: WorkspaceNotes[] } | null = null
+  const fetchAll = (): Promise<ApiResult> => {
+    if (allSettled !== null && Date.now() - allSettled.at < ALL_TTL_MS) {
+      return Promise.resolve({ ok: true, workspaces: allSettled.workspaces })
+    }
+    if (allFetch !== null) return allFetch
+    const promise = api('list')
+    allFetch = promise
+    promise.then(
+      (res) => {
+        if (allFetch === promise) allFetch = null
+        if (res.ok && res.workspaces !== undefined) allSettled = { at: Date.now(), workspaces: res.workspaces }
+      },
+      () => {
+        if (allFetch === promise) allFetch = null
+      },
+    )
+    return promise
+  }
+
   /** Candidate rows for one workspace, filtered by title/name substring. */
   const rowsFor = (
     ws: WorkspaceNotes, query: string, crossWs: boolean,
@@ -223,7 +254,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
         // Warm the session's own workspace list in parallel so a pick can
         // compute the session-relative path (settled backs onPick).
         const [all, _sessionWs] = await Promise.all([
-          api('list', undefined, signal),
+          fetchAll(),
           fetchCurrent(session.sessionId),
         ])
         if (signal.aborted) return []
@@ -244,7 +275,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
       }
 
       // Bare partial name (or just `@`): fuzzy workspace rows + current notes.
-      const all = await api('list', undefined, signal)
+      const all = await fetchAll()
       if (signal.aborted) return []
       if (!all.ok || all.workspaces === undefined) return []
       if (all.workspaces.some((w) => typeof w.notesDir !== 'string' || w.notesDir === '')) {
@@ -419,6 +450,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
       // Fire-and-forget scope-birth prewarm; the shared fetch reports
       // through candidates.
       void fetchCurrent(session.sessionId).catch(() => {})
+      void fetchAll().catch(() => {})
     },
     lexicon(session) {
       const ws = settled.get(session.sessionId)?.[0]
@@ -445,6 +477,8 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
       lexiconListeners.clear()
       candidateRefs.clear()
       candidateWorkspaces.clear()
+      allFetch = null
+      allSettled = null
     },
   }
 }
