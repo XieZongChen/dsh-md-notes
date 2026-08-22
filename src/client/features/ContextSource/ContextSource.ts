@@ -325,6 +325,13 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
         source: NOTES_SOURCE,
         ref: path,
         label: chipLabel(candidate.name),
+        // Reserved out-of-band `appearance`: dsh renders the chip's domain
+        // glyph through ReferenceIcon, which only knows the three built-in
+        // kinds. A custom value keeps `data-reference-appearance="notes"` on
+        // the chip — the exact scope our global stylesheet uses to paint the
+        // plugin logo — while ReferenceIcon renders nothing for it (no default
+        // arm). The `as unknown as 'file'` satisfies the closed union type.
+        appearance: 'notes' as unknown as 'file',
         clipboardText: ref.crossWs ? `@${ref.ws.name}/${candidate.name}` : `@${candidate.name}`,
       }
       return { insert }

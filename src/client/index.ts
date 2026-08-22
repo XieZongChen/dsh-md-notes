@@ -27,6 +27,7 @@ import { NotePicker } from './features/NotePicker/NotePicker.tsx'
 import { NotesManager } from './features/NotesManager/NotesManager.tsx'
 import { SettingsSection } from './features/Settings/SettingsSection.tsx'
 import { createNotesSource } from './features/ContextSource/ContextSource.ts'
+import { ICON_URL } from './features/api.ts'
 
 export const inject = ['slots', 'locale']
 
@@ -67,6 +68,39 @@ export function apply(ctx: ClientContext): void {
   const tracker = createBusyTracker(store)
   const t = ctx.locale.bind('md-notes')
   ctx.effect(() => ctx.locale.register('md-notes', { zh, en }), 'dsh-md-notes: locale dicts')
+
+  // Note-reference chip logo: paint the plugin icon as the chip's domain
+  // glyph. The notes `@` source sets a reserved `appearance` value 'notes', so
+  // this selector matches only note chips — never ui-reference's file/session
+  // chips (which use the built-in 'file'/'session' kinds). The chip's leading
+  // `@` is transparent (it only reserves the icon's advance), and ReferenceIcon
+  // renders nothing for the unknown kind, so the logo below fills that slot.
+  ctx.effect(() => {
+    const tag = document.createElement('style')
+    tag.dataset.plugin = 'dsh-md-notes'
+    tag.dataset.pluginCss = 'dsh-md-notes/context-chip'
+    tag.textContent = [
+      // The chip's leading '@' (transparent) reserves its glyph advance and
+      // the title starts right after it. The logo is absolutely centered over
+      // that advance. NOTE: keep the width close to the '@' advance (~10px at
+      // 16px font) or the logo crowds the title; and do NOT add margin/padding
+      // to the chip's elements — that shifts the backdrop away from the
+      // textarea's caret (the inline-backdrop invariant). Tune the vertical
+      // offset via `top` / `translateY` only.
+      "[data-decoration='chip'][data-reference-appearance='notes'] > span:first-child::after {",
+      "  content: '';",
+      '  position: absolute;',
+      '  top: 50%;',
+      '  left: 50%;',
+      '  transform: translate(-50%, -50%);',
+      '  width: 12px;',
+      '  height: 12px;',
+      `  background: url('${ICON_URL}') center / contain no-repeat;`,
+      '}',
+    ].join('\n')
+    document.head.appendChild(tag)
+    return () => { tag.remove() }
+  }, 'dsh-md-notes: context chip stylesheet')
 
   // Session title for the append section heading — read from the client-side
   // sessions list (in-memory, no host round-trip), see docs/context.md.
