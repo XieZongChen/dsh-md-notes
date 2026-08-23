@@ -1,6 +1,6 @@
 {
   "name": "dsh-md-notes",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "MD 笔记插件：侧边栏笔记管理入口（列表/编辑/预览）+ 回答下方记入笔记，笔记存于工作区 .dsh-notes/",
   "homepage": "https://github.com/XieZongChen/dsh-md-notes",
   "repository": {

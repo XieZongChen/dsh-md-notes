@@ -24,6 +24,34 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## [0.7.0] - 2026-08-23
+
+### Added
+
+- **Notes-manager panel redesign**: each workspace row in the manager's left
+  panel gains a **Git sync card** (branch / subpath / last commit / "Synced" or
+  "N unpushed" status, update/push actions), layered above the note actions;
+  the header adds a global Git summary line (`{ws} workspaces · {pending} to
+  sync`). See
+  [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+- **Note-reference chip shows the plugin logo**: the chip in the chat input now
+  leads with the plugin icon (keeping the `appearance='notes'` scope). See
+  [User guide §4.1 — Picking a note](docs/usage.md#41-picking-a-note).
+- **`meta.json` is rebuilt automatically when missing**: the cache is
+  reconstructed from note titles and file mtimes — no manual repair needed. See
+  [User guide §1 — Where your notes live](docs/usage.md#1-where-your-notes-live).
+
+### Fixed
+
+- **Shared-repo Git status and commits are isolated per workspace subdirectory**:
+  cross-workspace status/commit bleed in shared-repo mode is fixed. See
+  [User guide §5 — Git sync](docs/usage.md#5-git-sync-optional).
+- **Unpushed count on the Git card is now correct**: it is computed from the
+  local-vs-repo difference (`unpushed`), no longer misreported.
+- **`@` reference path falls back to the title**: references no longer point at
+  a missing location after a workspace rename. See
+  [User guide §4.2 — Referencing notes from other workspaces](docs/usage.md#42-referencing-notes-from-other-workspaces).
+
 ## [0.6.0] - 2026-08-20
 
 ### Added
