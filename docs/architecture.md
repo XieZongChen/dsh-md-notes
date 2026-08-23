@@ -37,6 +37,9 @@ dsh-md-notes/
 │   ├── architecture.md    # 本文档（架构设计）
 │   ├── git.md             # Git 同步设计（v4 模型）
 │   ├── context.md         # 笔记引用进对话上下文设计（已实现）
+│   ├── state.md           # 状态管理总纲（分层/选型/异步跟踪）
+│   ├── write-lock.md      # 笔记写入互斥（写锁）方案（已实现）
+│   ├── manager-redesign.md# 笔记面板改版方案（0.7.0 已实现 P0）
 │   └── TODO.md            # 功能规划（待办）
 ├── scripts/
 │   └── link-deps.mjs     # 开发期链接 deepseek-harness checkout 类型
@@ -44,7 +47,8 @@ dsh-md-notes/
     ├── index.ts          # host 插件入口（name/inject/Config/apply，纯装配）
     ├── host/
     │   ├── notes.ts      # 笔记领域逻辑（目录/元数据/各操作方法）
-    │   ├── git.ts        # Git 领域逻辑（runGit/仓库解析/同步/冲突检测）
+    │   ├── git.ts        # Git 领域逻辑（runGit/仓库解析/同步/冲突检测/隔离）
+    │   ├── keyed-lock.ts # 通用键控写锁（write/append/delete 跨会话互斥，返回 note-writing）
     │   ├── settings.ts   # L3 settings 命名空间（schema + mergeSettings）
     │   ├── context-inject.ts # agent/pre-step 笔记内容注入（模型请求前折叠笔记内容）
     │   └── http.ts       # HTTP 工具 + 路由 handler 组装（notes + git 分发）
@@ -52,7 +56,9 @@ dsh-md-notes/
         ├── index.ts     # 入口（组装层，无 JSX）：apply + slot 注册 + NotesOverlay
         └── features/
             ├── api.ts            # Host HTTP API 封装 + gitErrorText（错误码→i18n）+ checkUpdateApi
-            ├── store.ts          # NotesStore（pub/sub 共享状态）
+            ├── store.ts          # NotesStore（createSnapshotStore 共享状态）
+            ├── busy.ts           # BusyTracker（通用异步任务跟踪，域前缀 note/<ws>/<name>）
+            ├── note-text.ts      # 记入笔记文本提取（从浏览器会话快照，与复制按钮同源）
             ├── update.ts         # useUpdateAvailable（npm 版本检测，模块级共享缓存）
             ├── markdown.ts       # 共享小工具（fmtTime；渲染已改用 dsh MarkdownText）
             ├── locales/          # i18n：zh.ts（源字典）/ en.ts（同键映射）+ LocaleNamespaceMap 合并
@@ -64,7 +70,7 @@ dsh-md-notes/
             ├── NotesEntry/       # 侧边栏入口
             ├── NoteAction/       # 记入笔记图标
             ├── NotePicker/       # 记入笔记弹窗
-            ├── NotesManager/     # 笔记管理面板（列表 + 编辑器 + Git 同步区 + 冲突确认 Modal）
+            ├── NotesManager/     # 笔记管理面板（列表 + 编辑器 + 工作区 Git 卡片 + 全局状态行）
             ├── ContextSource/    # @ 引用 source（ui-input-trigger：candidates/onPick/codec）
             └── Settings/         # dsh 设置面板「MD 笔记」分区（SettingsSection + css）
 ```
@@ -90,6 +96,10 @@ dsh-md-notes/
 - 上下文注入 `host/context-inject.ts`：监听 `agent/pre-step`，扫描已认领消息中的笔记路径
   （`.dsh-notes/…` 正则提取，相对会话 cwd 解析），读取内容并作为注入上下文消息
   （`source.kind: 'md-notes'`）折叠进模型请求——引用可靠生效，不依赖模型自觉 `read`。
+- **写锁（host）**：`host/keyed-lock.ts` 实现通用 `KeyedLock`（键 = `note/<workspaceId>/<name>`），
+  `write` / `appendConversation` / `delete` 三操作写入期间跨会话互斥，冲突返回错误码
+  `note-writing`；client 端用 `busy.ts` 的 `BusyTracker` 镜像（`store.busy`）联动三处 UI。
+  详见 [write-lock.md](write-lock.md) 与 [state.md](state.md)。
 - **错误码协议**：git 操作失败返回 `{ ok: false, code, error }`（如 `no-repo`、`sync-branch`、
   `git-failed`、`identity`、`remote-changed`、`non-fast-forward`），`error` 为英文 detail；
   client 用 `gitErrorText` 按 `code` 渲染本地化文案。
@@ -108,7 +118,7 @@ dsh-md-notes/
 | `create` | `{ workspaceId?, title }` | `{ ok, name }`（空标题自动用 Untitled note） |
 | `delete` | `{ workspaceId?, name }` | `{ ok, name }` |
 | `appendConversation` | `{ noteName, questionText, answerText, sessionTitle? }` | `{ ok, name }`（文本由 client 从会话快照提取，host 只写文件） |
-| `gitStatus` | `{ workspaceId? }` | `{ ok, status: { repoDir, subdir, branch, uncommitted, lastCommit?, remote } }` |
+| `gitStatus` | `{ workspaceId? }` | `{ ok, status: { repoDir, subdir, branch, uncommitted, unpushed, lastCommit?, remote } }`（`unpushed` 0.7.0 新增，本地与仓库差异数） |
 | `gitInit` | `{ workspaceId? }` | `{ ok }`（按 URL clone） |
 | `gitPush` | `{ workspaceId?, message, overwrite? }` | `{ ok }` 或 `{ ok:false, code, changed? }` |
 | `gitPull` | `{ workspaceId?, force?, manual? }` | `{ ok, skipped?, changed? }`（manual=手动更新始终同步；自动拉取按远端提交领先短路，见 git.md §5.2） |
@@ -130,13 +140,12 @@ dsh-md-notes/
   `ctx.get('inputTriggers')?.registerSource(...)`（挂 `ctx.effect`，HMR 安全）注册
   `trigger: '@'`、`name: 'notes'` 的引用源：`candidates` 默认取当前会话工作区笔记、
   部分工作区名出现模糊**工作区行**（`{ text }` 自动补全 `@工作区名/` + re-track 重触发）
-  切换跨工作区（中文名已支持，仅空格受限，见 TODO 2.3）；`onPick` 返回 `ReferenceInsert`
+  切换跨工作区（中文名已支持，仅空格受限，见 [context.md](context.md) §3.2）；`onPick` 返回 `ReferenceInsert`
   （`ref` = **会话工作区相对路径**：同工作区 `.dsh-notes/xxx.md`、跨工作区 `../<目录>/…`，
   `label` = 前置截断标题）；`codec.serialize` 提交时校验笔记仍存在并输出**标准 markdown
   链接** `[标题](路径)`，失效则抛本地化错误阻断发送；
   `warm`/`lexicon`/`subscribeLexicon` 提供纯文本装饰热快照。无 `inputTriggers` 时特性静默
   禁用（console.warn）。序列化格式与交互细节见 [context.md](context.md)。
-  序列化格式与交互细节见 [context.md](context.md)。
 - **i18n**：所有 UI 文案在 `features/locales/`（`zh.ts` 源字典、`en.ts` 映射类型强制同键，
   `LocaleNamespaceMap` 合并 `md-notes` 命名空间）；组件用 `t(key, params)` 读取，随 dsh 语言
   自动重渲染；host 错误经 `gitErrorText(t, code, detail)` 本地化。占位符用 `{name}` 模板。

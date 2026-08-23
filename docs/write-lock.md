@@ -1,7 +1,9 @@
 # 记入笔记异步写锁方案（docs/write-lock.md）
 
-> 状态：方案（待实现）。配套抽象见 [state.md](state.md) —— 本文是其中「异步操作状态跟踪」
-> 模式的第一个落地实例。
+> 状态：✅ **已实现（0.6.0）**。host 通用 `KeyedLock`（`host/keyed-lock.ts`，write /
+> appendConversation / delete 三操作互斥，冲突返回 `note-writing`）+ client 通用 busy 切片
+> （`store.busy` + `BusyTracker`，见 [state.md](state.md) §4）。本文件保留方案原文
+> （目标 / UI 联动 / 状态模型），实现与方案一致。
 
 ## 1. 背景与目标
 

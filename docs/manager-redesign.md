@@ -4,6 +4,13 @@
 >
 > 设计参考：`markdown-notes-manager-design` 系列程序化设计稿（浅色 + `--dark` 深色两版，含状态色、三栏布局、全宽工具栏等）。
 
+## 0. 实现状态
+
+> ✅ **P0（层级分离）已实现（0.7.0）**：工作区 Git 同步卡片 + 编辑器工具栏去 Git + 底部
+> 全局 Git 汇总行（§4.1–4.5 + §4.7 + §5）已落地于 `NotesManager.tsx`。P1（搜索框 /
+> 快捷访问空态）与 P2（右栏 TOC / 反链 / 冲突对比）仍为预留，见 [TODO.md](TODO.md) 3.x。
+> 已实现细节以 [features.md](features.md) / [git.md](git.md) 为准；本文保留原方案供对照。
+
 ## 1. 背景与问题
 
 现状（`src/client/features/NotesManager/NotesManager.tsx`）：
@@ -68,7 +75,7 @@
 - **去掉**：绿色「已连接」git chip。
 
 ### 4.6 右栏（预留）
-- 「本文目录」「谁引用了它」——未来 TODO 4.2 / 4.3。
+- 「本文目录」「谁引用了它」——未来 TODO 3.2 / 3.3。
 - 本次只占位，且**顶部对齐正文 h1**，不顶到面板顶部。
 
 ### 4.7 底部状态栏（`.syncLine` → 全局）
@@ -97,13 +104,13 @@
 |---|---|---|
 | `dirty`（未保存） | `NotesManager` 本地 state | `content` vs 上次保存快照比对；切换 / 关闭前提醒（未来 5.3） |
 | 全局未推送计数 | `NotesManager` `useMemo` | 由 `statusByWs` 聚合求和，不改 store |
-| 快捷访问 / 搜索 / TOC / 反链 | 未来 | 见 TODO 4.x，本次只占位 |
+| 快捷访问 / 搜索 / TOC / 反链 | 未来 | 见 TODO 3.x，本次只占位 |
 
 ## 7. 分阶段落地
 
 1. **P0（核心层级分离）**：§4.1–4.5 + §4.7 + §5，改动集中在 `NotesManager.tsx` + `notes-manager.module.css`。
 2. **P1**：搜索框 UI + 快捷访问空态 + 底部全局计数（真实数据 + 预留位）。
-3. **P2**：右栏 TOC / 反链、Git 冲突并排对比（依赖 host 新 API，按 TODO 3 / 4 单独排期）。
+3. **P2**：右栏 TOC / 反链、Git 冲突并排对比（依赖 host 新 API，按 TODO 2 / 3 单独排期）。
 
 ## 8. 涉及文件
 

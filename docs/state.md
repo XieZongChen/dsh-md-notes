@@ -132,7 +132,7 @@ interface BusyTracker {
 | context-inject per-session 缓存 | L3 | host 闭包 Map | 引用注入去重 |
 | 笔记写互斥锁 `KeyedLock` | L3 | apply 闭包（`src/host/keyed-lock.ts`） | 进程内按 key 互斥，写锁的权威层（client busy 只是镜像） |
 
-## 7. 未来状态预分配（TODO 4.x）
+## 7. 未来状态预分配（TODO 3.x）
 
 | 功能 | 状态 | 层/机制 |
 |---|---|---|

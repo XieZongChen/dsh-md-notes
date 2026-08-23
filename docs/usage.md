@@ -18,7 +18,8 @@ them, and — optionally — back them up / sync them with a Git repository.
 - Each note is a plain `.md` file. Open and edit it with any editor — the
   plugin picks up your changes the next time it reads the file.
 - `meta.json` in the same folder is just a cache of titles/timestamps; ignore
-  it (it's never committed to Git).
+  it (it's never committed to Git). If it goes missing it is **rebuilt
+  automatically** from note titles and file mtimes.
 
 > Notes are **workspace-bound**: without a workspace there's nowhere to store
 > them — create a workspace in the dsh sidebar first.
@@ -30,11 +31,14 @@ opens with two columns:
 
 - **Left — note list**, grouped by workspace. Each workspace row has a folder
   icon, a collapse arrow, and a **+** button to create a note in that
-  workspace (with Git enabled it also carries update/push icon buttons — see
-  [§5](#5-git-sync-optional)).
+  workspace. With Git enabled, each workspace group also shows a **Git sync
+  card** below its note list (status "Synced" / "N unpushed" + update/push
+  buttons — see [§5](#5-git-sync-optional)).
 - **Right — note content**, with **Preview / Edit** tabs and a **Save** button.
   **Clicking an existing note opens Preview by default**; a newly created note
   opens directly in Edit mode.
+- **Bottom — global Git status line**: cross-workspace summary ("N unpushed ·
+  X workspaces · Y to sync").
 
 ### Creating a note
 
@@ -97,7 +101,8 @@ the model can see and cite the note without you having to tell it to read files.
 
 1. Type `@` → the candidate menu lists notes of the **current workspace**
    (📝 prefix; the title is the primary row, the file name the secondary line).
-2. Select with arrows / click → a note chip appears; keep typing `@` to add more.
+2. Select with arrows / click → a note chip appears (leading with the plugin
+   icon); keep typing `@` to add more.
 3. Keep typing to **filter** the candidates (by title or file name).
 
 ### 4.2 Referencing notes from other workspaces
@@ -165,8 +170,7 @@ In the settings panel (see [§6](#6-the-settings-panel)), pick a mode:
 
 ### 5.2 Pushing notes
 
-1. Open any note and click **Push** (next to Save) — or click the **push icon**
-   on a workspace row in the note list.
+1. Open the notes manager and click **Push** on the workspace's **Git sync card**.
 2. A small panel asks for a commit message (default "Notes update <time>").
    Confirm to commit & push.
 3. First push clones the repository automatically (credentials come from git
@@ -184,8 +188,8 @@ difference it asks:
 
 ### 5.3 Updating notes (pulling)
 
-Click **Update** (above the editor, or the **update icon** on a workspace row)
-   to pull the remote version of the notes down:
+Click **Update** on the workspace's **Git sync card** to pull the remote
+version of the notes down:
 
 - If the remote has **new notes** you don't have → they're pulled in and the
   list refreshes automatically.
@@ -202,8 +206,8 @@ Click **Update** (above the editor, or the **update icon** on a workspace row)
 
 When you open a note, the plugin (if `gitAutoPull` is on) silently pulls the
 remote first — **without overwriting** anything you've edited locally. If the
-remote has notes that conflict with local ones, it shows a hint next to the
-**Update** button: "Remote has updates — update manually." Click **Update** to
+remote has notes that conflict with local ones, it shows a hint on the Git
+sync card: "Remote has updates — update manually." Click **Update** to
 resolve.
 
 ### 5.5 When a push is rejected
