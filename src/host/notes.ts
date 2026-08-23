@@ -63,8 +63,31 @@ export async function listNotes(dir: string): Promise<{ ok: true; notes: NoteSum
     entries = []
   }
   const meta = await readMeta(dir)
-  const notes = entries
-    .filter((n) => n.endsWith('.md'))
+  const names = entries.filter((n) => n.endsWith('.md'))
+  // Rebuild missing cache entries from the note's `# heading` + file mtime, so a
+  // freshly cloned / git-pulled workspace (no meta.json) still lists accurate
+  // titles and a sane updatedAt — without committing meta.json to git. One-time
+  // cost: after this pass the rebuilt meta.json backs every later list.
+  let dirty = false
+  for (const n of names) {
+    if (meta[n] !== undefined) continue
+    let title = n.replace(/\.md$/i, '')
+    let updatedAt = 0
+    try {
+      const [content, st] = await Promise.all([
+        readFile(join(dir, n), 'utf8'),
+        stat(join(dir, n)),
+      ])
+      title = titleOf(content, n.replace(/\.md$/i, ''))
+      updatedAt = st.mtimeMs
+    } catch {
+      // unreadable → keep the filename fallback + 0
+    }
+    meta[n] = { title, updatedAt }
+    dirty = true
+  }
+  if (dirty) await writeMeta(dir, meta)
+  const notes = names
     .map((n) => ({
       name: n,
       title: meta[n]?.title ?? n.replace(/\.md$/i, ''),
