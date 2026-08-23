@@ -102,6 +102,23 @@ export function apply(ctx: ClientContext): void {
     return () => { tag.remove() }
   }, 'dsh-md-notes: context chip stylesheet')
 
+  // Sidebar footer entry: the notes entry owns its full-width top row by making
+  // its direct flex parent wrap. Scoped via `:has(> [data-md-notes-entry])` to
+  // the footer-actions container only — no inline styles on any ancestor (the
+  // old ancestor walk wrote flex-wrap onto SidebarRoot and broke the sidebar).
+  ctx.effect(() => {
+    const tag = document.createElement('style')
+    tag.dataset.plugin = 'dsh-md-notes'
+    tag.dataset.pluginCss = 'dsh-md-notes/sidebar-entry'
+    tag.textContent = [
+      '*:has(> [data-md-notes-entry]) {',
+      '  flex-wrap: wrap;',
+      '}',
+    ].join('\n')
+    document.head.appendChild(tag)
+    return () => { tag.remove() }
+  }, 'dsh-md-notes: sidebar entry stylesheet')
+
   // Session title for the append section heading — read from the client-side
   // sessions list (in-memory, no host round-trip), see docs/context.md.
   const getSessionTitle = (sessionId: string): string => {

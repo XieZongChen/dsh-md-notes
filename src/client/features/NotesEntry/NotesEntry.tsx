@@ -2,8 +2,9 @@
  * Sidebar footer entry: notes icon opens the notes manager. Rendered in
  * `sidebar.footer.action`; mirrors the Settings trigger geometry (34px compact
  * row / 36px rail circle, 12px radius, interactive hover fill, 14/22 text on
- * primary ink) so the footer reads as one row. Forces the direct footer flex
- * container to wrap so this entry occupies its own full-width top row.
+ * primary ink) so the footer reads as one row. Owns its full-width top row via
+ * a `data-md-notes-entry` marker + an injected `:has()` rule — no inline styles
+ * are ever written onto any ancestor.
  * @module dsh-md-notes/client/NotesEntry
  */
 
@@ -38,24 +39,8 @@ export function NotesEntry(props: NotesEntryProps): React.ReactElement {
     store.subscribe,
     () => busyCount(store.getSnapshot()),
   )
-  const rowRef = React.useRef<HTMLDivElement | null>(null)
-
-  React.useEffect(() => {
-    const el = rowRef.current
-    if (!el) return
-    // Scope to the direct flex parent (the footer-actions row) only. The
-    // previous ancestor walk also wrote `flex-wrap: wrap` onto SidebarRoot and
-    // the outer `data-slot="sidebar"` container, which widened the whole
-    // sidebar and clipped its right edge for long session titles.
-    const parent = el.parentElement
-    if (parent === null) return
-    const prev = parent.style.flexWrap
-    parent.style.flexWrap = 'wrap'
-    return () => { parent.style.flexWrap = prev }
-  }, [])
-
   return (
-    <div ref={rowRef} className={styles.notesRow}>
+    <div className={styles.notesRow} data-md-notes-entry="">
       <button
         type="button"
         className={wide ? styles.entry : `${styles.entry} ${styles.entryRail}`}
