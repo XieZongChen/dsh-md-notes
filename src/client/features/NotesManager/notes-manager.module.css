@@ -368,10 +368,10 @@
   font-size: 12px;
 }
 
-/* Git sync buttons (editor head + manager head). */
+/* Git sync buttons (workspace Git card). */
 .gitBtn {
   flex: none;
-  height: 28px;
+  height: 32px;
   padding: 0 12px;
   border: 1px solid var(--dsw-alias-border-l2, #ddd);
   border-radius: 8px;
@@ -393,12 +393,11 @@
   cursor: default;
 }
 
-/* Primary action button (保存 / 提交并推送) — same geometry as .gitBtn so
-   the editor-head trio reads as one row. */
+/* Primary action button (保存 / 提交并推送). */
 .saveBtn {
   flex: none;
-  height: 28px;
-  padding: 0 14px;
+  height: 32px;
+  padding: 0 16px;
   border: none;
   border-radius: 8px;
   background: var(--dsw-alias-button-primary-fill, var(--dsw-alias-brand-primary, #4a7bff));
@@ -534,4 +533,186 @@
 }
 .wsIconBtn:hover {
   color: var(--dsw-alias-brand-primary, #4a7bff);
+}
+
+/* Workspace-row note count (muted caption). */
+.wsCount {
+  flex: none;
+  margin-left: 4px;
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+/* Git sync card (workspace-level) — scope-separated from the note editor. */
+.gitCard {
+  margin: 2px 2px 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--dsw-alias-border-l2, #ddd);
+  border-radius: 10px;
+  background: var(--dsw-alias-bg-base, #fff);
+}
+
+.gitCardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gitCardTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary, #222);
+}
+
+.gitPillSynced,
+.gitPillUnpushed {
+  flex: none;
+  font-size: 11px;
+  line-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.gitPillSynced {
+  color: var(--dsw-alias-state-success-primary, #2e8b57);
+  background: var(--dsw-alias-state-success-bg, rgba(46, 139, 87, 0.12));
+}
+
+.gitPillUnpushed {
+  color: var(--dsw-alias-state-warning-primary, #b7791f);
+  background: var(--dsw-alias-state-warning-bg, rgba(183, 121, 31, 0.12));
+}
+
+.gitCardRows {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gitCardRow {
+  font-size: 11px;
+  color: var(--dsw-alias-label-secondary, #888);
+}
+
+.gitCardHint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--dsw-alias-state-warning-primary, #b7791f);
+}
+
+.gitCardPush {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.gitCardPush input {
+  flex: 1;
+  min-width: 0;
+}
+
+.gitCardPushBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, #888);
+  cursor: pointer;
+}
+.gitCardPushBtn:hover {
+  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.15));
+  color: var(--dsw-alias-label-primary, #222);
+}
+.gitCardPushBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.gitCardActions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.gitCardActions .gitBtn,
+.gitCardActions .gitPushBtn {
+  flex: 1;
+}
+
+.gitPushBtn {
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--dsw-alias-button-primary-fill, var(--dsw-alias-brand-primary, #4a7bff));
+  color: var(--dsw-alias-label-primary-foreground, #fff);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.gitPushBtn:hover {
+  filter: brightness(1.08);
+}
+.gitPushBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Editor-head delete (danger outline) — note-level. */
+.delBtn {
+  flex: none;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--dsw-alias-danger, #d9534f);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-danger, #d9534f);
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+.delBtn:hover {
+  background: color-mix(in srgb, var(--dsw-alias-danger, #d9534f) 10%, transparent);
+}
+.delBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Unsaved-dirty pill (amber) — note-level. */
+.dirtyPill {
+  flex: none;
+  font-size: 11px;
+  line-height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  color: var(--dsw-alias-state-warning-primary, #b7791f);
+  background: var(--dsw-alias-state-warning-bg, rgba(183, 121, 31, 0.12));
+  white-space: nowrap;
+}
+
+/* Global git roll-up in the bottom status bar. */
+.syncGlobal {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }

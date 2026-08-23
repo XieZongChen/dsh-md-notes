@@ -9,7 +9,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconRefreshOutline16, IconSendOutline16, IconSettingsOutline16, IconTriangleRightFill14, MarkdownText, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSendOutline16, IconSettingsOutline16, IconTriangleRightFill14, MarkdownText, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData, WorkspaceNotes } from '../api.ts'
 import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
@@ -20,6 +20,70 @@ import { noteKey, type BusyTracker } from '../busy.ts'
 import type { MdNotesKey } from '../locales/index.ts'
 import shared from '../styles.module.css'
 import styles from './notes-manager.module.css'
+
+/** Per-workspace Git sync card: status + update/push actions (workspace scope). */
+interface GitSyncCardProps {
+  status: GitStatusData | null | undefined
+  busy: boolean
+  updating: boolean
+  pushing: boolean
+  pushOpen: boolean
+  pushMsg: string
+  remoteChanged: string[] | null
+  onUpdate: () => void
+  onPush: () => void
+  onPushMsgChange: (value: string) => void
+  onConfirmPush: () => void
+  onCancelPush: () => void
+  t: TranslateNS<'md-notes'>
+}
+
+function GitSyncCard({ status, busy, updating, pushing, pushOpen, pushMsg, remoteChanged, onUpdate, onPush, onPushMsgChange, onConfirmPush, onCancelPush, t }: GitSyncCardProps): React.ReactElement | null {
+  if (status === null || status === undefined || !status.repoDir) return null
+  const unpushed = status.unpushed ?? 0
+  return (
+    <div className={styles.gitCard}>
+      <div className={styles.gitCardHead}>
+        <span className={styles.gitCardTitle}>{t('git.cardTitle')}</span>
+        {unpushed === 0
+          ? <span className={styles.gitPillSynced}>{t('git.synced')}</span>
+          : <span className={styles.gitPillUnpushed}>{t('git.unpushed', { count: unpushed })}</span>}
+      </div>
+      <div className={styles.gitCardRows}>
+        <div className={styles.gitCardRow}>{t('git.branch')}: {status.branch ?? 'main'}{status.subdir ? ` · ${t('git.subpath')}: ${status.subdir}` : ''}</div>
+        {status.lastCommit ? <div className={styles.gitCardRow}>{t('git.lastCommit', { time: status.lastCommit })}</div> : null}
+      </div>
+      {remoteChanged !== null && remoteChanged.length > 0 && (
+        <div className={styles.gitCardHint}>{t('git.remoteUpdated')}</div>
+      )}
+      {pushOpen && (
+        <div className={styles.gitCardPush}>
+          <input
+            className={shared.input}
+            placeholder={t('git.commitPlaceholder')}
+            value={pushMsg}
+            onChange={(e) => onPushMsgChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') onConfirmPush() }}
+          />
+          <button type="button" className={styles.gitCardPushBtn} disabled={busy} onClick={onConfirmPush} title={t('git.confirmPush')}>
+            {pushing ? <LoadingIndicator size={14} /> : <IconSendOutline16 />}
+          </button>
+          <button type="button" className={styles.gitCardPushBtn} disabled={busy} onClick={onCancelPush} title={t('git.cancel')}>
+            <IconCloseOutline16 />
+          </button>
+        </div>
+      )}
+      <div className={styles.gitCardActions}>
+        <button type="button" className={styles.gitBtn} disabled={busy} onClick={onUpdate}>
+          {updating && <LoadingIndicator size={12} />}{t('git.update')}
+        </button>
+        <button type="button" className={styles.gitPushBtn} disabled={busy} onClick={onPush}>
+          {pushing && <LoadingIndicator size={12} />}{t('git.push')}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export interface NotesManagerProps {
   /** Shared store; closing the manager clears `managerOpen`. */
@@ -43,17 +107,19 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const [selectedWsId, setSelectedWsId] = React.useState<string | null>(null)
   const [selected, setSelected] = React.useState<string | null>(null)
   const [content, setContent] = React.useState('')
+  /** Content as of the last open/save — the "dirty" baseline. */
+  const [savedContent, setSavedContent] = React.useState('')
   const [mode, setMode] = React.useState<'edit' | 'preview'>('preview')
   const [saving, setSaving] = React.useState(false)
   const [flash, setFlash] = React.useState<'' | MdNotesKey>('')
   const [statusByWs, setStatusByWs] = React.useState<Record<string, GitStatusData | null>>({})
   const [gitMsg, setGitMsg] = React.useState('')
-  const [pushOpen, setPushOpen] = React.useState(false)
-  /** Workspace the commit popover targets (undefined = current workspace). */
+  /** Workspace whose commit popover is open (null = none). */
   const [pushTargetWsId, setPushTargetWsId] = React.useState<string | null>(null)
   const [pushMsg, setPushMsg] = React.useState('')
-  const [updating, setUpdating] = React.useState(false)
-  const [pushing, setPushing] = React.useState(false)
+  /** Workspace currently updating / pushing (null = none) — card spinners key off these. */
+  const [updatingWsId, setUpdatingWsId] = React.useState<string | null>(null)
+  const [pushingWsId, setPushingWsId] = React.useState<string | null>(null)
   const [pushConflict, setPushConflict] = React.useState<{ wsId: string; message: string; error: string } | null>(null)
   const [autoPull, setAutoPull] = React.useState(true)
   /** Names of notes the remote updated but local differs — hint to manually update. */
@@ -90,14 +156,13 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       setNoWorkspaces(res.ok === true && res.noWorkspaces === true)
       if (res.ok && res.workspaces) {
         setWorkspaces(res.workspaces)
-        // Refresh the status of the CURRENT workspace context (the note being
-        // edited), not always the first — refreshing [0] would clobber the
-        // buttons when saving a note in another workspace.
         const target = selectedWsId ?? res.workspaces[0]?.workspaceId
         if (target !== undefined) {
           setSelectedWsId((prev) => prev ?? target)
-          refreshStatus(target)
         }
+        // Every workspace's Git card needs its own status, not just the current
+        // one (each card renders its own branch/uncommitted/update/push).
+        for (const ws of res.workspaces) refreshStatus(ws.workspaceId)
       }
     })
   }
@@ -116,8 +181,6 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   }
 
   const currentWsId = (): string | null => selectedWsId ?? workspaces[0]?.workspaceId ?? null
-  const status = currentWsId() === null ? null : (statusByWs[currentWsId()!] ?? null)
-  const showEditorGit = !!status?.repoDir
 
   const open = (name: string, wsId: string): void => {
     selectionRef.current = { wsId, name }
@@ -125,12 +188,13 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     setSelected(name)
     setMode('preview')
     setContent('') // clear the previous note's content so switching never flashes it
+    setSavedContent('')
     setGitMsg('')
     setRemoteChanged(null)
     setContentLoading(true)
     refreshStatus(wsId)
     void api('read', { name, workspaceId: wsId }).then((res) => {
-      if (res.ok && isCurrent(wsId, name)) setContent(res.content ?? '')
+      if (res.ok && isCurrent(wsId, name)) { setContent(res.content ?? ''); setSavedContent(res.content ?? '') }
       setContentLoading(false)
     })
     // Auto-pull on open (honors gitAutoPull, best effort): refresh, then re-read.
@@ -151,7 +215,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         // panel shows them without reopening the manager.
         refresh()
         void api('read', { name, workspaceId: wsId }).then((r2) => {
-          if (r2.ok && isCurrent(wsId, name)) setContent(r2.content ?? '')
+          if (r2.ok && isCurrent(wsId, name)) { setContent(r2.content ?? ''); setSavedContent(r2.content ?? '') }
           setContentLoading(false)
         })
       }
@@ -165,6 +229,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     void tracker.run(noteKey(wsId, selected), () => api('write', { name: selected, content, workspaceId: wsId })).then((res) => {
       if (res.ok) {
         setFlash('manager.saved')
+        setSavedContent(content)
         refresh()
         window.setTimeout(() => setFlash(''), 1200)
       } else {
@@ -209,7 +274,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   }
 
   const doUpdate = (wsId: string, force: boolean): void => {
-    setUpdating(true)
+    setUpdatingWsId(wsId)
     setGitMsg('')
     void gitPullApi(wsId, force, true).then((res) => {
       if (res.ok) {
@@ -220,7 +285,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         refresh()
         if (selected && isCurrent(wsId, selected)) {
           void api('read', { name: selected, workspaceId: wsId }).then((r) => {
-            if (r.ok && isCurrent(wsId, selected)) setContent(r.content ?? '')
+            if (r.ok && isCurrent(wsId, selected)) { setContent(r.content ?? ''); setSavedContent(r.content ?? '') }
           })
         }
         setFlash('manager.updated')
@@ -228,14 +293,14 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       } else {
         setGitMsg(gitErrorText(t, res.code, res.error))
       }
-    }).finally(() => setUpdating(false))
+    }).finally(() => setUpdatingWsId(null))
   }
 
   const updateClick = (wsId: string): void => {
     // First run a conservative pull (never overwrites). If the remote has
     // files that differ from the local ones (skipped > 0), ask the user
     // whether to replace the local versions — never overwrite silently.
-    setUpdating(true)
+    setUpdatingWsId(wsId)
     setGitMsg('')
     void gitPullApi(wsId, false, true).then((res) => {
       if (!res.ok) {
@@ -250,7 +315,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         refresh()
         if (selected && isCurrent(wsId, selected)) {
           void api('read', { name: selected, workspaceId: wsId }).then((r) => {
-            if (r.ok && isCurrent(wsId, selected)) setContent(r.content ?? '')
+            if (r.ok && isCurrent(wsId, selected)) { setContent(r.content ?? ''); setSavedContent(r.content ?? '') }
           })
         }
         setFlash('manager.updated')
@@ -264,14 +329,14 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         cancelLabel: t('git.cancel'),
         onConfirm: () => { setConfirmState(null); doUpdate(wsId, true) },
       })
-    }).finally(() => setUpdating(false))
+    }).finally(() => setUpdatingWsId(null))
   }
   const runPush = (wsId: string, message: string, overwrite = false): void => {
-    setPushing(true)
+    setPushingWsId(wsId)
     setGitMsg('')
     void gitPushApi(wsId, message, overwrite).then((res) => {
       if (res.ok) {
-        setPushOpen(false)
+        setPushTargetWsId(null)
         setPushMsg('')
         setPushConflict(null)
         refreshStatus(wsId)
@@ -289,13 +354,13 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       } else if (res.code === 'non-fast-forward') {
         // Rejected because the remote is ahead / histories are unrelated:
         // offer an in-app merge-and-retry instead of a bare error.
-        setPushOpen(false)
+        setPushTargetWsId(null)
         setPushMsg('')
         setPushConflict({ wsId, message, error: gitErrorText(t, res.code, res.error) })
       } else {
         setGitMsg(gitErrorText(t, res.code, res.error))
       }
-    }).finally(() => setPushing(false))
+    }).finally(() => setPushingWsId(null))
   }
 
   const doPush = (wsId: string): void => {
@@ -309,12 +374,11 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const pushForWs = (wsId: string): void => {
     setPushTargetWsId(wsId)
     setPushMsg('')
-    setPushOpen(true)
   }
 
   const resolveAndRetry = (): void => {
     if (pushConflict === null) return
-    setPushing(true)
+    setPushingWsId(pushConflict.wsId)
     setGitMsg('')
     // ok 分支把 pushing 的生命周期交给 runPush（它重新 setPushing(true) 并在
     // 自己的 finally 里复位）；此处只在失败路径复位，避免与 runPush 竞争。
@@ -327,12 +391,15 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       } else {
         setGitMsg(gitErrorText(t, res.code, res.error))
       }
-    }).finally(() => { if (!handedOff) setPushing(false) })
+    }).finally(() => { if (!handedOff) setPushingWsId(null) })
   }
 
   /** Whether the currently selected note is being written (any session — docs/write-lock.md §7.3). */
   const writingThis = selected !== null && selectedWsId !== null && tracker.isBusy(noteKey(selectedWsId, selected))
 
+  const updating = updatingWsId !== null
+  const pushing = pushingWsId !== null
+  const dirty = content !== savedContent
   const busy = updating || saving || pushing || writingThis
 
   const close = (): void => store.update((d) => { d.managerOpen = false })
@@ -361,6 +428,10 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     window.setTimeout(locate, 60)
   }
   const grouped = workspaces.length > 1
+  /** Global git roll-up for the bottom bar (per-workspace detail lives in each Git card). */
+  const repoStatuses = Object.values(statusByWs).filter((s): s is GitStatusData => s !== null && !!s.repoDir)
+  const unpushedTotal = repoStatuses.reduce((sum, s) => sum + (s.unpushed ?? 0), 0)
+  const pendingWsCount = repoStatuses.filter((s) => (s.unpushed ?? 0) > 0).length
 
   return (
     <div className={shared.mask} onClick={(e) => { if (e.target === e.currentTarget) close() }}>
@@ -407,22 +478,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                           <IconTriangleRightFill14 className={collapsed[ws.workspaceId] ? styles.wsArrow : `${styles.wsArrow} ${styles.wsArrowOpen}`} />
                         </span>
                         <span className={styles.wsGroupTitle}>{ws.name}</span>
-                        <button
-                          type="button"
-                          className={styles.wsIconBtn}
-                          title={t('git.update')}
-                          onClick={(e) => { e.stopPropagation(); updateClick(ws.workspaceId) }}
-                        >
-                          <IconRefreshOutline16 />
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.wsIconBtn}
-                          title={t('git.push')}
-                          onClick={(e) => { e.stopPropagation(); pushForWs(ws.workspaceId) }}
-                        >
-                          <IconSendOutline16 />
-                        </button>
+                        <span className={styles.wsCount}>{ws.notes.length}</span>
                         <span
                           className={styles.wsNewBtn}
                           role="button"
@@ -432,6 +488,23 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                           <IconPlusOutline16 />
                         </span>
                       </div>
+                    )}
+                    {!collapsed[ws.workspaceId] && (
+                      <GitSyncCard
+                        status={statusByWs[ws.workspaceId]}
+                        busy={busy}
+                        updating={updatingWsId === ws.workspaceId}
+                        pushing={pushingWsId === ws.workspaceId}
+                        pushOpen={pushTargetWsId === ws.workspaceId}
+                        pushMsg={pushMsg}
+                        remoteChanged={currentWsId() === ws.workspaceId ? remoteChanged : null}
+                        onUpdate={() => updateClick(ws.workspaceId)}
+                        onPush={() => pushForWs(ws.workspaceId)}
+                        onPushMsgChange={setPushMsg}
+                        onConfirmPush={() => doPush(ws.workspaceId)}
+                        onCancelPush={() => setPushTargetWsId(null)}
+                        t={t}
+                      />
                     )}
                     {!collapsed[ws.workspaceId] && (ws.notes.length === 0 && grouped
                       ? <div className={`${shared.empty} ${styles.wsEmpty}`}>{t('manager.empty')}</div>
@@ -483,45 +556,14 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     >{t('manager.tabEdit')}</button>
                     <span className={styles.editorName}>{selected}</span>
                     <span className={styles.flash}>{flash === '' ? '' : t(flash)}</span>
-                    {showEditorGit && (writingThis || (remoteChanged !== null && remoteChanged.length > 0)) && (
-                      <span className={styles.remoteHint} title={writingThis ? '' : remoteChanged?.join(t('manager.listSep'))}>
-                        {writingThis ? t('manager.writingFile') : t('git.remoteUpdated')}
-                      </span>
-                    )}
-                    {showEditorGit && (
-                      <button type="button" className={styles.gitBtn} disabled={busy} onClick={() => { const id = currentWsId(); if (id !== null) updateClick(id) }}>
-                        {updating && <LoadingIndicator size={12} />}{t('git.update')}
-                      </button>
-                    )}
-                    <button type="button" className={styles.saveBtn} disabled={busy} onClick={save}>
-                      {saving && <LoadingIndicator size={12} />}{t('manager.save')}
-                    </button>
-                    {showEditorGit && (
-                      <button type="button" className={styles.gitBtn} disabled={busy} onClick={() => setPushOpen(true)}>
-                        {pushing && <LoadingIndicator size={12} />}{t('git.push')}
+                    {writingThis && <span className={styles.remoteHint}>{t('manager.writingFile')}</span>}
+                    {dirty && <span className={styles.dirtyPill}>{t('manager.unsaved')}</span>}
+                    {mode === 'edit' && (
+                      <button type="button" className={styles.saveBtn} disabled={busy} onClick={save}>
+                        {saving && <LoadingIndicator size={12} />}{t('manager.save')}
                       </button>
                     )}
                   </div>
-                  {pushOpen && (
-                    <div className={styles.pushPanel}>
-                      <input
-                        className={shared.input}
-                        placeholder={t('git.commitPlaceholder')}
-                        value={pushMsg}
-                        onChange={(e) => setPushMsg(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { const id = pushTargetWsId ?? currentWsId(); if (id !== null) doPush(id) } }}
-                      />
-                      <button
-                        type="button"
-                        className={styles.saveBtn}
-                        disabled={busy}
-                        onClick={() => { const id = pushTargetWsId ?? currentWsId(); if (id !== null) doPush(id) }}
-                      >{pushing && <LoadingIndicator size={12} />}{t('git.confirmPush')}</button>
-                      <button type="button" className={shared.btn} disabled={busy} onClick={() => { setPushOpen(false); setPushTargetWsId(null) }}>
-                        {t('git.cancel')}
-                      </button>
-                    </div>
-                  )}
                   {contentLoading
                     ? <div className={styles.editorLoading}><LoadingIndicator label={t('git.loading')} /></div>
                     : mode === 'edit'
@@ -532,12 +574,9 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
           </div>
         </div>
         <div className={styles.syncLine}>
-          {(!!status?.repoDir) && (
-            <span>
-              {t('git.title')} · {t('git.branch')}: {status.branch}
-              {status.subdir ? ` · ${t('git.subpath')}: ${status.subdir}` : ''}
-              {' · '}{t('git.uncommitted', { count: status.uncommitted ?? 0 })}
-              {status.lastCommit ? ` · ${t('git.lastCommit', { time: status.lastCommit })}` : ''}
+          {repoStatuses.length > 0 && (
+            <span className={styles.syncGlobal}>
+              {t('git.globalTitle')} · {unpushedTotal > 0 ? t('git.unpushed', { count: unpushedTotal }) : t('git.synced')} · {t('git.globalSummary', { ws: repoStatuses.length, pending: pendingWsCount })}
             </span>
           )}
           {busy && <LoadingIndicator size={10} />}
