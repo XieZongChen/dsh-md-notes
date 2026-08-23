@@ -47,7 +47,7 @@ export function sendJson(res: ServerResponse, status: number, value: unknown): v
 
 /** Git operations bound to the plugin context (see `src/index.ts`). */
 export interface GitApi {
-  status(repo: ResolvedRepo): Promise<GitStatusView>
+  status(repo: ResolvedRepo, notesDir: string): Promise<GitStatusView>
   init(repo: ResolvedRepo): Promise<void>
   push(repo: ResolvedRepo, notesDir: string, message: string, overwrite: boolean): Promise<{ ok: boolean; error?: string; code?: string; changed?: string[] }>
   pull(repo: ResolvedRepo, notesDir: string, force: boolean, manual: boolean): Promise<{ ok: boolean; error?: string; skipped?: number; changed?: string[] }>
@@ -178,7 +178,9 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'gitStatus': {
       const repo = deps.resolveRepo(workspaceId)
       if (repo === undefined) return { ok: false, code: 'no-repo', error: 'No git repo configured' }
-      const view = await deps.git.status(repo)
+      const notesDir = deps.resolveDir(workspaceId)
+      if (notesDir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
+      const view = await deps.git.status(repo, notesDir)
       return { ok: true, status: view }
     }
     case 'gitInit': {

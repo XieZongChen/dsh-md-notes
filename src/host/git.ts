@@ -257,22 +257,26 @@ export interface GitStatusView {
   subdir?: string
   branch?: string
   uncommitted?: number
+  /** Notes whose local state differs from the repo target (not yet pushed). */
+  unpushed?: number
   lastCommit?: string
   remote?: string
   error?: string
 }
 
-/** Status of one repo: branch, uncommitted file count, last commit, remote presence. */
-export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string): Promise<GitStatusView> {
+/** Status of one repo: branch, uncommitted file count, unpushed count, last commit, remote presence. */
+export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string, notesDir: string): Promise<GitStatusView> {
   try {
     await gitInit(ctx, repo, branch)
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
-  const [branchRes, porcelain, lastLog] = await Promise.all([
+  const target = repoTargetDir(repo)
+  const [branchRes, porcelain, lastLog, unpushed] = await Promise.all([
     runGit(ctx, repo.repoDir, ['branch', '--show-current']),
     runGit(ctx, repo.repoDir, ['status', '--porcelain']),
     runGit(ctx, repo.repoDir, ['log', '-1', '--format=%cr']),
+    unpushedCount(notesDir, target),
   ])
   const currentBranch = branchRes.code === 0 ? branchRes.stdout.trim() : branch
   const uncommitted = porcelain.code === 0
@@ -285,6 +289,7 @@ export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string
     subdir: repo.subdir,
     branch: currentBranch,
     uncommitted,
+    unpushed,
     lastCommit: lastCommit || undefined,
     remote: repo.remote,
   }
@@ -394,6 +399,22 @@ export async function remoteOnlyNotes(remoteDir: string, localDir: string): Prom
     // local dir unreadable → treat everything as remote-only
   }
   return remoteNames.filter((n) => !localNames.has(n))
+}
+
+/**
+ * Number of notes whose local state differs from the repo target dir — i.e.
+ * the "not yet pushed" changes: locally new notes, locally deleted notes, and
+ * notes present on both sides with different content. This is the user-facing
+ * "unpushed" metric (unlike `git status --porcelain`, which only sees the
+ * clone's own working tree and stays 0 until a push syncs the notes in).
+ */
+async function unpushedCount(localDir: string, targetDir: string): Promise<number> {
+  const [modified, deletedLocally, addedLocally] = await Promise.all([
+    changedNotes(targetDir, localDir),
+    remoteOnlyNotes(targetDir, localDir),
+    remoteOnlyNotes(localDir, targetDir),
+  ])
+  return modified.length + deletedLocally.length + addedLocally.length
 }
 
 /**

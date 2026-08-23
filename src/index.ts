@@ -161,7 +161,7 @@ export function apply(ctx: Context, config: Config): void {
   }
 
   const git: GitApi = {
-    status: (repo) => gitStatus(ctx, repo, repo.branch),
+    status: (repo, notesDir) => gitStatus(ctx, repo, repo.branch, notesDir),
     init: (repo) => gitInit(ctx, repo, repo.branch),
     push: (repo, notesDir, message, overwrite) => gitPush(ctx, repo, notesDir, message, {
       name: readSettings().gitAuthorName ?? '',
