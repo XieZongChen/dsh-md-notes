@@ -24,6 +24,15 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## [0.7.1] - 2026-08-23
+
+### Fixed
+
+- **Sidebar note-entry no longer pollutes ancestor styles**: the entry now only
+  adjusts its direct parent's flex-wrap and no longer writes ancestor inline
+  styles onto SidebarRoot (switched to an injected `:has()` CSS rule). See
+  [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+
 ## [0.7.0] - 2026-08-23
 
 ### Added
