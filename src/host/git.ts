@@ -272,10 +272,11 @@ export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
   const target = repoTargetDir(repo)
+  const scope = repo.subdir === '' ? '.' : repo.subdir.replace(/\\/g, '/')
   const [branchRes, porcelain, lastLog, unpushed] = await Promise.all([
     runGit(ctx, repo.repoDir, ['branch', '--show-current']),
-    runGit(ctx, repo.repoDir, ['status', '--porcelain']),
-    runGit(ctx, repo.repoDir, ['log', '-1', '--format=%cr']),
+    runGit(ctx, repo.repoDir, ['status', '--porcelain', '--', scope]),
+    runGit(ctx, repo.repoDir, ['log', '-1', '--format=%cr', '--', scope]),
     unpushedCount(notesDir, target),
   ])
   const currentBranch = branchRes.code === 0 ? branchRes.stdout.trim() : branch
@@ -485,10 +486,12 @@ export async function gitPush(
   const identity = await resolveIdentity(ctx, repo, author)
   if (identity.error !== undefined) return { ok: false, code: 'identity', error: identity.error }
 
-  const porcelain = await runGit(ctx, repo.repoDir, ['status', '--porcelain'])
+  // Scope both the change check and the commit to this workspace's subdir, so
+  // a shared repo never commits another workspace's staged/uncommitted files.
+  const porcelain = await runGit(ctx, repo.repoDir, ['status', '--porcelain', '--', addScope])
   const hasChanges = porcelain.code === 0 && porcelain.stdout.trim() !== ''
   if (hasChanges) {
-    const commit = await runGit(ctx, repo.repoDir, [...identity.args, 'commit', '-m', message])
+    const commit = await runGit(ctx, repo.repoDir, [...identity.args, 'commit', '-m', message, '--', addScope])
     if (commit.code !== 0) return { ok: false, code: 'git-failed', error: `git commit failed: ${commit.stderr || commit.stdout}` }
   }
 
