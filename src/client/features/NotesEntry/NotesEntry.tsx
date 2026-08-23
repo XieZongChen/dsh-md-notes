@@ -2,7 +2,7 @@
  * Sidebar footer entry: notes icon opens the notes manager. Rendered in
  * `sidebar.footer.action`; mirrors the Settings trigger geometry (34px compact
  * row / 36px rail circle, 12px radius, interactive hover fill, 14/22 text on
- * primary ink) so the footer reads as one row. Forces the footer flex
+ * primary ink) so the footer reads as one row. Forces the direct footer flex
  * container to wrap so this entry occupies its own full-width top row.
  * @module dsh-md-notes/client/NotesEntry
  */
@@ -43,19 +43,15 @@ export function NotesEntry(props: NotesEntryProps): React.ReactElement {
   React.useEffect(() => {
     const el = rowRef.current
     if (!el) return
-    const patched: Array<[HTMLElement, string]> = []
-    let node = el.parentElement
-    let hops = 0
-    while (node && hops < 4) {
-      const prev = node.style.flexWrap
-      if (prev !== 'wrap') {
-        node.style.flexWrap = 'wrap'
-        patched.push([node, prev])
-      }
-      node = node.parentElement
-      hops++
-    }
-    return () => { for (const [n, prev] of patched) n.style.flexWrap = prev }
+    // Scope to the direct flex parent (the footer-actions row) only. The
+    // previous ancestor walk also wrote `flex-wrap: wrap` onto SidebarRoot and
+    // the outer `data-slot="sidebar"` container, which widened the whole
+    // sidebar and clipped its right edge for long session titles.
+    const parent = el.parentElement
+    if (parent === null) return
+    const prev = parent.style.flexWrap
+    parent.style.flexWrap = 'wrap'
+    return () => { parent.style.flexWrap = prev }
   }, [])
 
   return (
