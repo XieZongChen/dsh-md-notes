@@ -4,8 +4,6 @@
    footer reads as one row. */
 
 .notesRow {
-  order: -1; /* top row of the sidebar bottom area */
-  flex: 1 0 100%;
   width: 100%;
   display: flex;
   justify-content: center;

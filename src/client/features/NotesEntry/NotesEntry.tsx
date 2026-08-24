@@ -2,9 +2,8 @@
  * Sidebar footer entry: notes icon opens the notes manager. Rendered in
  * `sidebar.footer.action`; mirrors the Settings trigger geometry (34px compact
  * row / 36px rail circle, 12px radius, interactive hover fill, 14/22 text on
- * primary ink) so the footer reads as one row. Owns its full-width top row via
- * a `data-md-notes-entry` marker + an injected `:has()` rule — no inline styles
- * are ever written onto any ancestor.
+ * primary ink) so the footer reads as one row. A plain full-width row — no
+ * flex-wrap / flex-basis manipulation and no inline styles on any ancestor.
  * @module dsh-md-notes/client/NotesEntry
  */
 
@@ -40,7 +39,7 @@ export function NotesEntry(props: NotesEntryProps): React.ReactElement {
     () => busyCount(store.getSnapshot()),
   )
   return (
-    <div className={styles.notesRow} data-md-notes-entry="">
+    <div className={styles.notesRow}>
       <button
         type="button"
         className={wide ? styles.entry : `${styles.entry} ${styles.entryRail}`}
