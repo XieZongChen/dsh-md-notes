@@ -5,9 +5,10 @@
 
 ## 0. 实现状态
 
-> 最后更新 2026-08-23（复核：0.7.0 面板改版——Git 状态入口从编辑器头部迁到**工作区 Git
-> 同步卡片** + 全局汇总条；`unpushed` 未推送计数按本地与仓库差异计算；shared 模式按工作区
-> 子目录隔离状态与提交）。✅ 已实现；🚧 设计已定、未实现；⏳ 待实测确认。
+> 最后更新 2026-08-24（复核：`gitStatus` 新增 `remoteAhead`（远端领先计数，拉取时刷新
+> origin refs，Git 卡片据此显示「有远端更新」）；冲突检测从「二选一内容比对」改为**三向
+> （base/local/remote）**——只有「远端相对上次同步变了且本地也变了」才判冲突，本地单方面
+> 改动不再误报）。✅ 已实现；🚧 设计已定、未实现；⏳ 待实测确认。
 
 ### 已实现
 
@@ -27,8 +28,9 @@
   → `git add -A <subdir>` → commit → push `branch`
 - ✅ **更新 = 反向同步**：先 `git fetch origin` 再对齐分支 → 把 `<subdir>` 的 `.md` 复制回本地，
   **不覆盖本地已修改的文件**（保守）；`changed` 返回「远端有本地无/同名不同内容」的笔记名单
-- ✅ **推送冲突检测**：推送前比较远端与本地同名笔记（`changedNotes`）+ 远端独有文件
-  （`remoteOnlyNotes`），有差异返回 `remote-changed` + 变更名单，弹页面内 Modal 确认后覆盖/删除
+- ✅ **推送冲突检测（三向判定）**：推送前用 **base（上次同步态）/ local（工作区）/ remote（仓库）**
+  三方比较——只有「远端相对 base 变了且本地也相对 base 变了（或本地仍与远端不同）」才判
+  冲突返回 `remote-changed` + 名单弹 Modal 确认；**本地单方面改动（远端没动）不算冲突**，直接推送
 - ✅ 提交身份解析：仓库自身 git 配置优先 → 插件 `gitAuthorName/Email` 兜底 → 都没有时明确报错（错误码 `identity`）
 - ✅ non-fast-forward 冲突：`gitPush` 返回错误码 + client「合并远端并重试」（`gitSync`，用户触发）
 - ✅ **i18n 错误码**：host 错误返回 `{ code, detail }`（`no-repo` / `sync-branch` / `git-failed` /
@@ -168,7 +170,7 @@ resolveNotesDir(ws) = <ws.path>/.dsh-notes        // 永远（笔记深度绑定
 
 | method | body | 返回/行为 |
 |---|---|---|
-| `gitStatus` | `{ workspaceId? }` | 目标仓库状态：`{ ok, repoDir, subdir, branch, uncommitted, unpushed, lastCommit?, remote }`（`unpushed` = 本地与仓库差异数，0.7.0 新增） |
+| `gitStatus` | `{ workspaceId? }` | 目标仓库状态：`{ ok, repoDir, subdir, branch, uncommitted, unpushed, remoteAhead, lastCommit?, remote }`（`unpushed` = 本地与仓库差异数；`remoteAhead` = 远端领先本地 clone 的提交数、按 subdir 范围——拉取时刷新 origin refs，0.7.1 后新增） |
 | `gitPush` | `{ workspaceId?, message }` | 把该工作区 `.dsh-notes` 的 `.md` 同步到仓库目标目录 → commit → push `branch` |
 | `gitPull` | `{ workspaceId?, force?, manual? }` | 拉取远端分支 → 把目标目录 `.md` 复制回本地。`manual`（手动更新）**始终同步**；自动拉取（manual=false）仅远端有**新提交**时同步（`rev-list` 领先判断在 checkout 之前），否则短路跳过。`force=false` 不覆盖本地已修改文件 |
 | `gitInit` | `{ workspaceId? }` | 按 URL 确保 clone 存在（缺 `.git` 时自动 `git clone`） |

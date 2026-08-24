@@ -176,15 +176,19 @@ In the settings panel (see [§6](#6-the-settings-panel)), pick a mode:
 3. First push clones the repository automatically (credentials come from git
    itself — HTTPS credential helper or your SSH key).
 
-**Before pushing**, the plugin checks the remote for notes that differ from
-yours or exist only remotely (e.g. a note you deleted locally). If there's a
-difference it asks:
+**Before pushing**, the plugin compares the remote against the **last-synced
+state** (three-way: base / local / remote). It asks only when the **remote
+changed since your last sync** and your local side differs from it (or a note
+you deleted locally still exists remotely):
 
-> Remote notes differ from or are missing locally: `<names>`. Overwrite/delete
-> the remote with your local state?
+> Remote notes changed and differ from or are missing locally: `<names>`.
+> Overwrite/delete the remote with your local state?
 
 - **Overwrite remote with local** → push proceeds, including deletions.
 - **Cancel** → nothing is pushed.
+
+A note you edited locally while the remote stayed unchanged is **not** a
+conflict — it pushes normally.
 
 ### 5.3 Updating notes (pulling)
 
@@ -193,8 +197,9 @@ version of the notes down:
 
 - If the remote has **new notes** you don't have → they're pulled in and the
   list refreshes automatically.
-- If a note differs on **both sides** (you edited it locally) → the plugin
-  keeps your local version and asks whether to replace it:
+- If a note **changed on the remote** (since your last sync) **and** differs
+  from your local edit → the plugin keeps your local version and asks whether
+  to replace it:
 
   > The remote has N note(s) different from local ones. Replace local with the
   > remote version?
