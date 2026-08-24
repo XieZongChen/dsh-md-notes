@@ -27,12 +27,13 @@ A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 - **Sidebar notes entry** → full-screen notes manager: per-workspace note list (grouped, collapsible), markdown edit/preview, save, delete (in-page confirm), create with one click.
 - **Assistant-message action** (next to copy) → pick or create a note and append that conversation (user question + answer) to it **instantly** — the text is captured from the conversation itself, so there's no waiting; section labels are localized (reasoning is not captured — only the final answer).
 - **Reference notes in chat (`@`)**: type `@` to pick notes (cross-workspace included); on send the host injects each note's content into the model context, so the model can cite it without being asked to read files.
-- **Git sync** (optional, URL-driven): **shared repo** mode (one repo for all workspaces, per-workspace folders) or **own repos** mode (per workspace: URL + branch + subpath). Push = mirror-sync (deletions included), Update = pull with conflict confirmation, auto-pull on open, merge-remote-and-retry.
+- **Git sync** (optional, URL-driven): **shared repo** mode (one repo for all workspaces, per-workspace folders) or **own repos** mode (per workspace: URL + branch + subpath). Push = mirror-sync (deletions included), Update = pull with three-way conflict confirmation, auto-pull on open, merge-remote-and-retry. Each workspace shows a **Git sync card** in the manager: "Synced" / "N unpushed" status, plus a hint when the remote has new commits.
+- **Note write mutex**: writes to the same note are locked across sessions — the sidebar entry, picker and manager stay in sync until the write finishes.
 - **Settings panel** (dsh Settings → MD Notes): mode, repo URL/branch/subpath, auto-pull, commit author — with dsh-styled form controls.
 - **Theme & i18n**: token-based colors (light/dark), UI copy follows dsh's language (Chinese / English), error messages localized.
 - **Update notifications**: a yellow "Update available" tag appears when a newer npm version exists.
 
-**On the roadmap** (see [docs/TODO.md](docs/TODO.md)): visual Git conflict rendering & resolution, note capability enhancements (search / TOC / wiki links), and interaction UX polish (unpushed-changes reminders, background capture, etc.).
+**On the roadmap** (see [docs/TODO.md](docs/TODO.md)): visual Git conflict rendering & resolution, note capability enhancements (search / TOC / wiki links), and interaction UX polish (dirty-editor reminders, save shortcut, etc.).
 
 ## Compatibility
 
@@ -130,7 +131,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 | `src/client/` | Browser half: entry (`index.ts`) + feature modules under `features/` |
 | `src/client/features/locales/` | zh/en UI dictionaries (dsh locale namespace `md-notes`) |
 | `assets/` | Plugin icon (SVG source + PNG) |
-| `docs/` | Docs: `usage.md`/`usage.zh.md` (user guide), `features.md` (functional), `architecture.md`, `context.md` (@ references), `git.md` (Git sync), `state.md` / `write-lock.md` (state & write-mutex design), `TODO.md` |
+| `docs/` | Docs: `usage.md`/`usage.zh.md` (user guide), `features.md` (functional), `architecture.md`, `context.md` (@ references), `git.md` (Git sync), `state.md` / `write-lock.md` (state & write-mutex design), `manager-redesign.md` (manager redesign), `TODO.md` |
 | `scripts/` | Dev tooling (e.g. `link-deps.mjs`) |
 | `lib/` | Build output (gitignored; what npm publishes) |
 
