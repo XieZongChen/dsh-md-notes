@@ -437,36 +437,117 @@ export async function deleteMissingNotes(remoteDir: string, localDir: string): P
 }
 
 /**
+ * Read a directory's `.md` notes into a `name → content` map. A missing
+ * directory or an unreadable file yields an empty/partial map (absent = absent).
+ */
+async function readNoteMap(dir: string): Promise<Map<string, string>> {
+  const map = new Map<string, string>()
+  let names: string[] = []
+  try {
+    names = (await readdir(dir)).filter((n) => n.endsWith('.md'))
+  } catch {
+    return map
+  }
+  for (const name of names) {
+    try {
+      map.set(name, await readFile(join(dir, name), 'utf8'))
+    } catch {
+      // unreadable → omit
+    }
+  }
+  return map
+}
+
+/**
+ * Push-time conflict names: a note is a conflict when its REMOTE side changed
+ * since `base` (modified / added / deleted) AND its local side still differs
+ * from the remote — pushing would overwrite or delete that remote change. A
+ * note the local side edited while the remote stayed at `base` is NOT a
+ * conflict.
+ */
+function pushConflicts(
+  base: Map<string, string>, local: Map<string, string>, remote: Map<string, string>,
+): string[] {
+  const names = new Set([...base.keys(), ...local.keys(), ...remote.keys()])
+  const conflicts: string[] = []
+  for (const name of names) {
+    const b = base.get(name)
+    const l = local.get(name)
+    const r = remote.get(name)
+    if (b !== r && l !== r) conflicts.push(name)
+  }
+  return conflicts
+}
+
+/**
+ * Three-way pull of remote notes into the local dir. `base` is the last-synced
+ * state, `local` the workspace notes, `remote` the freshly-checked-out repo
+ * notes. A note is overwritten only when the remote changed and the local side
+ * did not (or is absent); a local-only edit is preserved silently; a note both
+ * sides changed (a true conflict) is preserved and reported.
+ */
+async function threeWaySync(
+  srcDir: string, destDir: string,
+  base: Map<string, string>, local: Map<string, string>, remote: Map<string, string>,
+): Promise<{ copied: number; conflicts: string[] }> {
+  await mkdir(destDir, { recursive: true })
+  let copied = 0
+  const conflicts: string[] = []
+  for (const [name, remoteContent] of remote) {
+    const localContent = local.get(name)
+    const baseContent = base.get(name)
+    if (localContent === remoteContent) continue // already in sync
+    const localChanged = localContent !== baseContent
+    const remoteChanged = remoteContent !== baseContent
+    if (localChanged && remoteChanged) {
+      conflicts.push(name) // both diverged → keep local, report conflict
+      continue
+    }
+    if (localChanged) continue // only local changed → keep local silently
+    try {
+      await copyFile(join(srcDir, name), join(destDir, name))
+      copied++
+    } catch {
+      // unreadable → skip
+    }
+  }
+  return { copied, conflicts }
+}
+
+/**
  * Push a workspace's notes into the repo target directory: mirror the local
  * notes dir into `<repo>/<subdir>` — copy local `.md` (overwrite) AND delete
  * `.md` notes present remotely but missing locally, so deletions sync too.
- * Before touching anything, when `overwrite` is false, any note that exists
- * on the remote (fetched clone) with different content — or exists remotely
- * but not locally (would be deleted) — blocks the push and returns
- * `code: 'remote-changed'` with the involved names. The caller (the UI) then
- * asks the user whether to overwrite/delete and retries with `overwrite: true`.
+ * Before touching anything, when `overwrite` is false, a note whose REMOTE
+ * side changed since the last sync (modified / added / deleted) AND whose
+ * local side still differs — a true conflict — blocks the push and returns
+ * `code: 'remote-changed'`. A plain local edit with an unchanged remote is NOT
+ * a conflict and pushes straight through. The caller (the UI) then asks the
+ * user whether to overwrite/delete and retries with `overwrite: true`.
  */
 export async function gitPush(
   ctx: Context, repo: ResolvedRepo, notesDir: string, message: string,
   author: { name: string; email: string }, overwrite = false,
 ): Promise<{ ok: boolean; error?: string; code?: string; changed?: string[] }> {
   await gitInit(ctx, repo, repo.branch)
+  // Last-synced baseline — read BEFORE ensureBranch resets the clone to origin.
+  const base = await readNoteMap(repoTargetDir(repo))
   const branch = await ensureBranch(ctx, repo)
   if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
-  // Detect remote-vs-local conflicts before touching anything.
+  // Detect true conflicts (remote changed since base AND local still differs).
   const target = repoTargetDir(repo)
   if (!overwrite) {
-    const [changed, remoteOnly] = await Promise.all([
-      changedNotes(target, notesDir),
-      remoteOnlyNotes(target, notesDir),
+    const [local, remote] = await Promise.all([
+      readNoteMap(notesDir),
+      readNoteMap(target),
     ])
-    const affected = [...changed, ...remoteOnly]
-    if (affected.length > 0) {
+    const conflicts = pushConflicts(base, local, remote)
+    if (conflicts.length > 0) {
       return {
         ok: false,
         code: 'remote-changed',
-        changed: affected,
-        error: `Remote notes differ from or are missing locally: ${affected.join(', ')}. Overwrite/delete the remote with your local state?`,
+        changed: conflicts,
+        error: `Remote notes differ from or are missing locally: ${conflicts.join(', ')}. Overwrite/delete the remote with your local state?`,
       }
     }
   }
@@ -516,9 +597,10 @@ export async function gitPush(
  * local notes dir.
  *
  * `force` controls overwrite: true = the remote/clone version wins (the user
- * explicitly confirmed overwriting a locally-different file); false =
- * conservative — a locally-different file is skipped and reported in
- * `skipped`/`changed`.
+ * explicitly confirmed overwriting); false = three-way — a note is overwritten
+ * only when the remote changed and the local side did not; a local-only edit is
+ * preserved silently; a true conflict (both sides changed) is preserved and
+ * reported in `skipped`/`changed`.
  *
  * `manual` distinguishes a user-initiated Update from the implicit auto-pull
  * on open: a manual Update ALWAYS syncs the clone into the local dir (the user
@@ -533,6 +615,8 @@ export async function gitPull(
   ctx: Context, repo: ResolvedRepo, notesDir: string, force: boolean, manual = false,
 ): Promise<{ ok: boolean; code?: string; error?: string; skipped?: number; changed?: string[] }> {
   await gitInit(ctx, repo, repo.branch)
+  // Last-synced baseline — read BEFORE checkout resets the clone to origin.
+  const base = await readNoteMap(repoTargetDir(repo))
   const fetch = await fetchOrigin(ctx, repo)
   if (fetch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${fetch.stderr || fetch.stdout}` }
   if (!manual) {
@@ -553,11 +637,19 @@ export async function gitPull(
   const branch = await checkoutBranch(ctx, repo)
   if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
   const target = repoTargetDir(repo)
-  const { skipped } = await syncNotes(target, notesDir, force)
-  // In the conservative path, notes differing on both sides were skipped —
-  // surface them so the UI can hint that a manual update is needed.
-  const changed = force ? undefined : await changedNotes(target, notesDir)
-  return { ok: true, skipped, changed }
+  if (force) {
+    // Manual confirmed overwrite: the remote/clone version wins outright.
+    const { skipped } = await syncNotes(target, notesDir, true)
+    return { ok: true, skipped, changed: undefined }
+  }
+  // Conservative three-way: overwrite only "remote changed, local unchanged";
+  // preserve local-only edits silently; report true conflicts (both changed).
+  const [local, remote] = await Promise.all([
+    readNoteMap(notesDir),
+    readNoteMap(target),
+  ])
+  const { conflicts } = await threeWaySync(target, notesDir, base, local, remote)
+  return { ok: true, skipped: conflicts.length, changed: conflicts }
 }
 
 /**
