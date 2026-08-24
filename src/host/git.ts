@@ -274,8 +274,9 @@ export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
   // Refresh origin refs so the "remote has updates" check reflects the real
-  // remote (a cheap no-op when nothing new; failures are tolerated below).
-  await fetchOrigin(ctx, repo)
+  // remote — deduped per repo with a short TTL so a shared-repo panel doesn't
+  // fetch the same clone once per workspace.
+  await fetchRemoteDeduped(ctx, repo)
   const target = repoTargetDir(repo)
   const scope = repo.subdir === '' ? '.' : repo.subdir.replace(/\\/g, '/')
   const [branchRes, porcelain, lastLog, unpushed, aheadRes] = await Promise.all([
@@ -344,6 +345,34 @@ async function ensureBranch(ctx: Context, repo: ResolvedRepo): Promise<GitRunRes
 /** Fetch `origin` and return the git run result (callers check `.code`). */
 async function fetchOrigin(ctx: Context, repo: ResolvedRepo): Promise<GitRunResult> {
   return runGit(ctx, repo.repoDir, ['fetch', 'origin'])
+}
+
+/**
+ * Short-TTL `git fetch` dedup, keyed by repo (not workspace). In shared mode
+ * every workspace points at the same clone, so without this the manager would
+ * fetch that clone once per workspace on open. The TTL collapses such a burst
+ * into one real fetch; `inFlight` makes concurrent callers await the same one.
+ * Only `gitStatus` uses this — push/pull/sync always fetch fresh.
+ */
+const FETCH_TTL_MS = 3000
+const fetchCache = new Map<string, { at: number; inFlight?: Promise<void> }>()
+
+async function fetchRemoteDeduped(ctx: Context, repo: ResolvedRepo): Promise<void> {
+  const key = repo.repoDir
+  const now = Date.now()
+  const entry = fetchCache.get(key)
+  // A recently completed fetch within the TTL → skip.
+  if (entry !== undefined && entry.inFlight === undefined && now - entry.at < FETCH_TTL_MS) return
+  // A fetch for this repo is already in flight → await it.
+  if (entry?.inFlight !== undefined) {
+    await entry.inFlight
+    return
+  }
+  const inFlight = fetchOrigin(ctx, repo).then(() => {
+    fetchCache.set(key, { at: Date.now() })
+  })
+  fetchCache.set(key, { at: now, inFlight })
+  await inFlight
 }
 
 /**
