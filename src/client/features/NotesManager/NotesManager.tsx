@@ -53,6 +53,9 @@ function GitSyncCard({ status, busy, updating, pushing, pushOpen, pushMsg, remot
         <div className={styles.gitCardRow}>{t('git.branch')}: {status.branch ?? 'main'}{status.subdir ? ` · ${t('git.subpath')}: ${status.subdir}` : ''}</div>
         {status.lastCommit ? <div className={styles.gitCardRow}>{t('git.lastCommit', { time: status.lastCommit })}</div> : null}
       </div>
+      {(status.remoteAhead ?? 0) > 0 && (
+        <div className={styles.gitCardHint}>{t('git.remoteAhead')}</div>
+      )}
       {remoteChanged !== null && remoteChanged.length > 0 && (
         <div className={styles.gitCardHint}>{t('git.remoteUpdated')}</div>
       )}

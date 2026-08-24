@@ -29,6 +29,8 @@ export interface GitStatusData {
   uncommitted?: number
   /** Notes whose local state differs from the repo target (not yet pushed). */
   unpushed?: number
+  /** Number of remote commits ahead of the local clone (in this subdir). */
+  remoteAhead?: number
   lastCommit?: string
   remote?: string
   error?: string

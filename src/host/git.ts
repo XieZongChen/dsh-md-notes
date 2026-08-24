@@ -259,6 +259,8 @@ export interface GitStatusView {
   uncommitted?: number
   /** Notes whose local state differs from the repo target (not yet pushed). */
   unpushed?: number
+  /** Number of remote commits ahead of the local clone, scoped to this subdir. */
+  remoteAhead?: number
   lastCommit?: string
   remote?: string
   error?: string
@@ -271,19 +273,24 @@ export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
+  // Refresh origin refs so the "remote has updates" check reflects the real
+  // remote (a cheap no-op when nothing new; failures are tolerated below).
+  await fetchOrigin(ctx, repo)
   const target = repoTargetDir(repo)
   const scope = repo.subdir === '' ? '.' : repo.subdir.replace(/\\/g, '/')
-  const [branchRes, porcelain, lastLog, unpushed] = await Promise.all([
+  const [branchRes, porcelain, lastLog, unpushed, aheadRes] = await Promise.all([
     runGit(ctx, repo.repoDir, ['branch', '--show-current']),
     runGit(ctx, repo.repoDir, ['status', '--porcelain', '--', scope]),
     runGit(ctx, repo.repoDir, ['log', '-1', '--format=%cr', '--', scope]),
     unpushedCount(notesDir, target),
+    runGit(ctx, repo.repoDir, ['rev-list', '--count', `${repo.branch}..origin/${repo.branch}`, '--', scope]),
   ])
   const currentBranch = branchRes.code === 0 ? branchRes.stdout.trim() : branch
   const uncommitted = porcelain.code === 0
     ? porcelain.stdout.split('\n').filter((line) => line.trim() !== '').length
     : 0
   const lastCommit = lastLog.code === 0 ? lastLog.stdout.trim() : undefined
+  const remoteAhead = aheadRes.code === 0 ? Number(aheadRes.stdout.trim()) || 0 : 0
   return {
     ok: true,
     repoDir: repo.repoDir,
@@ -291,6 +298,7 @@ export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string
     branch: currentBranch,
     uncommitted,
     unpushed,
+    remoteAhead,
     lastCommit: lastCommit || undefined,
     remote: repo.remote,
   }
