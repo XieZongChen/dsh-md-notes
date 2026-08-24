@@ -20,6 +20,22 @@
   **不新增** `NEXT_VERSION`（开发空窗期不留空块）。写入改动时先检查是否存在 `NEXT_VERSION`
   块——没有就先添加一个，再在块下记录新改动。
 
+## [0.8.0] - 2026-08-25
+
+### Added
+
+- **Git 卡片远端更新检测**：`gitStatus` 拉取远端并返回 `remoteAhead`，远端有新提交时
+  Git 卡片提示「远端有更新，需手动更新」。见
+  [使用文档 §5 — Git 同步](docs/usage.zh.md#5-git-同步可选)。
+
+### Fixed
+
+- **覆盖弹窗改为三向冲突判定**（base / local / remote）：内容不同不再一律弹窗，仅真正的
+  三方冲突才询问。见 [使用文档 §5 — Git 同步](docs/usage.zh.md#5-git-同步可选)。
+- **修复侧边栏笔记入口样式**：不再依赖 footer 的 flex-wrap / flex-basis，改为普通全宽行，
+  `.notesRow` 对齐 ui-cordis（不被 footer 其他入口压缩）。见
+  [使用文档 §2 — 打开笔记管理器](docs/usage.zh.md#2-打开笔记管理器)。
+
 ## [0.7.1] - 2026-08-23
 
 ### Fixed

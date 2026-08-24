@@ -24,6 +24,25 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## [0.8.0] - 2026-08-25
+
+### Added
+
+- **Remote-update detection on the Git card**: `gitStatus` fetches the remote and
+  returns `remoteAhead`; when the remote has new commits, the Git card shows
+  "Remote has updates — update manually". See
+  [User guide §5 — Git sync](docs/usage.md#5-git-sync-optional).
+
+### Fixed
+
+- **Overwrite dialog uses three-way conflict detection** (base / local / remote):
+  differing content no longer always prompts — only a true three-way conflict
+  asks. See [User guide §5 — Git sync](docs/usage.md#5-git-sync-optional).
+- **Sidebar note-entry styles fixed**: it no longer depends on the footer's
+  flex-wrap / flex-basis — a plain full-width row with `.notesRow` aligned to
+  ui-cordis (not compressed by other footer entries). See
+  [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+
 ## [0.7.1] - 2026-08-23
 
 ### Fixed
