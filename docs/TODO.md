@@ -3,6 +3,15 @@
 > 未来功能规划清单，按优先级排序。每项实现后请移入 [CHANGELOG.md](../CHANGELOG.md)
 > （只记用户可见的功能性改动）。
 
+## 已知平台问题（待 dsh 修复）
+
+- **sidebar footer 入口无法独占一行**：dsh 的 `.footerActions`（`sidebar.footer.action` 容器，
+  `packages/client/ui-sidebar/src/client/SidebarRoot.module.css`）是 `display: flex`（默认
+  nowrap，横排）；而 dsh 内置 `ui-cordis` 与 md-notes 都用 `width:100%` 想独占一行，两个
+  `width:100%` 入口在 nowrap 里会互相挤压/溢出。插件侧已给 `.notesRow` 加 `flex:none`
+  缓解（不被压缩），但根治需 dsh 把 `.footerActions` 改为 `flex-direction: column`（或
+  `flex-wrap: wrap`）——待向 dsh 提 issue/PR。
+
 ## 1. 笔记引用进对话的细化（@ 引用已实现）
 
 **主体状态**：✅ 已实现（0.4.0 + 后续）：`@` 候选/chip/跨工作区、序列化为标准 markdown

@@ -4,6 +4,12 @@
    footer reads as one row. */
 
 .notesRow {
+  /* flex:none aligns with dsh's own ui-cordis footer entry (`.layer`), so this
+     entry is not squeezed by sibling footer actions. NOTE: dsh's
+     `.footerActions` container is `display:flex` (nowrap), so two `width:100%`
+     entries still overflow horizontally — the real fix is making that
+     container column/wrap upstream (see docs/TODO.md "已知平台问题"). */
+  flex: none;
   width: 100%;
   display: flex;
   justify-content: center;
