@@ -1,7 +1,7 @@
 {
   "name": "dsh-md-notes",
   "version": "0.8.0",
-  "description": "MD 笔记插件：侧边栏笔记管理入口（列表/编辑/预览）+ 回答下方记入笔记，笔记存于工作区 .dsh-notes/",
+  "description": "A note-taking plugin for DeepSeek Harness (DSH). It provides a full MD notes manager and MD notes editor, letting you quickly capture conversation content into notes. Notes can be maintained by syncing to a Git repository.",
   "homepage": "https://github.com/XieZongChen/dsh-md-notes",
   "repository": {
     "type": "git",
