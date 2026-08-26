@@ -27,7 +27,7 @@ import {
   type ResolvedRepo, type WorkspaceInfo,
 } from './host/git.ts'
 import { iconHandler, notesApiHandler, type GitApi, type NotesApiDeps, type WorkspaceEntry } from './host/http.ts'
-import { createKeyedLock } from './host/keyed-lock.ts'
+import { createKeyedLock, createKeyedMutex } from './host/keyed-lock.ts'
 import { MdNotesSettingsSchema, mergeSettings, MD_NOTES_NS, type MdNotesSettings } from './host/settings.ts'
 import { registerNoteContextInjection } from './host/context-inject.ts'
 
@@ -160,15 +160,24 @@ export function apply(ctx: Context, config: Config): void {
     await scope.update(patch)
   }
 
+  // Serialize all git operations per clone directory. git.ts runs
+  // checkout/add/commit/push/fetch against the same `repoDir`, and in shared
+  // mode several workspaces share one clone — a concurrent push/pull would
+  // interleave and corrupt the clone. The mutex QUEUES (never rejects) and
+  // must wrap at this GitApi boundary, NOT inside git.ts: those functions call
+  // each other (gitStatus → gitInit, gitPush → ensureBranch → fetchOrigin), so
+  // a per-function lock would self-deadlock. Wrapping here locks each top-level
+  // API call exactly once.
+  const gitMutex = createKeyedMutex()
   const git: GitApi = {
-    status: (repo, notesDir) => gitStatus(ctx, repo, repo.branch, notesDir),
-    init: (repo) => gitInit(ctx, repo, repo.branch),
-    push: (repo, notesDir, message, overwrite) => gitPush(ctx, repo, notesDir, message, {
+    status: (repo, notesDir) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitStatus(ctx, repo, repo.branch, notesDir)),
+    init: (repo) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitInit(ctx, repo, repo.branch)),
+    push: (repo, notesDir, message, overwrite) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitPush(ctx, repo, notesDir, message, {
       name: readSettings().gitAuthorName ?? '',
       email: readSettings().gitAuthorEmail ?? '',
-    }, overwrite),
-    pull: (repo, notesDir, force, manual) => gitPull(ctx, repo, notesDir, force, manual),
-    sync: (repo) => gitSync(ctx, repo),
+    }, overwrite)),
+    pull: (repo, notesDir, force, manual) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitPull(ctx, repo, notesDir, force, manual)),
+    sync: (repo) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitSync(ctx, repo)),
   }
 
   const suggest = (): Record<string, unknown> => {
