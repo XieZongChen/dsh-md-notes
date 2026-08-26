@@ -251,6 +251,10 @@
 
 ## 9. Git 提交、文档与发布
 
+- **提交粒度（越细越好）**：一笔 commit 只做**一个独立、可单独 revert 的改动点**（一个 bug
+  修复、一个关注点、一个文件的独立变更）。一次提问涉及多个独立改动时，按改动点拆成多笔，
+  逐笔 `commit` + `push`；禁止把多个无关改动混进一笔。粒度上限 = 每笔仍要能独立通过类型
+  检查/构建，不为拆而拆出「半成品」提交（改动需配套一起改的文件要放进同一笔）。
 - **Commit message**：Conventional Commits（`feat`/`fix`/`perf`/`docs`/`chore`/`refactor`…），
   描述可用中文（现状约定），一行讲清动机；涉及用户可见行为变更时关联版本。示例：
   `fix: appendConversation 对 noteName 做 sanitize，堵住路径穿越`。
