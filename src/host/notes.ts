@@ -181,6 +181,10 @@ export async function appendConversation(
 ): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
   if (answerText === '') return { ok: false, error: 'assistant message not found' }
 
+  // Normalize + sanitize the target basename (same guard as read/write/delete):
+  // blocks `../` path traversal and absolute paths before any join below.
+  const name = sanitizeName(noteName)
+
   const stamp = new Date().toLocaleString()
   const userLabel = labels?.user ?? 'User'
   const assistantLabel = labels?.assistant ?? 'DSH'
@@ -194,13 +198,13 @@ export async function appendConversation(
   await mkdir(dir, { recursive: true })
   let content = ''
   try {
-    content = await readFile(join(dir, noteName), 'utf8')
+    content = await readFile(join(dir, name), 'utf8')
   } catch {
     /* new note */
   }
-  await writeFile(join(dir, noteName), content + section, 'utf8')
+  await writeFile(join(dir, name), content + section, 'utf8')
   const meta = await readMeta(dir)
-  meta[noteName] = { title: titleOf(content + section, noteName.replace(/\.md$/i, '')), updatedAt: Date.now() }
+  meta[name] = { title: titleOf(content + section, name.replace(/\.md$/i, '')), updatedAt: Date.now() }
   await writeMeta(dir, meta)
-  return { ok: true, name: noteName }
+  return { ok: true, name }
 }

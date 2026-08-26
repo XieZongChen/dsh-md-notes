@@ -9,7 +9,7 @@
 import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import {
-  appendConversation, createNote, deleteNote, listNotes, readNote, writeNote,
+  appendConversation, createNote, deleteNote, listNotes, readNote, sanitizeName, writeNote,
 } from './notes.ts'
 import {
   GitError, type GitStatusView, type ResolvedRepo,
@@ -155,15 +155,19 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'appendConversation': {
       const dir = deps.resolveDir(workspaceId)
       if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
+      // Normalize the target basename BEFORE computing the lock key so the key
+      // always equals the real target file; `appendConversation` sanitizes
+      // again internally as the authoritative guard (same as write/read/delete).
+      const noteName = sanitizeName(String(req.noteName ?? ''))
       // The client localizes the section labels (User/DSH/empty) and captures
       // the question/answer texts + session title from the browser snapshot —
       // the host only formats and writes the file (docs/context.md).
       const labels = typeof req.labels === 'object' && req.labels !== null
         ? (req.labels as { user?: string; assistant?: string; empty?: string; image?: string })
         : undefined
-      const lock = await deps.lock.with(`${workspaceId}/${String(req.noteName ?? '')}`, () => appendConversation(
+      const lock = await deps.lock.with(`${workspaceId}/${noteName}`, () => appendConversation(
         dir,
-        String(req.noteName ?? ''),
+        noteName,
         String(req.questionText ?? ''),
         String(req.answerText ?? ''),
         String(req.sessionTitle ?? ''),
