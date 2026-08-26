@@ -87,9 +87,10 @@ dsh-md-notes/
   全部为纯函数（目录参数注入，无 ctx 依赖），可独立测试。
 - Git 领域 `host/git.ts`：`runGit`（subprocess 收集输出）、`cloneDirFor`（URL→本地 clone 目录）、
   `resolveWorkspaceRepo` / `resolveSharedRepo`（互斥双模式解析）、`resolveNotesDir`（恒为工作区
-  `.dsh-notes`）、`syncNotes` / `changedNotes` / `remoteOnlyNotes` / `deleteMissingNotes`
-  （目录镜像同步 + 冲突检测）、`gitInit`（clone）/ `gitStatus` / `gitPush` / `gitPull` / `gitSync`、
-  `GitError`（带机器可读 `code`）。
+  `.dsh-notes`）、共享模式子目录映射（`.dsh-notes-workspaces.json`，`resolveEffectiveRepo` /
+  `resolveSharedFolder` 固定目录名）、`syncNotes` / `changedNotes` / `remoteOnlyNotes` /
+  `deleteMissingNotes`（目录镜像同步 + 冲突检测）、`gitInit`（clone）/ `gitStatus` / `gitPush` /
+  `gitPull` / `gitSync`、`GitError`（带机器可读 `code`）。
 - 设置 `host/settings.ts`：`MD_NOTES_NS`（`md-notes`）、`MdNotesSettingsSchema`（L3 wire schema）、
   `mergeSettings`（L2 Config 与 L3 逐层合并，`gitMode:'on'` 归一化为 shared/own）。
 - HTTP 层 `host/http.ts`：`readBody`（有界 JSON 读取）、`sendJson`、`notesApiHandler`（method 分发：

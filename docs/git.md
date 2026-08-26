@@ -48,6 +48,9 @@
   （0.7.0），Git 卡片与全局汇总行据此显示，不再只看未提交数
 - ✅ **shared 模式按工作区子目录隔离**（0.7.0）：共享仓库的 Git 状态与提交以**工作区名子目录**
   为粒度（`gitStatus`/`gitPush`/`gitPull` 均按工作区定位子目录），跨工作区状态与提交互不串扰
+- ✅ **共享模式文件夹映射**：仓库根提交 `.dsh-notes-workspaces.json`，以 `ws.id` 为 key 固定
+  每个工作区的子目录名——工作区**改名后子目录不再变化**、旧目录不再孤儿化，同名工作区也不再
+  互相覆盖（见 §3.2）
 - ✅ Client 管理器：按工作区分组、工作区 Git 卡片、commit 弹层面板、打开笔记自动拉取
   （受 `gitAutoPull` 控制）、底部全局 Git 状态行、冲突解决 UI、i18n 中英
 - ✅ **dsh 设置面板「MD 笔记」分区**（`settings.section`）：三态模式选择 + 互斥配置区
@@ -115,7 +118,8 @@
 ```
 $DSH_HOME/md-notes-repos/<url-hash>/      # git clone <url> 的结果
 ├── .git/
-├── <工作区A 名>/                          # shared 模式：每个工作区一个子目录
+├── .dsh-notes-workspaces.json            # shared 模式：ws.id → 子目录名映射（入 git，§3.2）
+├── <工作区A 名>/                          # shared 模式：每个工作区一个子目录（名由映射固定）
 │   └── <note>.md
 └── <note>.md                              # own 模式 subpath=''：直接放仓库根
 ```
@@ -127,7 +131,22 @@ $DSH_HOME/md-notes-repos/<url-hash>/      # git clone <url> 的结果
 ### 3.2 共享仓库模式（`gitMode: 'shared'`）
 
 配置共享仓库 URL（`gitCentral.remote`）+ 可选分支（`gitCentral.branch`，默认 main）。
-**所有工作区**的笔记都推送到该仓库的该分支，每个工作区一个**以工作区名命名的子目录**。
+**所有工作区**的笔记都推送到该仓库的该分支，每个工作区一个子目录。
+
+**子目录由映射固定（工作区改名安全）**：仓库根提交一个 `.dsh-notes-workspaces.json`，以
+`ws.id` 为 key 记录每个工作区的子目录名（首次推送时按当时的工作区名生成并固定）：
+
+```json
+{ "<ws.id>": { "folder": "dsh-plugin" } }
+```
+
+- 解析子目录时先查映射里的 `folder`；没有条目才回退到「当前工作区名」，并在首次推送时写死。
+- 因此**工作区改名后，子目录不再跟着变**——旧目录不会被孤儿化；同名工作区也因 key 是
+  `ws.id` 而不再互相覆盖。
+- 该映射**必须随笔记一起 commit**（与 `meta.json` 相反）；own 模式不使用该映射（子目录就是
+  用户配置的 `subpath`）。
+- **迁移**：老用户仓库里已有的「工作区名」目录会在首次启用时被直接认领（fallback 恰是旧目录
+  名）；若改名发生在启用映射**之前**，旧目录无法按名找回，需手动合并一次。
 
 ### 3.3 独立仓库模式（`gitMode: 'own'`）
 
@@ -146,7 +165,7 @@ $DSH_HOME/md-notes-repos/<url-hash>/      # git clone <url> 的结果
 | 配置 | 仓库 | 笔记目录（不变） |
 |---|---|---|
 | `gitMode: 'off'` | 无 | `<ws>/.dsh-notes` |
-| `gitMode: 'shared'` + URL | 共享仓库，`branch`/`<工作区名>/` | `<ws>/.dsh-notes` |
+| `gitMode: 'shared'` + URL | 共享仓库，`branch`/`<映射固定的子目录>/`（§3.2） | `<ws>/.dsh-notes` |
 | `gitMode: 'own'` + `gitRepos[ws].remote` | 该工作区仓库，`branch`/`subpath` | `<ws>/.dsh-notes` |
 | `gitMode: 'own'` 未配置 | 无仓库 | `<ws>/.dsh-notes`（git 按钮隐藏） |
 
@@ -159,8 +178,11 @@ $DSH_HOME/md-notes-repos/<url-hash>/      # git clone <url> 的结果
 resolveNotesDir(ws) = <ws.path>/.dsh-notes        // 永远（笔记深度绑定工作区，无兜底目录）
 ```
 
-- **git 目标解析**（`resolveWorkspaceRepo`）：按模式返回 `{ repoDir, subdir, branch, remote }`，
+- **git 目标解析**（`resolveWorkspaceRepo`）：按模式返回 `{ repoDir, subdir, branch, remote, workspaceId? }`，
   repoDir = URL 的 clone 目录；无仓库 → `undefined`（git 按钮隐藏）。
+- **共享模式子目录解析**（`resolveEffectiveRepo` / `resolveSharedFolder`）：shared 模式从仓库根的
+  `.dsh-notes-workspaces.json` 读固定目录名（无条目回退工作区名并写死）；`gitStatus`/`gitPull`
+  只读，`gitPush` 在 checkout 之后写条目并随笔记 commit；own 模式不读不写映射。
 - **推送目标目录** `repoTargetDir(repo)` = clone 根（subdir 空）或 `join(repoDir, subdir)`。
 - **笔记位置恒定**：切换模式/配置仓库都不改变笔记文件位置，不存在目录迁移问题。
 
