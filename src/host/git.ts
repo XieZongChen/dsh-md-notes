@@ -17,7 +17,7 @@
 import { join, resolve, sep } from 'node:path'
 import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync, existsSync, realpathSync } from 'node:fs'
-import { mkdir, readdir, readFile, copyFile, stat, rm } from 'node:fs/promises'
+import { mkdir, readdir, readFile, copyFile, stat, rm, writeFile } from 'node:fs/promises'
 import type { Context } from '@deepseek-ai/cordis'
 import type { MdNotesSettings } from './settings.ts'
 
@@ -46,10 +46,14 @@ export interface ResolvedRepo {
   branch: string
   /** Remote URL (the repo's identity). */
   remote: string
+  /** Shared mode only: the workspace id keying the repo-root folder mapping. */
+  workspaceId?: string
 }
 
 const GIT_TIMEOUT_MS = 60_000
 const COLLECT_MAX = 512 * 1024
+/** Shared-mode folder mapping committed at the repo root (see docs/git.md). */
+const MAPPING_NAME = '.dsh-notes-workspaces.json'
 
 /** Minimal subprocess-service face used here (raw spawn; no sandbox). */
 interface SubprocessLike {
@@ -136,6 +140,7 @@ export function resolveWorkspaceRepo(settings: MdNotesSettings, ws: WorkspaceInf
       subdir: sanitizeFolder(ws.title),
       branch: settings.gitCentral?.branch?.trim() ? settings.gitCentral.branch : 'main',
       remote,
+      workspaceId: ws.id,
     }
   }
   if (settings.gitMode === 'own') {
@@ -180,6 +185,68 @@ export function resolveNotesDir(_settings: MdNotesSettings, ws: WorkspaceInfo): 
 /** The absolute in-repo directory where this workspace's notes sync to. */
 export function repoTargetDir(repo: ResolvedRepo): string {
   return repo.subdir === '' ? repo.repoDir : join(repo.repoDir, ...repo.subdir.split(sep).filter(Boolean))
+}
+
+/** One entry of the shared-mode folder mapping (`ws.id` → committed folder). */
+interface WorkspaceFolderEntry {
+  /** In-repo folder holding this workspace's notes (pinned on first write). */
+  folder: string
+}
+
+/** The shared-mode folder mapping, committed at the repo root. */
+type WorkspaceFolderMap = Record<string, WorkspaceFolderEntry>
+
+/** Read the committed folder mapping (empty when absent/corrupt). */
+async function readWorkspaceMapping(repoDir: string): Promise<WorkspaceFolderMap> {
+  try {
+    const raw = await readFile(join(repoDir, MAPPING_NAME), 'utf8')
+    const parsed = JSON.parse(raw) as unknown
+    return parsed !== null && typeof parsed === 'object' ? parsed as WorkspaceFolderMap : {}
+  } catch {
+    return {}
+  }
+}
+
+/** Write the folder mapping (best-effort; never blocks a sync). */
+async function writeWorkspaceMapping(repoDir: string, mapping: WorkspaceFolderMap): Promise<void> {
+  try {
+    await writeFile(join(repoDir, MAPPING_NAME), JSON.stringify(mapping, null, 2), 'utf8')
+  } catch {
+    // best effort
+  }
+}
+
+/**
+ * Resolve the shared-mode workspace folder from the committed mapping.
+ * The folder is pinned on first write (keyed by workspace id), so renaming the
+ * workspace never orphans the repo subdirectory; the legacy title-named folder
+ * is adopted when present (the fallback is the sanitized title, which is
+ * exactly the legacy name). `create` controls whether a missing entry is
+ * written back — push writes it, status/pull only read.
+ */
+async function resolveSharedFolder(repo: ResolvedRepo, create: boolean): Promise<string> {
+  const workspaceId = repo.workspaceId
+  if (repo.kind !== 'shared' || workspaceId === undefined) return repo.subdir
+  const mapping = await readWorkspaceMapping(repo.repoDir)
+  const existing = mapping[workspaceId]
+  if (existing !== undefined && existing.folder !== '') return existing.folder
+  const folder = repo.subdir
+  if (create) {
+    mapping[workspaceId] = { folder }
+    await writeWorkspaceMapping(repo.repoDir, mapping)
+  }
+  return folder
+}
+
+/**
+ * Effective repo for a git operation: shared mode swaps `subdir` for the
+ * pinned folder (reading/creating the mapping as requested); own mode is a
+ * no-op (its `subdir` is the user-configured subpath).
+ */
+async function resolveEffectiveRepo(repo: ResolvedRepo, create: boolean): Promise<ResolvedRepo> {
+  if (repo.kind !== 'shared') return repo
+  const subdir = await resolveSharedFolder(repo, create)
+  return { ...repo, subdir }
 }
 
 /**
@@ -273,6 +340,9 @@ export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) }
   }
+  // Shared mode: pin the subdir to the committed folder mapping (read-only —
+  // status never writes the mapping; push creates/commits it).
+  repo = await resolveEffectiveRepo(repo, false)
   // Refresh origin refs so the "remote has updates" check reflects the real
   // remote — deduped per repo with a short TTL so a shared-repo panel doesn't
   // fetch the same clone once per workspace.
@@ -567,10 +637,18 @@ export async function gitPush(
   author: { name: string; email: string }, overwrite = false,
 ): Promise<{ ok: boolean; error?: string; code?: string; changed?: string[] }> {
   await gitInit(ctx, repo, repo.branch)
+  // Shared mode: resolve the folder (read-only) BEFORE the baseline read, so
+  // the baseline uses the pinned folder even when it differs from the title.
+  repo = await resolveEffectiveRepo(repo, false)
   // Last-synced baseline — read BEFORE ensureBranch resets the clone to origin.
   const base = await readNoteMap(repoTargetDir(repo))
   const branch = await ensureBranch(ctx, repo)
   if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
+  // Now create/pin the folder mapping entry. The write happens AFTER the
+  // checkout above so it survives the branch reset; a missing entry adopts the
+  // title-named folder (the legacy directory when the title is unchanged) and
+  // is committed together with the notes below.
+  repo = await resolveEffectiveRepo(repo, true)
   // Detect true conflicts (remote changed since base AND local still differs).
   const target = repoTargetDir(repo)
   if (!overwrite) {
@@ -597,8 +675,11 @@ export async function gitPush(
   }
 
   const addScope = repo.subdir === '' ? '.' : repo.subdir.replace(/\\/g, '/')
+  // Shared mode also stages the repo-root folder mapping (which pins this
+  // workspace's folder and must be committed to survive across devices).
+  const pathspec = repo.kind === 'shared' ? [addScope, MAPPING_NAME] : [addScope]
   // `-A` so deletions staged as well.
-  const add = await runGit(ctx, repo.repoDir, ['add', '-A', '--', addScope])
+  const add = await runGit(ctx, repo.repoDir, ['add', '-A', '--', ...pathspec])
   if (add.code !== 0) return { ok: false, code: 'git-failed', error: `git add failed: ${add.stderr || add.stdout}` }
 
   const identity = await resolveIdentity(ctx, repo, author)
@@ -606,10 +687,10 @@ export async function gitPush(
 
   // Scope both the change check and the commit to this workspace's subdir, so
   // a shared repo never commits another workspace's staged/uncommitted files.
-  const porcelain = await runGit(ctx, repo.repoDir, ['status', '--porcelain', '--', addScope])
+  const porcelain = await runGit(ctx, repo.repoDir, ['status', '--porcelain', '--', ...pathspec])
   const hasChanges = porcelain.code === 0 && porcelain.stdout.trim() !== ''
   if (hasChanges) {
-    const commit = await runGit(ctx, repo.repoDir, [...identity.args, 'commit', '-m', message, '--', addScope])
+    const commit = await runGit(ctx, repo.repoDir, [...identity.args, 'commit', '-m', message, '--', ...pathspec])
     if (commit.code !== 0) return { ok: false, code: 'git-failed', error: `git commit failed: ${commit.stderr || commit.stdout}` }
   }
 
@@ -652,6 +733,9 @@ export async function gitPull(
   ctx: Context, repo: ResolvedRepo, notesDir: string, force: boolean, manual = false,
 ): Promise<{ ok: boolean; code?: string; error?: string; skipped?: number; changed?: string[] }> {
   await gitInit(ctx, repo, repo.branch)
+  // Shared mode: pin the subdir to the committed folder mapping (read-only —
+  // pull does not create/commit the mapping; push does).
+  repo = await resolveEffectiveRepo(repo, false)
   // Last-synced baseline — read BEFORE checkout resets the clone to origin.
   const base = await readNoteMap(repoTargetDir(repo))
   const fetch = await fetchOrigin(ctx, repo)
