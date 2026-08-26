@@ -161,7 +161,7 @@ In the settings panel (see [§6](#6-the-settings-panel)), pick a mode:
 | Mode | What it does | Configure |
 |---|---|---|
 | **Off** | No Git sync. Notes are just local files. | — |
-| **Shared repo** | One repository for all workspaces. Each workspace's notes sync into that repo's branch under a folder named after the workspace. | Repo URL + optional branch (default `main`) |
+| **Shared repo** | One repository for all workspaces. Each workspace's notes sync into that repo's branch under a pinned folder (its name is fixed on the first sync and stays the same if the workspace is renamed). | Repo URL + optional branch (default `main`) |
 | **Own repos** | Each workspace has its own repository. | Per workspace: repo URL + branch (default `main`) + in-repo subpath (default repo root) |
 
 > Want a single repository for everything? Use **Shared repo** — every
