@@ -298,10 +298,10 @@
 
 | # | 位置 | 隐患 | 级别 | 处置 |
 |---|---|---|---|---|
-| 1 | `host/http.ts` `appendConversation` | `noteName` 未过 `sanitizeName`，`join(dir, noteName)` 可被 `../` 穿越到 `.dsh-notes` 之外 | 高（安全） | 立即修：与 write/delete 一致先 `sanitizeName` |
-| 2 | `host/git.ts` 全部入口 | 同一 clone 无并发互斥，并发 push/pull 会 race；shared 模式多工作区共享 clone 尤其危险 | 高（正确性） | 立即修：加 `repo/<repoDir>` 进程内锁串行化 |
+| 1 | ✅ `host/http.ts` + `host/notes.ts` | `appendConversation` 的 `noteName` 未消毒，可被 `../` 穿越出 `.dsh-notes` | 已修 | 双层 `sanitizeName`（commit `577912f`） |
+| 2 | ✅ `host/keyed-lock.ts` + `index.ts` | 同一 clone 无并发互斥，并发 push/pull 会 race；shared 模式多工作区共享 clone 尤其危险 | 已修 | 新增 `KeyedMutex`，GitApi 边界按 `repo/<repoDir>` 串行化（commit `dc293c1`） |
 | 3 | `host/http.ts` | HTTP API 无鉴权，任意 client 可传任意 `workspaceId` 读写任意工作区；`gitStatus` 返回含凭据的 `remote` URL | 中（信任边界） | 文档化信任边界；评估 `remote` 是否脱敏/不下发 |
-| 4 | `host/git.ts` `resolveWorkspaceRepo` | shared 子目录用 `sanitizeFolder(ws.title)`，工作区改名会孤儿化旧子目录笔记 | 中 | 改用稳定 id（workspace id 或目录名）做子目录键 |
+| 4 | ✅ `host/git.ts` | shared 子目录原用 `sanitizeFolder(ws.title)`，工作区改名孤儿化旧目录 | 已修 | 仓库内 `.dsh-notes-workspaces.json` 以 `ws.id` 固定目录名（commit `e59f300`） |
 | 5 | `client/NotesManager.tsx` | ~620 行巨石 + 22+ useState + 三处重复的「刷新+重读」逻辑 | 中（可维护） | 重构：拆子组件 + `useNoteListAndRead` hook |
 | 6 | host/client 双份类型 | `NoteSummary`/`GitStatusData`/`GitSettingsData` 等两边各一份，易漂移 | 中 | 收敛为一份（§3），至少交叉注释 |
 | 7 | `client/api.ts` `ApiResult` | `ok:true` 分支 10+ optional 字段的大杂烩，调用方靠猜 | 中 | 改按 method 的 discriminated union |
