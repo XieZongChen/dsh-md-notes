@@ -24,6 +24,19 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## NEXT_VERSION
+
+### Breaking
+
+- **Shared-repo subdirectories are now pinned by a mapping (rename-safe)**: shared mode now uses a
+  committed `.dsh-notes-workspaces.json` (keyed by workspace id) to pin each workspace's
+  subdirectory — renaming a workspace no longer moves or orphans its folder, and same-named
+  workspaces no longer overwrite each other. **Migration impact**: only workspaces renamed *before*
+  this upgrade are affected — the old subdirectory stays in the remote repo (the plugin no longer
+  reads/writes it); local notes are **unaffected** (they always live locally under
+  `<workspace>/.dsh-notes/`, git sync is only a mirror). To clean up, delete the old remote
+  subdirectory — leaving it is harmless.
+
 ## [0.8.0] - 2026-08-25
 
 ### Added
