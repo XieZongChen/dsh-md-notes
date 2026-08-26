@@ -39,7 +39,8 @@ dsh-md-notes/
 │   ├── context.md         # 笔记引用进对话上下文设计（已实现）
 │   ├── state.md           # 状态管理总纲（分层/选型/异步跟踪）
 │   ├── write-lock.md      # 笔记写入互斥（写锁）方案（已实现）
-│   ├── manager-redesign.md# 笔记面板改版方案（0.7.0 已实现 P0）
+│   ├── manager-redesign.md # 笔记面板改版方案（0.7.0 已实现 P0）
+│   ├── coding-standards.md # 代码规范（分层/命名/类型/错误码/锁/测试 + 隐患清单）
 │   └── TODO.md            # 功能规划（待办）
 ├── scripts/
 │   └── link-deps.mjs     # 开发期链接 deepseek-harness checkout 类型
