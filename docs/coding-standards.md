@@ -302,7 +302,7 @@
 | 2 | ✅ `host/keyed-lock.ts` + `index.ts` | 同一 clone 无并发互斥，并发 push/pull 会 race；shared 模式多工作区共享 clone 尤其危险 | 已修 | 新增 `KeyedMutex`，GitApi 边界按 `repo/<repoDir>` 串行化（commit `dc293c1`） |
 | 3 | `host/http.ts` | HTTP API 无鉴权，任意 client 可传任意 `workspaceId` 读写任意工作区；`gitStatus` 返回含凭据的 `remote` URL | 中（信任边界） | 文档化信任边界；评估 `remote` 是否脱敏/不下发 |
 | 4 | ✅ `host/git.ts` | shared 子目录原用 `sanitizeFolder(ws.title)`，工作区改名孤儿化旧目录 | 已修 | 仓库内 `.dsh-notes-workspaces.json` 以 `ws.id` 固定目录名（commit `e59f300`） |
-| 5 | ✅ `client/NotesManager.tsx` | 三处「刷新+重读」已去重、左栏拆 `NoteItem`/`WorkspaceList`、state/handler 收敛进 `useNotesManager` hook | 已修 | commit `f1b5d98`/`8eda8ed`/`2fed9a7`（hook 内部仍可按 list/editor/git 再细分） |
+| 5 | ✅ `client/NotesManager.tsx` | 三处「刷新+重读」已去重、左栏拆 `NoteItem`/`WorkspaceList`、state 收敛并按 list/editor/git 拆成三个 hook | 已修 | commit `f1b5d98`/`8eda8ed`/`2fed9a7`/`44cf8c5` |
 | 6 | host/client 双份类型 | `NoteSummary`/`GitStatusData`/`GitSettingsData` 等两边各一份，易漂移 | 中 | 收敛为一份（§3），至少交叉注释 |
 | 7 | `client/api.ts` `ApiResult` | `ok:true` 分支 10+ optional 字段的大杂烩，调用方靠猜 | 中 | 改按 method 的 discriminated union |
 | 8 | `NotePicker`/`NotesManager` | 「按工作区分组列表」JSX 重复 | 低 | 抽共享列表组件 |
