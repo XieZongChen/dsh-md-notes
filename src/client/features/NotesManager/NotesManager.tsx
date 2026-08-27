@@ -170,6 +170,20 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     })
   }
 
+  /** Re-read one note's content into the editor, guarded by the current selection. */
+  const readInto = (wsId: string, name: string, onDone?: () => void): void => {
+    void api('read', { name, workspaceId: wsId }).then((res) => {
+      if (res.ok && isCurrent(wsId, name)) { setContent(res.content ?? ''); setSavedContent(res.content ?? '') }
+      onDone?.()
+    })
+  }
+
+  /** Re-list workspaces, then re-read the selected note (if it is the one just synced). */
+  const refreshAndRereadSelected = (wsId: string): void => {
+    refresh()
+    if (selected !== null && isCurrent(wsId, selected)) readInto(wsId, selected)
+  }
+
   React.useEffect(() => { refresh() }, [])
 
   const toggleWorkspace = (wsId: string): void => {
@@ -196,10 +210,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     setRemoteChanged(null)
     setContentLoading(true)
     refreshStatus(wsId)
-    void api('read', { name, workspaceId: wsId }).then((res) => {
-      if (res.ok && isCurrent(wsId, name)) { setContent(res.content ?? ''); setSavedContent(res.content ?? '') }
-      setContentLoading(false)
-    })
+    readInto(wsId, name, () => setContentLoading(false))
     // Auto-pull on open (honors gitAutoPull, best effort): refresh, then re-read.
     if (!autoPull) return
     void gitPullApi(wsId).then((res) => {
@@ -217,10 +228,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         // The pull may have brought new notes down — re-list so the left
         // panel shows them without reopening the manager.
         refresh()
-        void api('read', { name, workspaceId: wsId }).then((r2) => {
-          if (r2.ok && isCurrent(wsId, name)) { setContent(r2.content ?? ''); setSavedContent(r2.content ?? '') }
-          setContentLoading(false)
-        })
+        readInto(wsId, name, () => setContentLoading(false))
       }
     })
   }
@@ -285,12 +293,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         refreshStatus(wsId)
         // The pull may have brought new notes down — re-list so the left
         // panel shows them immediately.
-        refresh()
-        if (selected && isCurrent(wsId, selected)) {
-          void api('read', { name: selected, workspaceId: wsId }).then((r) => {
-            if (r.ok && isCurrent(wsId, selected)) { setContent(r.content ?? ''); setSavedContent(r.content ?? '') }
-          })
-        }
+        refreshAndRereadSelected(wsId)
         setFlash('manager.updated')
         window.setTimeout(() => setFlash(''), 1200)
       } else {
@@ -315,12 +318,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         // Nothing differed → the conservative pull already brought everything.
         // Re-list so newly-pulled notes appear in the left panel.
         setRemoteChanged(null)
-        refresh()
-        if (selected && isCurrent(wsId, selected)) {
-          void api('read', { name: selected, workspaceId: wsId }).then((r) => {
-            if (r.ok && isCurrent(wsId, selected)) { setContent(r.content ?? ''); setSavedContent(r.content ?? '') }
-          })
-        }
+        refreshAndRereadSelected(wsId)
         setFlash('manager.updated')
         window.setTimeout(() => setFlash(''), 1200)
         return
