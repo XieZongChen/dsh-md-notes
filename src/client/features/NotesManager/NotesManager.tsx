@@ -21,6 +21,16 @@ import type { MdNotesKey } from '../locales/index.ts'
 import shared from '../styles.module.css'
 import styles from './notes-manager.module.css'
 
+/** In-page confirmation dialog state (replaces window.confirm, reliable in overlay). */
+interface ConfirmState {
+  title: string
+  description: string
+  confirmLabel: string
+  cancelLabel: string
+  danger?: boolean
+  onConfirm: () => void
+}
+
 /** Per-workspace Git sync card: status + update/push actions (workspace scope). */
 interface GitSyncCardProps {
   status: GitStatusData | null | undefined
@@ -230,48 +240,13 @@ export interface NotesManagerProps {
   t: TranslateNS<'md-notes'>
 }
 
-/**
- * State + handlers for the notes manager, extracted so the component below
- * stays a pure renderer. Owns the note list, editor selection, and git sync.
- */
-function useNotesManager({ store, tracker, t }: NotesManagerProps) {
+/** List loading + per-workspace git status (the left pane's data). */
+function useNotesList() {
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [noWorkspaces, setNoWorkspaces] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
-  const [contentLoading, setContentLoading] = React.useState(false)
-  const [selectedWsId, setSelectedWsId] = React.useState<string | null>(null)
-  const [selected, setSelected] = React.useState<string | null>(null)
-  const [content, setContent] = React.useState('')
-  /** Content as of the last open/save — the "dirty" baseline. */
-  const [savedContent, setSavedContent] = React.useState('')
-  const [mode, setMode] = React.useState<'edit' | 'preview'>('preview')
-  const [saving, setSaving] = React.useState(false)
-  const [flash, setFlash] = React.useState<'' | MdNotesKey>('')
   const [statusByWs, setStatusByWs] = React.useState<Record<string, GitStatusData | null>>({})
-  const [gitMsg, setGitMsg] = React.useState('')
-  /** Workspace whose commit popover is open (null = none). */
-  const [pushTargetWsId, setPushTargetWsId] = React.useState<string | null>(null)
-  const [pushMsg, setPushMsg] = React.useState('')
-  /** Workspace currently updating / pushing (null = none) — card spinners key off these. */
-  const [updatingWsId, setUpdatingWsId] = React.useState<string | null>(null)
-  const [pushingWsId, setPushingWsId] = React.useState<string | null>(null)
-  const [pushConflict, setPushConflict] = React.useState<{ wsId: string; message: string; error: string } | null>(null)
   const [autoPull, setAutoPull] = React.useState(true)
-  /** Names of notes the remote updated but local differs — hint to manually update. */
-  const [remoteChanged, setRemoteChanged] = React.useState<string[] | null>(null)
-  /** In-page confirmation dialog (replaces window.confirm, reliable in overlay). */
-  const [confirmState, setConfirmState] = React.useState<{
-    title: string
-    description: string
-    confirmLabel: string
-    cancelLabel: string
-    danger?: boolean
-    onConfirm: () => void
-  } | null>(null)
-  const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
-  const selectionRef = React.useRef<{ wsId: string; name: string } | null>(null)
-  const isCurrent = (wsId: string, name: string): boolean =>
-    selectionRef.current !== null && selectionRef.current.wsId === wsId && selectionRef.current.name === name
 
   const refreshStatus = (wsId: string | null): void => {
     if (wsId === null) return
@@ -291,16 +266,51 @@ function useNotesManager({ store, tracker, t }: NotesManagerProps) {
       setNoWorkspaces(res.ok === true && res.noWorkspaces === true)
       if (res.ok && res.workspaces) {
         setWorkspaces(res.workspaces)
-        const target = selectedWsId ?? res.workspaces[0]?.workspaceId
-        if (target !== undefined) {
-          setSelectedWsId((prev) => prev ?? target)
-        }
         // Every workspace's Git card needs its own status, not just the current
         // one (each card renders its own branch/uncommitted/update/push).
         for (const ws of res.workspaces) refreshStatus(ws.workspaceId)
       }
     })
   }
+
+  React.useEffect(() => { refresh() }, [])
+
+  return { workspaces, noWorkspaces, loading, statusByWs, autoPull, refresh, refreshStatus }
+}
+
+/** Editor selection + content + note write/delete (depends on the list hook). */
+function useNotesEditor(deps: {
+  workspaces: WorkspaceNotes[]
+  autoPull: boolean
+  refresh: () => void
+  refreshStatus: (wsId: string | null) => void
+  setRemoteChanged: (names: string[] | null) => void
+  setGitMsg: (msg: string) => void
+  setConfirmState: React.Dispatch<React.SetStateAction<ConfirmState | null>>
+  tracker: BusyTracker
+  t: TranslateNS<'md-notes'>
+}) {
+  const { workspaces, autoPull, refresh, refreshStatus, setRemoteChanged, setGitMsg, setConfirmState, tracker, t } = deps
+  const [selectedWsId, setSelectedWsId] = React.useState<string | null>(null)
+  const [selected, setSelected] = React.useState<string | null>(null)
+  const [content, setContent] = React.useState('')
+  /** Content as of the last open/save — the "dirty" baseline. */
+  const [savedContent, setSavedContent] = React.useState('')
+  const [mode, setMode] = React.useState<'edit' | 'preview'>('preview')
+  const [saving, setSaving] = React.useState(false)
+  const [flash, setFlash] = React.useState<'' | MdNotesKey>('')
+  const [contentLoading, setContentLoading] = React.useState(false)
+  const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
+  const selectionRef = React.useRef<{ wsId: string; name: string } | null>(null)
+
+  // Default the selected workspace to the first one once the list arrives
+  // (moved out of `refresh` so the list hook stays independent of selection).
+  React.useEffect(() => {
+    setSelectedWsId((prev) => prev ?? workspaces[0]?.workspaceId ?? null)
+  }, [workspaces])
+
+  const isCurrent = (wsId: string, name: string): boolean =>
+    selectionRef.current !== null && selectionRef.current.wsId === wsId && selectionRef.current.name === name
 
   /** Re-read one note's content into the editor, guarded by the current selection. */
   const readInto = (wsId: string, name: string, onDone?: () => void): void => {
@@ -315,8 +325,6 @@ function useNotesManager({ store, tracker, t }: NotesManagerProps) {
     refresh()
     if (selected !== null && isCurrent(wsId, selected)) readInto(wsId, selected)
   }
-
-  React.useEffect(() => { refresh() }, [])
 
   const toggleWorkspace = (wsId: string): void => {
     selectionRef.current = null
@@ -416,6 +424,34 @@ function useNotesManager({ store, tracker, t }: NotesManagerProps) {
     })
   }
 
+  const dirty = content !== savedContent
+
+  return {
+    selectedWsId, selected, content, mode, saving, flash, contentLoading, collapsed, dirty,
+    currentWsId, toggleWorkspace, open, save, createIn, remove, setMode, setContent,
+    refreshAndRereadSelected, setFlash,
+  }
+}
+
+/** Git sync state + update/push/conflict flows (depends on the list + editor hooks). */
+function useGitSync(deps: {
+  refreshStatus: (wsId: string | null) => void
+  refreshAndRereadSelected: (wsId: string) => void
+  setFlash: (key: '' | MdNotesKey) => void
+  setRemoteChanged: (names: string[] | null) => void
+  setGitMsg: (msg: string) => void
+  setConfirmState: React.Dispatch<React.SetStateAction<ConfirmState | null>>
+  t: TranslateNS<'md-notes'>
+}) {
+  const { refreshStatus, refreshAndRereadSelected, setFlash, setRemoteChanged, setGitMsg, setConfirmState, t } = deps
+  /** Workspace whose commit popover is open (null = none). */
+  const [pushTargetWsId, setPushTargetWsId] = React.useState<string | null>(null)
+  const [pushMsg, setPushMsg] = React.useState('')
+  /** Workspace currently updating / pushing (null = none) — card spinners key off these. */
+  const [updatingWsId, setUpdatingWsId] = React.useState<string | null>(null)
+  const [pushingWsId, setPushingWsId] = React.useState<string | null>(null)
+  const [pushConflict, setPushConflict] = React.useState<{ wsId: string; message: string; error: string } | null>(null)
+
   const doUpdate = (wsId: string, force: boolean): void => {
     setUpdatingWsId(wsId)
     setGitMsg('')
@@ -464,6 +500,7 @@ function useNotesManager({ store, tracker, t }: NotesManagerProps) {
       })
     }).finally(() => setUpdatingWsId(null))
   }
+
   const runPush = (wsId: string, message: string, overwrite = false): void => {
     setPushingWsId(wsId)
     setGitMsg('')
@@ -513,8 +550,9 @@ function useNotesManager({ store, tracker, t }: NotesManagerProps) {
     if (pushConflict === null) return
     setPushingWsId(pushConflict.wsId)
     setGitMsg('')
-    // ok 分支把 pushing 的生命周期交给 runPush（它重新 setPushing(true) 并在
-    // 自己的 finally 里复位）；此处只在失败路径复位，避免与 runPush 竞争。
+    // The ok branch hands the pushing lifecycle to runPush (it re-sets
+    // pushing and resets it in its own finally); here we only reset on the
+    // failure path, to avoid racing with runPush.
     let handedOff = false
     void gitSyncApi(pushConflict.wsId).then((res) => {
       if (res.ok) {
@@ -527,20 +565,56 @@ function useNotesManager({ store, tracker, t }: NotesManagerProps) {
     }).finally(() => { if (!handedOff) setPushingWsId(null) })
   }
 
-  /** Whether the currently selected note is being written (any session — docs/write-lock.md §7.3). */
-  const writingThis = selected !== null && selectedWsId !== null && tracker.isBusy(noteKey(selectedWsId, selected))
+  return {
+    pushTargetWsId, pushMsg, updatingWsId, pushingWsId, pushConflict,
+    updateClick, pushForWs, doPush, resolveAndRetry, setPushMsg, setPushTargetWsId,
+  }
+}
 
-  const updating = updatingWsId !== null
-  const pushing = pushingWsId !== null
-  const dirty = content !== savedContent
-  const busy = updating || saving || pushing || writingThis
+/**
+ * Orchestrates the three feature hooks (list / editor / git) and owns the few
+ * cross-cutting states they share (`gitMsg`, `remoteChanged`, `confirmState`).
+ */
+function useNotesManager({ store, tracker, t }: NotesManagerProps) {
+  const [gitMsg, setGitMsg] = React.useState('')
+  const [remoteChanged, setRemoteChanged] = React.useState<string[] | null>(null)
+  const [confirmState, setConfirmState] = React.useState<ConfirmState | null>(null)
+
+  const list = useNotesList()
+  const editor = useNotesEditor({
+    workspaces: list.workspaces,
+    autoPull: list.autoPull,
+    refresh: list.refresh,
+    refreshStatus: list.refreshStatus,
+    setRemoteChanged,
+    setGitMsg,
+    setConfirmState,
+    tracker,
+    t,
+  })
+  const git = useGitSync({
+    refreshStatus: list.refreshStatus,
+    refreshAndRereadSelected: editor.refreshAndRereadSelected,
+    setFlash: editor.setFlash,
+    setRemoteChanged,
+    setGitMsg,
+    setConfirmState,
+    t,
+  })
+
+  /** Whether the currently selected note is being written (any session — docs/write-lock.md §7.3). */
+  const writingThis = editor.selected !== null && editor.selectedWsId !== null && tracker.isBusy(noteKey(editor.selectedWsId, editor.selected))
+  const updating = git.updatingWsId !== null
+  const pushing = git.pushingWsId !== null
+  const busy = updating || editor.saving || pushing || writingThis
 
   const close = (): void => store.update((d) => { d.managerOpen = false })
+
   /**
    * Open dsh's own settings panel and jump to the "MD 笔记" section. The
    * settings shell owns its open state locally and exposes no external API,
-   * so this simulates the two clicks a user would make: the sidebar
-   * settings trigger, then the section's nav cell. The trigger is the only
+   * so this simulates the two clicks a user would make: the sidebar settings
+   * trigger, then the section's nav cell. The trigger is the only
    * `button[aria-haspopup="dialog"]` without an aria-label on the page; the
    * nav cell is matched by the section's localized label. Closes the manager
    * first so its overlay cannot cover the settings modal.
@@ -560,19 +634,56 @@ function useNotesManager({ store, tracker, t }: NotesManagerProps) {
     }
     window.setTimeout(locate, 60)
   }
+
   /** Global git roll-up for the bottom bar (per-workspace detail lives in each Git card). */
-  const repoStatuses = Object.values(statusByWs).filter((s): s is GitStatusData => s !== null && !!s.repoDir)
+  const repoStatuses = Object.values(list.statusByWs).filter((s): s is GitStatusData => s !== null && !!s.repoDir)
   const unpushedTotal = repoStatuses.reduce((sum, s) => sum + (s.unpushed ?? 0), 0)
   const pendingWsCount = repoStatuses.filter((s) => (s.unpushed ?? 0) > 0).length
 
   return {
-    workspaces, noWorkspaces, loading, contentLoading, selectedWsId, selected, content,
-    mode, saving, flash, statusByWs, gitMsg, pushTargetWsId, pushMsg,
-    updatingWsId, pushingWsId, pushConflict, remoteChanged, confirmState, collapsed,
-    writingThis, dirty, busy, repoStatuses, unpushedTotal, pendingWsCount,
-    currentWsId, toggleWorkspace, open, save, createIn, remove, updateClick, pushForWs,
-    doPush, resolveAndRetry, setPushMsg, setPushTargetWsId, setMode, setContent,
-    setConfirmState, close, openDshSettings,
+    workspaces: list.workspaces,
+    noWorkspaces: list.noWorkspaces,
+    loading: list.loading,
+    statusByWs: list.statusByWs,
+    contentLoading: editor.contentLoading,
+    selectedWsId: editor.selectedWsId,
+    selected: editor.selected,
+    content: editor.content,
+    mode: editor.mode,
+    saving: editor.saving,
+    flash: editor.flash,
+    collapsed: editor.collapsed,
+    dirty: editor.dirty,
+    currentWsId: editor.currentWsId,
+    toggleWorkspace: editor.toggleWorkspace,
+    open: editor.open,
+    save: editor.save,
+    createIn: editor.createIn,
+    remove: editor.remove,
+    setMode: editor.setMode,
+    setContent: editor.setContent,
+    gitMsg,
+    remoteChanged,
+    confirmState,
+    setConfirmState,
+    pushTargetWsId: git.pushTargetWsId,
+    pushMsg: git.pushMsg,
+    updatingWsId: git.updatingWsId,
+    pushingWsId: git.pushingWsId,
+    pushConflict: git.pushConflict,
+    updateClick: git.updateClick,
+    pushForWs: git.pushForWs,
+    doPush: git.doPush,
+    resolveAndRetry: git.resolveAndRetry,
+    setPushMsg: git.setPushMsg,
+    setPushTargetWsId: git.setPushTargetWsId,
+    writingThis,
+    busy,
+    repoStatuses,
+    unpushedTotal,
+    pendingWsCount,
+    close,
+    openDshSettings,
   }
 }
 
