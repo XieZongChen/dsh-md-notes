@@ -231,11 +231,10 @@ export interface NotesManagerProps {
 }
 
 /**
- * The full-screen notes manager.
+ * State + handlers for the notes manager, extracted so the component below
+ * stays a pure renderer. Owns the note list, editor selection, and git sync.
  */
-export function NotesManager(props: NotesManagerProps): React.ReactElement {
-  const { store, tracker, t } = props
-  const updateInfo = useUpdateAvailable()
+function useNotesManager({ store, tracker, t }: NotesManagerProps) {
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [noWorkspaces, setNoWorkspaces] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
@@ -565,6 +564,34 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const repoStatuses = Object.values(statusByWs).filter((s): s is GitStatusData => s !== null && !!s.repoDir)
   const unpushedTotal = repoStatuses.reduce((sum, s) => sum + (s.unpushed ?? 0), 0)
   const pendingWsCount = repoStatuses.filter((s) => (s.unpushed ?? 0) > 0).length
+
+  return {
+    workspaces, noWorkspaces, loading, contentLoading, selectedWsId, selected, content,
+    mode, saving, flash, statusByWs, gitMsg, pushTargetWsId, pushMsg,
+    updatingWsId, pushingWsId, pushConflict, remoteChanged, confirmState, collapsed,
+    writingThis, dirty, busy, repoStatuses, unpushedTotal, pendingWsCount,
+    currentWsId, toggleWorkspace, open, save, createIn, remove, updateClick, pushForWs,
+    doPush, resolveAndRetry, setPushMsg, setPushTargetWsId, setMode, setContent,
+    setConfirmState, close, openDshSettings,
+  }
+}
+
+/**
+ * The full-screen notes manager: a pure renderer. All state and handlers live in
+ * `useNotesManager`; `updateInfo` is the only component-local state.
+ */
+export function NotesManager(props: NotesManagerProps): React.ReactElement {
+  const { store, tracker, t } = props
+  const updateInfo = useUpdateAvailable()
+  const {
+    workspaces, noWorkspaces, loading, contentLoading, selectedWsId, selected, content,
+    mode, saving, flash, statusByWs, gitMsg, pushTargetWsId, pushMsg,
+    updatingWsId, pushingWsId, pushConflict, remoteChanged, confirmState, collapsed,
+    writingThis, dirty, busy, repoStatuses, unpushedTotal, pendingWsCount,
+    currentWsId, toggleWorkspace, open, save, createIn, remove, updateClick, pushForWs,
+    doPush, resolveAndRetry, setPushMsg, setPushTargetWsId, setMode, setContent,
+    setConfirmState, close, openDshSettings,
+  } = useNotesManager({ store, tracker, t })
 
   return (
     <div className={shared.mask} onClick={(e) => { if (e.target === e.currentTarget) close() }}>
