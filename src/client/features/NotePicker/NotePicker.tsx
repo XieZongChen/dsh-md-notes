@@ -240,6 +240,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
       {createWsId !== null && (
         <CreateNoteDialog
           defaultTitle={t('manager.untitled', { date: new Date().toLocaleDateString() })}
+          existingNames={workspaces.find((w) => w.workspaceId === createWsId)?.notes.map((n) => n.name) ?? []}
           busy={createBusy}
           t={t}
           onCancel={cancelCreate}
