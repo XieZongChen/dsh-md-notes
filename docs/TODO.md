@@ -40,10 +40,10 @@
   §3「4.3 笔记互链」里「MarkdownText 不接受自定义 mdast 节点渲染器」的根因。⚠️ 仍只对
   反引号 token 生效，`@笔记名`/`[[…]]` 语法需先预处理成反引号。
 - **`chatFileMentions` 服务**（ui-chat 声明的 ctx 可选服务）：`ctx.provide('chatFileMentions',
-  { forClosing })` 让**对话气泡**里的行内代码 token 也解析成笔记链接。✅ 已接入（2026-08，
-  commit `608ef28`）：模型回答里的 `` `相对路径` ``（如 `.dsh-notes/xxx.md`）命中即打开管理器
-  跳转；注入引用约定已从 `[标题](路径)` 改为行内代码路径（`context-inject.ts`）。显示为路径
-  而非标题（fileMentions 只显示原始 token），标题放在 tooltip。
+  { forClosing })` 让**对话气泡**里的行内代码 token 解析成链接。⚠️ **不可用**（2026-08 实测）：
+  该服务是 `ui-deliverables` 独占的单例服务，第三方插件 `ctx.provide` 会触发 cordis
+  「service has been registered」冲突、导致插件加载失败（已回退 commit `098fc05`）。
+  对话内笔记引用可点需另寻扩展点（如上游开放多 provider 或用户消息渲染扩展点）。
 - **`InputTriggerCandidateIcon` 语义化**：收紧为 `'file' | 'folder' | 'session'`，dsh 渲染
   真实字形（替代 emoji）。✅ 本次迁移已适配。
 - **新 slot（可选入口）**：`conversation.chat.node`（按 `ChatNodeKind` 自定义聊天节点）、
