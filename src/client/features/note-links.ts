@@ -53,6 +53,52 @@ export function resolveNoteLink(
   return matches.find((m) => m.workspaceId === preferredWsId) ?? matches[0]
 }
 
+/** Canonicalize a POSIX path (collapse `.` / `..`) for exact compares; null when
+ *  `..` escapes above the root. Mirrors ContextSource's `canon` (kept local to
+ *  avoid a cross-module import here). */
+function canon(p: string): string | null {
+  const out: string[] = []
+  for (const seg of p.split('/')) {
+    if (seg === '' || seg === '.') continue
+    if (seg === '..') {
+      if (out.length === 0) return null
+      out.pop()
+    } else out.push(seg)
+  }
+  return out.length === 0 ? '/' : `/${out.join('/')}`
+}
+
+/** Strip the last segment of an absolute dir (`<ws>/.dsh-notes` → `<ws>`). */
+function parentDir(dir: string): string {
+  return dir.replace(/[\\/]+$/, '').replace(/[\\/][^\\/]*$/, '')
+}
+
+/**
+ * Resolve a note's RELATIVE path (`.dsh-notes/xxx.md` or `../<dir>/.dsh-notes/xxx.md`)
+ * back to its owning workspace + note. The path is relative to a session's
+ * workspace root; the resolver tries every workspace root and requires the
+ * canonical join to equal the note's absolute path, so cross-workspace and
+ * arbitrary-depth paths resolve without knowing the session root up front.
+ */
+export function resolveNotePath(
+  path: string,
+  workspaces: readonly WorkspaceNotes[],
+): NoteLink | undefined {
+  const rel = path.trim()
+  if (rel === '') return undefined
+  const name = rel.slice(rel.lastIndexOf('/') + 1)
+  if (name === '' || !name.endsWith('.md')) return undefined
+  for (const ws of workspaces) {
+    const note = ws.notes.find((n) => n.name === name)
+    if (note === undefined) continue
+    const target = canon(`${ws.notesDir}/${name}`)
+    if (target === null) continue
+    const matched = workspaces.some((base) => canon(`${parentDir(base.notesDir)}/${rel}`) === target)
+    if (matched) return { workspaceId: ws.workspaceId, name, title: note.title }
+  }
+  return undefined
+}
+
 /** Match one wiki link `[[name]]` (no nesting, no newline inside the brackets). */
 const WIKI_LINK_RE = /\[\[([^\[\]\n]+)\]\]/g
 
