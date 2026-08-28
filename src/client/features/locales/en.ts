@@ -41,6 +41,8 @@ export const en: { [K in keyof typeof zh]: string } = {
   'create.nameLabel': 'File name',
   'create.namePlaceholder': 'Leave empty to derive from the title',
   'create.nameHint': 'The file name is fixed once created; the title can change anytime.',
+  'create.willCreate': 'Will create: {name}',
+  'create.duplicate': 'A file with this name already exists — change the title or file name.',
   'create.confirm': 'Create',
   'create.cancel': 'Cancel',
   'picker.title': 'Add to note',

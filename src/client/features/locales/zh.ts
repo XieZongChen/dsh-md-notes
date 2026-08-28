@@ -38,6 +38,8 @@ export const zh = {
   'create.nameLabel': '文件名',
   'create.namePlaceholder': '留空则按标题生成',
   'create.nameHint': '文件名创建后固定，标题可随时修改',
+  'create.willCreate': '将创建：{name}',
+  'create.duplicate': '同名文件已存在，请更换标题或文件名',
   'create.confirm': '创建',
   'create.cancel': '取消',
   'picker.title': '记入笔记',
