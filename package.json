@@ -1,6 +1,6 @@
 {
   "name": "dsh-md-notes",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "A note-taking plugin for DeepSeek Harness (DSH). It provides a full MD notes manager and MD notes editor, letting you quickly capture conversation content into notes. Notes can be maintained by syncing to a Git repository.",
   "homepage": "https://github.com/XieZongChen/dsh-md-notes",
   "repository": {

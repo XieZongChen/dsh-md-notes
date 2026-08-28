@@ -24,7 +24,7 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
-## NEXT_VERSION
+## [0.9.0] - 2026-08-29
 
 ### Breaking
 
@@ -42,7 +42,20 @@ Only user-visible functional changes are recorded (no documentation, code refact
 - **Note interlinking in the preview**: `[[笔记名]]` (wiki) and `` `笔记名` `` (backtick) written in a
   note's body render as clickable links that jump to the target note, including across workspaces.
   Links resolve by title or file name (case-insensitive), preferring the current workspace on name
-  collisions. See [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+  collisions; cross-workspace collisions disambiguate with `[[workspace/note]]`, and same-workspace
+  title collisions show a hover hint ("N notes share this title — use the file name to be precise").
+  See [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+- **Create-note dialog**: title and file name are decoupled at creation — you can set an explicit
+  file name (blank = derived from the title; invalid chars → `-`, forced `.md` suffix). The dialog
+  shows a live "Will create" preview plus a red duplicate warning that disables creation; both the
+  manager and the note picker reuse this dialog. See
+  [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+
+### Fixed
+
+- Note capture sanitizes `noteName`, closing a path-traversal hole.
+- Git operations are serialized per clone directory, removing concurrent push/pull races.
+- `mergeSettings` no longer drops the L2 configured shared/own mode.
 
 ## [0.8.0] - 2026-08-25
 
