@@ -5,42 +5,54 @@
 
 ## dsh 兼容性（dsh 0.1.1-rc.2 → 0.1.2-alpha.1，2026-08-25）
 
-**状态**：⚠️ 有影响（破坏性，待适配）。兼容性检查发现 dsh 在 0.1.2-alpha.1 中
-**删除了 `@deepseek-ai/dsh-client-runtime` 包**（提交 `be531688f3
-refactor(client): migrate consumers and remove Runtime`，整个 runtime 包目录被删、拆分到
-多个包），插件直接依赖该包——升级到该版本后插件会因包缺失而无法加载/构建。
+**状态**：✅ 已适配（代码 + 构建通过，待冒烟）。dsh 0.1.2-alpha.1 删除了
+`@deepseek-ai/dsh-client-runtime` 包（提交 `be531688f3`，整个 runtime 拆分到多个包），
+插件已按新布局完成迁移（commit `32e6b36` chore + `0179300` fix）。
 
-**受影响功能与影响范围**：
+**迁移内容**（已完成）：
 
-- **插件无法加载（阻断）**：`package.json` 声明了 `@deepseek-ai/dsh-client-runtime: "*"`
-  （deps + peerDeps），且 `dsh.client.inject` 引用了它；包被删后安装/构建即失败。
-- **5 个源码文件 import 失效**（symbol 均迁到新包）：
-  - `createSnapshotStore` / `SnapshotStore` → 迁至 `@deepseek-ai/dsh-client-store`
-    （`packages/client/store`）；
-  - `ConversationSnapshot` / `AssistantBlock` / `ConversationNode` → 迁至
-    `@deepseek-ai/dsh-client-ui-conversation`（`contract/conversation.ts`）；
-  - `SessionId` → 迁至 `@deepseek-ai/dsh-client-ui-slots`（或 `@deepseek-ai/dsh-session`）；
-  - `ClientContext` → 去向待定（需在 alpha.1 源码中定位）。
-- **slot 归属变化**：`conversation.chat.assistant-actions` slot 随 `ui-conversation` 拆分
-  迁到新包 `@deepseek-ai/dsh-client-ui-chat`（`TurnTailNodeView.tsx` 现位于 ui-chat）。
+- 依赖：移除 `@deepseek-ai/dsh-client-runtime`，新增 `dsh-client-store` /
+  `dsh-client-ui-chat` / `dsh-client-ui-renderer`；`dsh.client.inject` 改为
+  renderer / locale / conversation / input-trigger / chat。
+- 符号迁移：`createSnapshotStore`/`SnapshotStore` → `dsh-client-store`；
+  `ConversationSnapshot`/`AssistantBlock`/`ConversationNode` → `dsh-client-ui-conversation`；
+  `SessionId` → `dsh-session`；`ClientContext` → `cordis` 的 `Context`。
+- slot 归属：`conversation.chat.assistant-actions` 迁至 `dsh-client-ui-chat`（补声明合并）。
+- **额外 API 变更**（超出 runtime 拆分，已一并适配）：`InputTriggerCandidate.icon` 收紧为
+  `'file' | 'folder' | 'session'`；`Modal` 的 `headless` 分支禁止 `closeLabel`；`MarkdownText`
+  新增必填 `labels`；会话模型重写——记入笔记改从 `useChat` 的 `legacy.nodes` 取文本。
 
-**需要的动作**：
+**待办**：
 
-1. 更新 `package.json`：移除 `@deepseek-ai/dsh-client-runtime`，按符号新位置声明
-   `@deepseek-ai/dsh-client-store` 等新包依赖，并核对 `dsh.client.inject` 注入列表。
-2. 更新 5 个源码文件的 import 路径（`note-text.ts` / `NoteAction.tsx` /
-   `ContextSource.ts` / `store.ts` / `index.ts`）。
-3. 重新 `npm run build` 对齐 alpha.1 类型，修复所有类型错误。
-4. 实测：侧边栏入口、@ 引用（候选/chip/注入）、记入笔记、笔记管理器、Git 同步、写锁、
-   设置面板在 alpha.1 上全功能冒烟。
-5. 全部通过后：更新 README 兼容性章节到插件当前版本 / `0.1.2-alpha.1`，删除本条。
+1. 冒烟实测：侧边栏入口 / 记入笔记 / @ 引用（候选+chip+注入）/ 笔记管理器 / Git 同步 /
+   写锁 / 设置面板在 alpha.1 上全功能验证（重点核验 `dsh.client.inject` 最小集、`useChat`
+   legacy 文本与旧版一致）。
+2. 冒烟通过后：更新 README 兼容性章节到 `0.1.2-alpha.1`，删除本条。
 
-**阻塞项 / 待验证**：`ClientContext` 的新位置未定位；`ui-conversation`→`ui-chat` 拆分后
-其余 slot/契约是否有二次变化待实测确认。
+## dsh 0.1.2-alpha.1 开放能力盘点（2026-08-27，供体验优化选用）
 
-**验收标准**：插件在 alpha.1 上安装加载、全部功能正常；README 兼容性章节更新到 alpha.1。
+> 迁移时顺带盘点 alpha.1 对外放出、可优化插件体验的能力。
 
-## 已知平台问题（待 dsh 修复）
+**可用（推荐用）**：
+
+- **`MarkdownText.fileMentions` / `MarkdownFileMentions`**（ui-primitives）：`resolve(value)`
+  命中后把**行内代码 token（反引号）**渲染成可点击链接（`open()`/`label`/`title`）。→ 解决
+  §3「4.3 笔记互链」里「MarkdownText 不接受自定义 mdast 节点渲染器」的根因。⚠️ 仍只对
+  反引号 token 生效，`@笔记名`/`[[…]]` 语法需先预处理成反引号。
+- **`chatFileMentions` 服务**（ui-chat 声明的 ctx 可选服务）：`ctx.provide('chatFileMentions',
+  { forClosing })` 让**对话气泡**里的行内代码 token 也解析成笔记链接——与上面共用同一个
+  resolver，补上「笔记 → 对话」可点闭环。
+- **`InputTriggerCandidateIcon` 语义化**：收紧为 `'file' | 'folder' | 'session'`，dsh 渲染
+  真实字形（替代 emoji）。✅ 本次迁移已适配。
+- **新 slot（可选入口）**：`conversation.chat.node`（按 `ChatNodeKind` 自定义聊天节点）、
+  `conversation.message.images`（图片渲染，§3「4.6 图片」）、`conversation.composer.dock` /
+  `conversation.input.left/right/dock`（输入区扩展）、`conversation.session.header.utilities`
+  （会话头部工具）、`settings.action`/`settings.header`（设置区动作）、`tool.call.toolview`
+  （工具卡片）。
+
+**仍未开放（继续等或降级）**：见下节「已知平台问题」。
+
+## 已知平台问题 / 未开放能力（待 dsh）
 
 - **sidebar footer 入口无法独占一行**：dsh 的 `.footerActions`（`sidebar.footer.action` 容器，
   `packages/client/ui-sidebar/src/client/SidebarRoot.module.css`）是 `display: flex`（默认
@@ -48,6 +60,15 @@ refactor(client): migrate consumers and remove Runtime`，整个 runtime 包目�
   `width:100%` 入口在 nowrap 里会互相挤压/溢出。插件侧已给 `.notesRow` 加 `flex:none`
   缓解（不被压缩），但根治需 dsh 把 `.footerActions` 改为 `flex-direction: column`（或
   `flex-wrap: wrap`）——待向 dsh 提 issue/PR。
+- **设置面板「打开并跳到某 section」无客户端导航 API**：`openSettingsDocument` 是 settings
+  文档的 Remote（host→client 拉配置），非「打开面板到某分区」。插件 `openDshSettings` 目前
+  靠 `querySelector` 模拟两次点击跳「MD 笔记」分区（脆弱，耦合 dsh DOM）——待 dsh 开放
+  设置导航/跳转 API 后替换。
+- **插件级快捷键注册无公开 API**：composer 的 keymap 是 `ui-conversation` 内部实现。§3「4.5
+  编辑体验」与 §4「5.4 保存快捷键」的 Cmd/Ctrl+S 只能插件内自监听 `keydown`（需避免与 dsh
+  冲突），待 dsh 开放快捷键注册扩展点。
+- **@ 引用 chip 尺寸/结构不可定制**：chip 为 4em 硬编码（`DshChipCell` 字体）；`conversation.chat.node`
+  是节点级扩展点、非 chip 级。更宽的 chip 标签区需 dsh 开放 chip 尺寸/渲染扩展点。
 
 ## 1. 笔记引用进对话的细化（@ 引用已实现）
 
@@ -161,13 +182,16 @@ HTML / 危险协议禁用）。自研 `renderMd` 已移除，`markdown.ts` 只�
   **方向（用户反馈）**：不采用反引号包 `笔记名` 的粗糙触发（fileMentions 曾试做后回滚，
   观感与预期差距大）——应采用与对话引用一致的 **`@笔记名`** 语法（或 `[[笔记名]]` wiki
   链接），先细化设计再实现：
-  - **渲染链路**：`@笔记名` 在 MarkdownText 里是普通文本（渲染为纯文本、无交互），且
-    MarkdownText **不接受自定义 mdast 节点渲染器**。可选方案：
-    a) **预处理 + fileMentions**：渲染前把匹配的 `@笔记名` 替换为行内代码形式喂给
-       `fileMentions`（有反引号/代码样式副作用，需评估观感）；
-    b) **自建渲染管线**：micromark + mdast 扩展 + 自有 React 渲染器（可复用 dsh 的
-       highlight/katex，代价高但完全可控）；
-    c) **给 dsh 提需求**：MarkdownText 开放自定义行内节点渲染扩展点（最干净，依赖上游）。
+  - **渲染链路（alpha.1 已解锁）**：dsh 0.1.2-alpha.1 已开放 `MarkdownText.fileMentions`
+    （`resolve(value) → { open, label, title }`），命中即把**行内代码 token** 渲染成可点链接
+    ——此前「MarkdownText 不接受自定义 mdast 节点渲染器」的根因已解除（见上文「开放能力
+    盘点」）。⚠️ `fileMentions` **只对反引号 token 生效**，裸 `@笔记名`/`[[…]]` 不触发。定稿
+    二选一：
+    a) **反引号语法**：约定互链写 `` `笔记名` ``，零预处理、最省事；代价是正文呈代码样式
+       （「引用」语义观感有偏差，此前用户不偏好）；
+    b) **预处理 + fileMentions**：坚持 `[[笔记名]]` 语法，渲染前把匹配 token 替换成反引号
+       喂给 `fileMentions`（现为正式 prop，副作用可控）。原「自建渲染管线 / 给 dsh 提需求」
+       两条已不再需要。
   - **匹配规则**：`@标题` 或 `@文件名`；当前工作区优先 → 全工作区；**同名歧义**的处理
     （候选选择 / 忽略 / 后缀区分）；大小写与空格归一化。
   - **交互**：点击跳转目标笔记（复用 open 路由）；hover 显示标题 / 路径；目标不存在
