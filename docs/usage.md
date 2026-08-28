@@ -107,7 +107,7 @@ the model can see and cite the note without you having to tell it to read files.
 ### 4.1 Picking a note
 
 1. Type `@` → the candidate menu lists notes of the **current workspace**
-   (📝 prefix; the title is the primary row, the file name the secondary line).
+   (file icon; the title is the primary row, the file name the secondary line).
 2. Select with arrows / click → a note chip appears (leading with the plugin
    icon); keep typing `@` to add more.
 3. Keep typing to **filter** the candidates (by title or file name).
@@ -115,7 +115,7 @@ the model can see and cite the note without you having to tell it to read files.
 ### 4.2 Referencing notes from other workspaces
 
 - Type a partial workspace name (e.g. `@dsh-pl`) → a **workspace row** appears
-  (`dsh-plugin/`, 🗂️ icon);
+  (`dsh-plugin/`, folder icon);
 - **Pick the workspace row** → it auto-completes to `@dsh-plugin/` and
   **immediately lists that workspace's notes**; keep typing to filter within it;
 - An exact workspace name (`@dsh-plugin`) switches directly;
