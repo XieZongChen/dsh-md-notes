@@ -35,7 +35,7 @@ import { SettingsSection } from './features/Settings/SettingsSection.tsx'
 import { createNotesSource } from './features/ContextSource/ContextSource.ts'
 import { ICON_URL } from './features/api.ts'
 
-export const inject = ['slots', 'locale']
+export const inject = ['slots', 'locale', 'inputTriggers']
 
 /** React hook: subscribe to the store via uSES, re-render on snapshot change. */
 function useStore(store: NotesUiStore): NotesUiState {
@@ -133,12 +133,7 @@ export function apply(ctx: ClientContext): void {
     })
   })
   ctx.effect(() => {
-    const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract | undefined
-    if (inputTriggers === undefined) {
-      // ui-input-trigger absent (unbundled host) — the feature is inert.
-      console.warn('[dsh-md-notes] inputTriggers unavailable; @ reference disabled')
-      return () => {}
-    }
+    const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract
     const unregister = inputTriggers.registerSource(notesSource.source)
     return () => {
       unregister()
