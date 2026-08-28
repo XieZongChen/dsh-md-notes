@@ -18,6 +18,7 @@ import { noteKey, type BusyTracker } from '../busy.ts'
 import type { MdNotesKey } from '../locales/index.ts'
 import { fmtTime } from '../markdown.ts'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
+import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
 import shared from '../styles.module.css'
 import styles from './note-picker.module.css'
 
@@ -54,6 +55,8 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
   const [busy, setBusy] = React.useState(false)
   const [status, setStatus] = React.useState<Status>('')
+  const [createWsId, setCreateWsId] = React.useState<string | null>(null)
+  const [createBusy, setCreateBusy] = React.useState(false)
 
   React.useEffect(() => {
     // No sessionId → list every workspace, enabling cross-workspace capture.
@@ -85,18 +88,29 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
   }
 
   const createIn = (workspaceId: string): void => {
-    const title = t('manager.untitled', { date: new Date().toLocaleDateString() })
+    setCreateWsId(workspaceId)
+  }
+
+  const submitCreate = (title: string, name: string): void => {
+    if (createWsId === null) return
+    setCreateBusy(true)
     setStatus({ key: 'picker.creating' })
-    void api('create', { title, workspaceId }).then((res) => {
+    void api('create', { title, name, workspaceId: createWsId }).then((res) => {
       if (res.ok && res.name) {
-        setSelected({ workspaceId, name: res.name })
+        setCreateWsId(null)
+        setSelected({ workspaceId: createWsId, name: res.name })
         reload()
         setStatus({ key: 'picker.created' })
         window.setTimeout(() => setStatus(''), 1200)
       } else {
         setStatus({ key: 'picker.createFailed' })
       }
-    })
+    }).finally(() => setCreateBusy(false))
+  }
+
+  const cancelCreate = (): void => {
+    setCreateWsId(null)
+    setCreateBusy(false)
   }
 
   const send = (): void => {
@@ -132,13 +146,14 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
   const close = (): void => store.update((d) => { d.picker = null })
 
   return (
-    <Modal
-      open
-      headless
-      title={t('picker.title')}
-      onClose={close}
-      className={styles.dialog}
-    >
+    <>
+      <Modal
+        open
+        headless
+        title={t('picker.title')}
+        onClose={close}
+        className={styles.dialog}
+      >
       <div className={styles.dialogHead}>
         <img src={ICON_URL} width={16} height={16} alt="" className={styles.dialogIcon} />
         <span className={styles.dialogTitle}>{t('picker.title')}</span>
@@ -221,6 +236,16 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
           {busy ? t('picker.writing') : t('picker.write')}
         </button>
       </div>
-    </Modal>
+      </Modal>
+      {createWsId !== null && (
+        <CreateNoteDialog
+          defaultTitle={t('manager.untitled', { date: new Date().toLocaleDateString() })}
+          busy={createBusy}
+          t={t}
+          onCancel={cancelCreate}
+          onSubmit={submitCreate}
+        />
+      )}
+    </>
   )
 }
