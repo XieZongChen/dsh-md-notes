@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { preprocessWikiLinks, resolveNoteLink } from './note-links.ts'
+import { preprocessWikiLinks, resolveNoteLink, titleMatchCount } from './note-links.ts'
 import type { WorkspaceNotes } from './api.ts'
 
 /** Two workspaces, `foo.md` present in both (name collision across workspaces). */
@@ -18,6 +18,20 @@ const workspaces: WorkspaceNotes[] = [
     name: '工作区B',
     notesDir: '/root/b/.dsh-notes',
     notes: [{ name: 'foo.md', title: 'Foo B', updatedAt: 3 }],
+  },
+]
+
+/** One workspace with two notes sharing a title (same-workspace title collision). */
+const dupTitles: WorkspaceNotes[] = [
+  {
+    workspaceId: 'ws-a',
+    name: '工作区A',
+    notesDir: '/root/a/.dsh-notes',
+    notes: [
+      { name: 'foo.md', title: 'Foo', updatedAt: 1 },
+      { name: 'foo-2.md', title: 'Foo', updatedAt: 2 },
+      { name: 'bar.md', title: 'Bar 笔记', updatedAt: 3 },
+    ],
   },
 ]
 
@@ -65,6 +79,30 @@ describe('resolveNoteLink', () => {
 
   it('returns undefined for a blank value', () => {
     expect(resolveNoteLink('   ', workspaces, 'ws-a')).toBeUndefined()
+  })
+})
+
+describe('titleMatchCount', () => {
+  it('counts same-workspace notes sharing a title (case-insensitive)', () => {
+    expect(titleMatchCount('foo', dupTitles, 'ws-a')).toBe(2)
+    expect(titleMatchCount('Foo', dupTitles, 'ws-a')).toBe(2)
+  })
+
+  it('returns 1 for a unique title', () => {
+    expect(titleMatchCount('Bar 笔记', dupTitles, 'ws-a')).toBe(1)
+  })
+
+  it('returns 0 when the token matches by file name only', () => {
+    expect(titleMatchCount('foo-2', dupTitles, 'ws-a')).toBe(0)
+  })
+
+  it('strips a workspace qualifier before counting', () => {
+    expect(titleMatchCount('工作区A/foo', dupTitles, 'ws-a')).toBe(2)
+  })
+
+  it('returns 0 for an unknown workspace or empty value', () => {
+    expect(titleMatchCount('foo', dupTitles, 'nope')).toBe(0)
+    expect(titleMatchCount('   ', dupTitles, 'ws-a')).toBe(0)
   })
 })
 

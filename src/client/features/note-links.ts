@@ -43,41 +43,75 @@ function matchInWorkspace(ws: WorkspaceNotes, q: string): NoteLink | undefined {
 }
 
 /**
+ * Split a possibly workspace-qualified token into its note part plus the named
+ * workspace when the prefix matches one (by display name or id, case-insensitive).
+ * The prefix must match a workspace; otherwise the whole token is the note part
+ * (a note title may itself contain `/`, while a file basename never does).
+ */
+function splitQualified(
+  value: string,
+  workspaces: readonly WorkspaceNotes[],
+): { notePart: string; ws?: WorkspaceNotes } {
+  const raw = value.trim()
+  const slash = raw.indexOf('/')
+  if (slash > 0) {
+    const wsPart = raw.slice(0, slash).trim()
+    const ws = workspaces.find((w) =>
+      w.workspaceId.toLowerCase() === wsPart.toLowerCase() ||
+      w.name.trim().toLowerCase() === wsPart.toLowerCase())
+    if (ws !== undefined) return { notePart: raw.slice(slash + 1).trim(), ws }
+  }
+  return { notePart: raw }
+}
+
+/**
  * Resolve a link token to a note, preferring `preferredWsId`. Matches the
  * display title or the file basename; returns undefined when no note matches.
  *
  * A `工作区名/笔记名` token resolves **only inside** the named workspace (matched
  * by display name or workspace id, case-insensitive), letting a cross-workspace
- * name collision address the other workspace's note explicitly. The prefix must
- * match a workspace; otherwise the token falls through to the unqualified match
- * below (a note title may itself contain `/`, while a file basename never does).
+ * name collision address the other workspace's note explicitly.
  */
 export function resolveNoteLink(
   value: string,
   workspaces: readonly WorkspaceNotes[],
   preferredWsId: string | null,
 ): NoteLink | undefined {
-  const raw = value.trim()
-  if (raw === '') return undefined
+  const { notePart, ws } = splitQualified(value, workspaces)
+  if (notePart === '') return undefined
+  if (ws !== undefined) return matchInWorkspace(ws, notePart)
 
-  const slash = raw.indexOf('/')
-  if (slash > 0) {
-    const wsPart = raw.slice(0, slash).trim()
-    const notePart = raw.slice(slash + 1).trim()
-    const ws = workspaces.find((w) =>
-      w.workspaceId.toLowerCase() === wsPart.toLowerCase() ||
-      w.name.trim().toLowerCase() === wsPart.toLowerCase())
-    if (ws !== undefined) return matchInWorkspace(ws, notePart)
-  }
-
-  const q = normalize(raw)
   const matches: NoteLink[] = []
-  for (const ws of workspaces) {
-    const match = matchInWorkspace(ws, q)
+  for (const w of workspaces) {
+    const match = matchInWorkspace(w, notePart)
     if (match !== undefined) matches.push(match)
   }
   if (matches.length === 0) return undefined
   return matches.find((m) => m.workspaceId === preferredWsId) ?? matches[0]
+}
+
+/**
+ * Count the notes inside `workspaceId` whose display title matches the note
+ * part of `value` (case-insensitive). A count > 1 means a title-based link is
+ * ambiguous: several notes share that title within the same workspace, so the
+ * caller should hint that the file name be used instead. Returns 0 when the
+ * workspace is unknown or the token matches by file name only.
+ */
+export function titleMatchCount(
+  value: string,
+  workspaces: readonly WorkspaceNotes[],
+  workspaceId: string,
+): number {
+  const ws = workspaces.find((w) => w.workspaceId === workspaceId)
+  if (ws === undefined) return 0
+  const { notePart } = splitQualified(value, workspaces)
+  const q = normalize(notePart)
+  if (q === '') return 0
+  let count = 0
+  for (const note of ws.notes) {
+    if (note.title.trim().toLowerCase() === q) count += 1
+  }
+  return count
 }
 
 /** Match one wiki link `[[name]]` (no nesting, no newline inside the brackets). */
