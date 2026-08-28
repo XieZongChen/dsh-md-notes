@@ -9,12 +9,12 @@ import { basename, dirname, resolve as resolvePath, sep } from 'node:path'
 import { transform } from 'lightningcss'
 
 const PLATFORM_MODULES = [
-  '@deepseek-ai/dsh-client-runtime',
-  '@deepseek-ai/dsh-client-runtime/client',
-  '@deepseek-ai/dsh-client-runtime/types',
+  '@deepseek-ai/dsh-client-store',
   '@deepseek-ai/dsh-client-ui-slots',
   '@deepseek-ai/dsh-client-ui-slots/client',
   '@deepseek-ai/dsh-client-ui-slots/types',
+  '@deepseek-ai/dsh-client-ui-chat',
+  '@deepseek-ai/dsh-client-ui-chat/client',
   '@deepseek-ai/dsh-client-ui-conversation',
   '@deepseek-ai/dsh-client-ui-conversation/client',
   '@deepseek-ai/dsh-client-ui-input-trigger',
