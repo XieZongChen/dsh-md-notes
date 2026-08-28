@@ -60,7 +60,8 @@ dsh-md-notes/
             ├── store.ts          # NotesStore（createSnapshotStore 共享状态）
             ├── busy.ts           # BusyTracker（通用异步任务跟踪，域前缀 note/<ws>/<name>）
             ├── note-text.ts      # 记入笔记文本提取（从浏览器会话快照，与复制按钮同源）
-            ├── note-links.ts     # 笔记互链解析/预处理/路径解析（预览 fileMentions + 对话 chatFileMentions）
+            ├── note-links.ts     # 笔记互链解析/预处理（预览 fileMentions：resolveNoteLink / preprocessWikiLinks / titleMatchCount）
+            ├── sanitize.ts       # 客户端文件名镜像 sanitizeFileName / fileNameKey（创建查重比对）
             ├── update.ts         # useUpdateAvailable（npm 版本检测，模块级共享缓存）
             ├── markdown.ts       # 共享小工具（fmtTime；渲染已改用 dsh MarkdownText）
             ├── locales/          # i18n：zh.ts（源字典）/ en.ts（同键映射）+ LocaleNamespaceMap 合并
@@ -83,7 +84,7 @@ dsh-md-notes/
   `Config`（schemastery schema：`route`、`gitMode`、`gitCentralRemote/Branch`、
   `gitRepos`、`gitAutoPull`、`gitAuthorName/Email`）、`apply(ctx, config)`；
   `apply` 只做装配——解析目录、构建 handler、注册路由、注册 L3 settings 命名空间。
-- 领域逻辑 `host/notes.ts`：`notesDir` / `sanitizeName` / `titleOf` / `blocksToText` + 六个操作方法
+- 领域逻辑 `host/notes.ts`：`sanitizeName` / `titleOf` + 六个操作方法
   （`listNotes` / `readNote` / `writeNote` / `createNote` / `deleteNote` / `appendConversation`），
   全部为纯函数（目录参数注入，无 ctx 依赖），可独立测试。
 - Git 领域 `host/git.ts`：`runGit`（subprocess 收集输出）、`cloneDirFor`（URL→本地 clone 目录）、
