@@ -1,0 +1,25 @@
+/* New-note dialog: two stacked fields (title + optional file name) and a hint. */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 320px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary, #888);
+}
+
+.hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-tertiary, #aaa);
+}
