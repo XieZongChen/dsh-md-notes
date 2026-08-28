@@ -75,7 +75,7 @@ export const MdNotesSettingsSchema: s<MdNotesSettings> = s.object({
  */
 export function mergeSettings(
   config: {
-    gitMode?: string
+    gitMode?: 'off' | 'on' | 'shared' | 'own'
     gitCentralRemote?: string
     gitCentralBranch?: string
     gitRepos?: Record<string, RepoSettings>
@@ -86,7 +86,8 @@ export function mergeSettings(
   l3: MdNotesSettings | undefined,
 ): MdNotesSettings {
   const user = l3 ?? {}
-  const mode = user.gitMode ?? (config.gitMode === 'on' ? 'on' : 'off')
+  // L2 (config) `shared` / `own` pass through; only legacy `on` normalizes.
+  const mode = user.gitMode ?? config.gitMode ?? 'off'
   const normalized = mode === 'on'
     ? (user.gitCentral?.remote ?? config.gitCentralRemote) ? 'shared' : 'own'
     : mode
