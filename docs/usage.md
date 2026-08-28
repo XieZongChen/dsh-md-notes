@@ -42,8 +42,21 @@ opens with two columns:
 
 ### Creating a note
 
-Click **+** on a workspace row. A note is created with an auto title
-("Untitled note <date>") and **opens directly in Edit mode**.
+Click **+** on a workspace row. A "New note" dialog opens:
+
+- **Title**: defaults to "Untitled note <date>", editable — it is the note's display title
+  (the first `# heading` in the body) and can change later.
+- **File name** (optional): leave empty to derive it from the title, or type one (illegal
+  characters become `-`, a `.md` suffix is enforced). **The file name is fixed once created**
+  and no longer follows the title.
+
+> ⚠️ **Don't reuse file names**: the file name is the note's **unique identity** (interlinks,
+> `@` references, and Git sync all locate notes by file name). Duplicate names within one
+> workspace cause mis-routed links/references and Git-sync overwrites — **strongly
+> discouraged**. The dialog shows "Will create: <name>" live and, on a collision, shows a red
+> warning and **disables creation**; change the title or file name.
+
+On create the note **opens directly in Edit mode**.
 
 ### Editing & previewing
 
@@ -56,8 +69,15 @@ Click **+** on a workspace row. A note is created with an auto title
 
 Write `[[Note name]]` (or a backtick `` `Note name` ``) in a note's body to reference another note;
 the preview renders it as a clickable link that jumps to the target note (cross-workspace supported).
-Links match by title or file name (case-insensitive), preferring the current workspace on name
-collisions; a reference to a missing note stays plain text.
+Links match by title or file name (case-insensitive):
+
+- A bare name prefers the **current workspace** on cross-workspace collisions, and still crosses
+  workspaces when there's no collision.
+- To link a same-named note in **another workspace**, write `[[workspace/Note name]]` (workspace
+  name or id).
+- When several notes share a **title** within one workspace, hovering shows "N notes share this
+  title — use the file name"; link by `[[file-name]]` instead (file names are unique per workspace).
+- A reference to a missing note stays plain text.
 
 ### Deleting a note
 
@@ -255,6 +275,8 @@ Upgrade with `dsh plugin --profile web update dsh-md-notes`, then restart dsh we
 
 - **Files are yours**: notes are ordinary `.md` files; edit them anywhere, keep
   them after uninstalling the plugin.
+- **File names are unique per workspace**: the file name is the note's identity; duplicates break
+  interlinks/references/Git sync — don't reuse names.
 - **meta.json** is a local cache only — it's never committed, and a fresh clone
   rebuilds it.
 - **Deleting a note locally and pushing** removes it from the remote too
