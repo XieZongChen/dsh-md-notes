@@ -134,5 +134,6 @@ export const en: { [K in keyof typeof zh]: string } = {
   'markdown.copy': 'Copy',
   'markdown.copied': 'Copied',
   'markdown.footnotes': 'Footnotes',
+  'link.duplicateHint': '{count} notes share this title — use the file name to disambiguate',
 
 }

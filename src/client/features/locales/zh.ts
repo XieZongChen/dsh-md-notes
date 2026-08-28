@@ -131,5 +131,6 @@ export const zh = {
   'markdown.copy': '复制',
   'markdown.copied': '已复制',
   'markdown.footnotes': '脚注',
+  'link.duplicateHint': '{count} 篇同名标题，建议用文件名区分',
 
 } as const
