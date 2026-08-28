@@ -102,13 +102,14 @@ export function registerNoteContextInjection(ctx: Context): () => void {
     if (fresh.length === 0) return decision
 
     // Injected context carries a one-line citation convention so the model
-    // cites notes as inline-code relative paths (`` `.dsh-notes/xxx.md` ``),
-    // which the client's `chatFileMentions` resolver turns into a clickable
-    // "open note" link. Instructions are best-effort guidance, not a guarantee.
+    // cites notes in the standard markdown link form `[标题](路径)` (the same
+    // syntax the user message uses) instead of free-form prose — structured
+    // citations any renderer can recognize. Instructions are best-effort
+    // guidance, not a guarantee.
     const injected = fresh.map(note => createUserMessage({
       content: [{
         type: 'text',
-        text: `[笔记内容 / Note content]\n\n引用约定：回答中如需引用本笔记，请用行内代码包裹笔记的相对路径（沿用你看到的引用路径，如 \`.dsh-notes/3333.md\`），不要用标题或 markdown 链接。\nCitation convention: when citing this note, wrap its relative path in inline code (reuse the reference path you see, e.g. \`.dsh-notes/3333.md\`) — not the title or a markdown link.\n\n${note.content}`,
+        text: `[笔记内容 / Note content]\n\n引用约定：回答中如需引用本笔记，请用 markdown 链接格式 [标题](路径)，路径沿用你看到的引用路径（如 [3333](../dsh-work/.dsh-notes/3333.md)）。\nCitation convention: when citing this note in your answer, use the markdown link form [title](path), reusing the reference path you see (e.g. [3333](../dsh-work/.dsh-notes/3333.md)).\n\n${note.content}`,
       }],
       source: { kind: NOTE_CONTEXT_SOURCE, path: note.path },
     }))
