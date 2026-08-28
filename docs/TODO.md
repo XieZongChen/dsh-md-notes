@@ -3,6 +3,43 @@
 > 未来功能规划清单，按优先级排序。每项实现后请移入 [CHANGELOG.md](../CHANGELOG.md)
 > （只记用户可见的功能性改动）。
 
+## dsh 兼容性（dsh 0.1.1-rc.2 → 0.1.2-alpha.1，2026-08-25）
+
+**状态**：⚠️ 有影响（破坏性，待适配）。兼容性检查发现 dsh 在 0.1.2-alpha.1 中
+**删除了 `@deepseek-ai/dsh-client-runtime` 包**（提交 `be531688f3
+refactor(client): migrate consumers and remove Runtime`，整个 runtime 包目录被删、拆分到
+多个包），插件直接依赖该包——升级到该版本后插件会因包缺失而无法加载/构建。
+
+**受影响功能与影响范围**：
+
+- **插件无法加载（阻断）**：`package.json` 声明了 `@deepseek-ai/dsh-client-runtime: "*"`
+  （deps + peerDeps），且 `dsh.client.inject` 引用了它；包被删后安装/构建即失败。
+- **5 个源码文件 import 失效**（symbol 均迁到新包）：
+  - `createSnapshotStore` / `SnapshotStore` → 迁至 `@deepseek-ai/dsh-client-store`
+    （`packages/client/store`）；
+  - `ConversationSnapshot` / `AssistantBlock` / `ConversationNode` → 迁至
+    `@deepseek-ai/dsh-client-ui-conversation`（`contract/conversation.ts`）；
+  - `SessionId` → 迁至 `@deepseek-ai/dsh-client-ui-slots`（或 `@deepseek-ai/dsh-session`）；
+  - `ClientContext` → 去向待定（需在 alpha.1 源码中定位）。
+- **slot 归属变化**：`conversation.chat.assistant-actions` slot 随 `ui-conversation` 拆分
+  迁到新包 `@deepseek-ai/dsh-client-ui-chat`（`TurnTailNodeView.tsx` 现位于 ui-chat）。
+
+**需要的动作**：
+
+1. 更新 `package.json`：移除 `@deepseek-ai/dsh-client-runtime`，按符号新位置声明
+   `@deepseek-ai/dsh-client-store` 等新包依赖，并核对 `dsh.client.inject` 注入列表。
+2. 更新 5 个源码文件的 import 路径（`note-text.ts` / `NoteAction.tsx` /
+   `ContextSource.ts` / `store.ts` / `index.ts`）。
+3. 重新 `npm run build` 对齐 alpha.1 类型，修复所有类型错误。
+4. 实测：侧边栏入口、@ 引用（候选/chip/注入）、记入笔记、笔记管理器、Git 同步、写锁、
+   设置面板在 alpha.1 上全功能冒烟。
+5. 全部通过后：更新 README 兼容性章节到插件当前版本 / `0.1.2-alpha.1`，删除本条。
+
+**阻塞项 / 待验证**：`ClientContext` 的新位置未定位；`ui-conversation`→`ui-chat` 拆分后
+其余 slot/契约是否有二次变化待实测确认。
+
+**验收标准**：插件在 alpha.1 上安装加载、全部功能正常；README 兼容性章节更新到 alpha.1。
+
 ## 已知平台问题（待 dsh 修复）
 
 - **sidebar footer 入口无法独占一行**：dsh 的 `.footerActions`（`sidebar.footer.action` 容器，
