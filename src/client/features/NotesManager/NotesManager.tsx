@@ -10,10 +10,11 @@
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSendOutline16, IconSettingsOutline16, IconTriangleRightFill14, MarkdownText, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData, NoteSummary, WorkspaceNotes } from '../api.ts'
 import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
+import { preprocessWikiLinks, resolveNoteLink } from '../note-links.ts'
 import { useUpdateAvailable } from '../update.ts'
 import { fmtTime } from '../markdown.ts'
 import type { NotesUiStore } from '../store.ts'
@@ -713,6 +714,31 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     footnotes: t('markdown.footnotes'),
   }), [t])
 
+  // Always call the latest `open` from the resolver (its closure captures
+  // autoPull etc., so a memoized resolver must not freeze an old copy).
+  const openRef = React.useRef(open)
+  openRef.current = open
+
+  // Note interlinks: `[[笔记名]]` (rewritten to backticks) and `` `笔记名` ``
+  // both resolve to a note and open it on click (TODO 4.3 / note-links.ts).
+  const fileMentions = React.useMemo<MarkdownFileMentions>(() => ({
+    resolve: (value) => {
+      const link = resolveNoteLink(value, workspaces, selectedWsId)
+      if (link === undefined) return undefined
+      const wsName = workspaces.find((w) => w.workspaceId === link.workspaceId)?.name ?? ''
+      return {
+        open: () => openRef.current(link.name, link.workspaceId),
+        label: link.title,
+        title: wsName === '' ? link.name : `${wsName} · ${link.name}`,
+      }
+    },
+  }), [workspaces, selectedWsId])
+
+  const previewText = React.useMemo(
+    () => preprocessWikiLinks(content, workspaces, selectedWsId),
+    [content, workspaces, selectedWsId],
+  )
+
   return (
     <div className={shared.mask} onClick={(e) => { if (e.target === e.currentTarget) close() }}>
       <div className={styles.manager}>
@@ -792,7 +818,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     ? <div className={styles.editorLoading}><LoadingIndicator label={t('git.loading')} /></div>
                     : mode === 'edit'
                       ? <textarea className={styles.textarea} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
-                      : <div className={styles.preview}><MarkdownText text={content} labels={markdownLabels} /></div>}
+                      : <div className={styles.preview}><MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} /></div>}
                 </>
               )}
           </div>
