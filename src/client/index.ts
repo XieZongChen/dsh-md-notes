@@ -13,8 +13,9 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 // Declaration-merge triggers for slot maps + the ctx.locale service.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 // The assistant-actions slot is now declared by ui-chat (was ui-conversation);
-// UseChat is the session-scope Chat-target selector backing text capture.
-import type { UseChat } from '@deepseek-ai/dsh-client-ui-chat/client'
+// UseChat is the session-scope Chat-target selector backing text capture, and
+// ChatFileMentions is the optional service making note paths clickable in chat.
+import type { ChatFileMentions, UseChat } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
@@ -33,7 +34,8 @@ import { NotePicker } from './features/NotePicker/NotePicker.tsx'
 import { NotesManager } from './features/NotesManager/NotesManager.tsx'
 import { SettingsSection } from './features/Settings/SettingsSection.tsx'
 import { createNotesSource } from './features/ContextSource/ContextSource.ts'
-import { ICON_URL } from './features/api.ts'
+import { resolveNotePath } from './features/note-links.ts'
+import { api, ICON_URL, type WorkspaceNotes } from './features/api.ts'
 
 export const inject = ['slots', 'locale']
 
@@ -74,6 +76,41 @@ export function apply(ctx: ClientContext): void {
   const tracker = createBusyTracker(store)
   const t = ctx.locale.bind('md-notes')
   ctx.effect(() => ctx.locale.register('md-notes', { zh, en }), 'dsh-md-notes: locale dicts')
+
+  // Chat file mentions: make assistant inline-code note paths (`` `相对路径` ``)
+  // clickable — resolved against a cached all-workspaces list, then opening the
+  // manager and jumping to the note (TODO 4.3; docs/context.md §3.7).
+  let workspacesCache: WorkspaceNotes[] = []
+  let cacheWarm = false
+  const refreshWorkspaces = (): void => {
+    void api('list').then((res) => {
+      if (res.ok && res.workspaces !== undefined) {
+        workspacesCache = res.workspaces
+        cacheWarm = true
+      }
+    })
+  }
+  refreshWorkspaces()
+  ctx.effect(() => ctx.provide('chatFileMentions', {
+    forClosing: () => {
+      refreshWorkspaces() // keep the list fresh for later turns
+      return {
+        resolve: (value) => {
+          if (!cacheWarm) return undefined
+          const link = resolveNotePath(value, workspacesCache)
+          if (link === undefined) return undefined
+          return {
+            open: () => store.update((d) => {
+              d.pendingOpen = { workspaceId: link.workspaceId, name: link.name }
+              d.managerOpen = true
+            }),
+            label: link.title,
+            title: link.title,
+          }
+        },
+      }
+    },
+  } satisfies ChatFileMentions), 'dsh-md-notes: chat file mentions')
 
   // Note-reference chip logo: paint the plugin icon as the chip's domain
   // glyph. The notes `@` source sets a reserved `appearance` value 'notes', so
