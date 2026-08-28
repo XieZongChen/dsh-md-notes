@@ -52,6 +52,13 @@ Click **+** on a workspace row. A note is created with an auto title
 - **Edit** tab: write markdown source.
 - **Save**: writes to the local `.md` file and refreshes the list.
 
+### Linking notes
+
+Write `[[Note name]]` (or a backtick `` `Note name` ``) in a note's body to reference another note;
+the preview renders it as a clickable link that jumps to the target note (cross-workspace supported).
+Links match by title or file name (case-insensitive), preferring the current workspace on name
+collisions; a reference to a missing note stays plain text.
+
 ### Deleting a note
 
 Hover a note in the list and click the 🗑 icon. A confirmation dialog asks for

@@ -37,6 +37,13 @@ Only user-visible functional changes are recorded (no documentation, code refact
   `<workspace>/.dsh-notes/`, git sync is only a mirror). To clean up, delete the old remote
   subdirectory — leaving it is harmless.
 
+### Added
+
+- **Note interlinking in the preview**: `[[笔记名]]` (wiki) and `` `笔记名` `` (backtick) written in a
+  note's body render as clickable links that jump to the target note, including across workspaces.
+  Links resolve by title or file name (case-insensitive), preferring the current workspace on name
+  collisions. See [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+
 ## [0.8.0] - 2026-08-25
 
 ### Added
