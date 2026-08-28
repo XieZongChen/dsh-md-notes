@@ -12,6 +12,7 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSendOutline16, IconSettingsOutline16, IconTriangleRightFill14, MarkdownText, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
+import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
 import type { GitStatusData, NoteSummary, WorkspaceNotes } from '../api.ts'
 import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
 import { preprocessWikiLinks, resolveNoteLink } from '../note-links.ts'
@@ -303,6 +304,8 @@ function useNotesEditor(deps: {
   const [flash, setFlash] = React.useState<'' | MdNotesKey>('')
   const [contentLoading, setContentLoading] = React.useState(false)
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
+  const [createWsId, setCreateWsId] = React.useState<string | null>(null)
+  const [createBusy, setCreateBusy] = React.useState(false)
   const selectionRef = React.useRef<{ wsId: string; name: string } | null>(null)
 
   // Default the selected workspace to the first one once the list arrives
@@ -392,19 +395,30 @@ function useNotesEditor(deps: {
   }
 
   const createIn = (wsId: string): void => {
-    const title = t('manager.untitled', { date: new Date().toLocaleDateString() })
+    setCreateWsId(wsId)
+  }
+
+  const submitCreate = (title: string, name: string): void => {
+    if (createWsId === null) return
+    setCreateBusy(true)
     setFlash('manager.creating')
-    void api('create', { title, workspaceId: wsId }).then((res) => {
+    void api('create', { title, name, workspaceId: createWsId }).then((res) => {
       if (res.ok && res.name) {
+        setCreateWsId(null)
         setFlash('manager.created')
         refresh()
-        open(res.name, wsId)
+        open(res.name, createWsId)
         setMode('edit') // newly created note opens in the editor, not preview
         window.setTimeout(() => setFlash(''), 1500)
       } else {
         setFlash('manager.createFailed')
       }
-    })
+    }).finally(() => setCreateBusy(false))
+  }
+
+  const cancelCreate = (): void => {
+    setCreateWsId(null)
+    setCreateBusy(false)
   }
 
   const remove = (name: string, wsId: string): void => {
@@ -430,7 +444,8 @@ function useNotesEditor(deps: {
 
   return {
     selectedWsId, selected, content, mode, saving, flash, contentLoading, collapsed, dirty,
-    currentWsId, toggleWorkspace, open, save, createIn, remove, setMode, setContent,
+    createWsId, createBusy, currentWsId, toggleWorkspace, open, save, createIn, submitCreate, cancelCreate,
+    remove, setMode, setContent,
     refreshAndRereadSelected, setFlash,
   }
 }
@@ -656,11 +671,15 @@ function useNotesManager({ store, tracker, t }: NotesManagerProps) {
     flash: editor.flash,
     collapsed: editor.collapsed,
     dirty: editor.dirty,
+    createWsId: editor.createWsId,
+    createBusy: editor.createBusy,
     currentWsId: editor.currentWsId,
     toggleWorkspace: editor.toggleWorkspace,
     open: editor.open,
     save: editor.save,
     createIn: editor.createIn,
+    submitCreate: editor.submitCreate,
+    cancelCreate: editor.cancelCreate,
     remove: editor.remove,
     setMode: editor.setMode,
     setContent: editor.setContent,
@@ -701,9 +720,9 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     mode, saving, flash, statusByWs, gitMsg, pushTargetWsId, pushMsg,
     updatingWsId, pushingWsId, pushConflict, remoteChanged, confirmState, collapsed,
     writingThis, dirty, busy, repoStatuses, unpushedTotal, pendingWsCount,
-    currentWsId, toggleWorkspace, open, save, createIn, remove, updateClick, pushForWs,
-    doPush, resolveAndRetry, setPushMsg, setPushTargetWsId, setMode, setContent,
-    setConfirmState, close, openDshSettings,
+    currentWsId, toggleWorkspace, open, save, createIn, submitCreate, cancelCreate, remove,
+    updateClick, pushForWs, doPush, resolveAndRetry, setPushMsg, setPushTargetWsId, setMode,
+    setContent, setConfirmState, close, openDshSettings, createWsId, createBusy,
   } = useNotesManager({ store, tracker, t })
 
   // Localized Markdown chrome (code-fence copy + footnotes), memoized per
@@ -864,6 +883,15 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
         >
           <div className={styles.confirmBody}>{confirmState.description}</div>
         </Modal>
+      )}
+      {createWsId !== null && (
+        <CreateNoteDialog
+          defaultTitle={t('manager.untitled', { date: new Date().toLocaleDateString() })}
+          busy={createBusy}
+          t={t}
+          onCancel={cancelCreate}
+          onSubmit={submitCreate}
+        />
       )}
     </div>
   )
