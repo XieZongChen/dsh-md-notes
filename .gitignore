@@ -9,3 +9,6 @@ lib/
 
 # macOS
 .DS_Store
+
+# plugin's own note data (smoke-test artifacts)
+.dsh-notes/
