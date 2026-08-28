@@ -36,6 +36,16 @@ describe('sanitizeName', () => {
   it('replaces spaces with dashes', () => {
     expect(sanitizeName('my note')).toBe('my-note.md')
   })
+
+  it('replaces special characters with dashes and collapses runs', () => {
+    expect(sanitizeName('a/b:c?*')).toBe('a-b-c.md')
+    expect(sanitizeName('a  b')).toBe('a-b.md')
+    expect(sanitizeName('  x  ')).toBe('x.md')
+  })
+
+  it('trims leading/trailing dashes', () => {
+    expect(sanitizeName('--a--')).toBe('a.md')
+  })
 })
 
 describe('titleOf', () => {
@@ -84,6 +94,24 @@ describe('notes file ops', () => {
     const dir = await tempDir()
     const created = await createNote(dir, 'My Title')
     expect(created.name).toBe('My-Title.md')
+  })
+
+  it('createNote dedups a colliding name by appending -2, -3, …', async () => {
+    const dir = await tempDir()
+    const a = await createNote(dir, 'My Note')
+    const b = await createNote(dir, 'My Note')
+    const c = await createNote(dir, 'My Note')
+    expect(a.name).toBe('My-Note.md')
+    expect(b.name).toBe('My-Note-2.md')
+    expect(c.name).toBe('My-Note-3.md')
+  })
+
+  it('createNote dedups an explicit colliding file name too', async () => {
+    const dir = await tempDir()
+    const a = await createNote(dir, 'First', 'shared-name')
+    const b = await createNote(dir, 'Second', 'shared-name')
+    expect(a.name).toBe('shared-name.md')
+    expect(b.name).toBe('shared-name-2.md')
   })
 
   it('appendConversation appends a dated section', async () => {

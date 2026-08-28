@@ -73,6 +73,16 @@ describe('resolveNoteLink', () => {
     expect(resolveNoteLink('Bar 笔记', workspaces, 'ws-a')).toMatchObject({ workspaceId: 'ws-a', name: 'bar.md' })
   })
 
+  it('matches a note whose title contains a slash when the prefix is not a workspace', () => {
+    const withSlash: WorkspaceNotes[] = [{
+      workspaceId: 'ws-a',
+      name: '工作区A',
+      notesDir: '/root/a/.dsh-notes',
+      notes: [{ name: 'ab.md', title: 'A/B', updatedAt: 1 }],
+    }]
+    expect(resolveNoteLink('A/B', withSlash, 'ws-a')).toMatchObject({ workspaceId: 'ws-a', name: 'ab.md' })
+  })
+
   it('returns undefined for an unknown name', () => {
     expect(resolveNoteLink('nope', workspaces, 'ws-a')).toBeUndefined()
   })

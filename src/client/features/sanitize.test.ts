@@ -20,6 +20,15 @@ describe('sanitizeFileName (host sanitizeName mirror)', () => {
   it('replaces spaces with dashes', () => {
     expect(sanitizeFileName('my note')).toBe('my-note.md')
   })
+
+  it('replaces special characters with dashes and collapses runs', () => {
+    expect(sanitizeFileName('a/b:c?*')).toBe('a-b-c.md')
+    expect(sanitizeFileName('a  b')).toBe('a-b.md')
+  })
+
+  it('trims leading/trailing dashes', () => {
+    expect(sanitizeFileName('--a--')).toBe('a.md')
+  })
 })
 
 describe('fileNameKey', () => {
