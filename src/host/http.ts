@@ -142,7 +142,7 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     case 'create': {
       const dir = deps.resolveDir(workspaceId)
       if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
-      return createNote(dir, String(req.title ?? ''))
+      return createNote(dir, String(req.title ?? ''), typeof req.name === 'string' ? req.name : undefined)
     }
     case 'delete': {
       const dir = deps.resolveDir(workspaceId)

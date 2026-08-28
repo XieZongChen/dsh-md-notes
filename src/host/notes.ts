@@ -121,12 +121,18 @@ export async function writeNote(dir: string, rawName: string, content: string): 
   return { ok: true, name }
 }
 
-/** Create one note with a `# title` stub, deduping the basename. */
-export async function createNote(dir: string, rawTitle: string): Promise<{ ok: true; name: string }> {
+/**
+ * Create one note with a `# title` stub, deduping the basename. The file
+ * basename defaults to a slug of the title, but an explicit `rawName` (the
+ * user-chosen file name from the create dialog) wins when non-empty — so the
+ * file name and the display title are chosen independently at creation time.
+ */
+export async function createNote(dir: string, rawTitle: string, rawName?: string): Promise<{ ok: true; name: string }> {
   // Client always passes a localized title; this neutral fallback only guards
   // direct API calls without a title.
   const title = String(rawTitle ?? '').trim() || 'Untitled note'
-  const base = sanitizeName(title)
+  const explicitName = String(rawName ?? '').trim()
+  const base = explicitName !== '' ? sanitizeName(explicitName) : sanitizeName(title)
   await mkdir(dir, { recursive: true })
   let name = base
   let i = 2

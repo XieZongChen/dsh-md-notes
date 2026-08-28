@@ -72,6 +72,20 @@ describe('notes file ops', () => {
     expect((await listNotes(dir)).notes.some((n) => n.name === name)).toBe(false)
   })
 
+  it('createNote honors an explicit file name independent of the title', async () => {
+    const dir = await tempDir()
+    const created = await createNote(dir, 'My Title', 'chosen-name')
+    expect(created.name).toBe('chosen-name.md')
+    // The `# heading` (display title) is the title, not the file basename.
+    expect((await readNote(dir, created.name)).content).toContain('# My Title')
+  })
+
+  it('createNote derives the file name from the title when no name is given', async () => {
+    const dir = await tempDir()
+    const created = await createNote(dir, 'My Title')
+    expect(created.name).toBe('My-Title.md')
+  })
+
   it('appendConversation appends a dated section', async () => {
     const dir = await tempDir()
     const created = await createNote(dir, 'Note')
