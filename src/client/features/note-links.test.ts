@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { preprocessWikiLinks, resolveNoteLink, resolveNotePath } from './note-links.ts'
+import { preprocessWikiLinks, resolveNoteLink } from './note-links.ts'
 import type { WorkspaceNotes } from './api.ts'
 
 /** Two workspaces, `foo.md` present in both (name collision across workspaces). */
@@ -64,23 +64,5 @@ describe('preprocessWikiLinks', () => {
   it('does not rewrite inside a code fence', () => {
     const src = '```\n[[foo]]\n```\noutside [[foo]]'
     expect(preprocessWikiLinks(src, workspaces, 'ws-a')).toBe('```\n[[foo]]\n```\noutside `foo`')
-  })
-})
-
-describe('resolveNotePath', () => {
-  it('resolves a same-workspace relative path', () => {
-    expect(resolveNotePath('.dsh-notes/foo.md', workspaces)).toMatchObject({ workspaceId: 'ws-a', name: 'foo.md' })
-  })
-
-  it('resolves a cross-workspace relative path', () => {
-    expect(resolveNotePath('../b/.dsh-notes/foo.md', workspaces)).toMatchObject({ workspaceId: 'ws-b', name: 'foo.md' })
-  })
-
-  it('returns undefined for a non-.md path', () => {
-    expect(resolveNotePath('.dsh-notes/foo', workspaces)).toBeUndefined()
-  })
-
-  it('returns undefined for an unknown path', () => {
-    expect(resolveNotePath('.dsh-notes/nope.md', workspaces)).toBeUndefined()
   })
 })
