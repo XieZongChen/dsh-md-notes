@@ -49,7 +49,7 @@ dsh-md-notes/
     ├── host/
     │   ├── notes.ts      # 笔记领域逻辑（目录/元数据/各操作方法）
     │   ├── git.ts        # Git 领域逻辑（runGit/仓库解析/同步/冲突检测/隔离）
-    │   ├── keyed-lock.ts # 通用键控写锁（write/append/delete 跨会话互斥，返回 note-writing）
+    │   ├── keyed-lock.ts # 通用键控并发：KeyedLock（笔记写互斥）+ KeyedMutex（git 按 repo 串行）
     │   ├── settings.ts   # L3 settings 命名空间（schema + mergeSettings）
     │   ├── context-inject.ts # agent/pre-step 笔记内容注入（模型请求前折叠笔记内容）
     │   └── http.ts       # HTTP 工具 + 路由 handler 组装（notes + git 分发）
@@ -60,6 +60,7 @@ dsh-md-notes/
             ├── store.ts          # NotesStore（createSnapshotStore 共享状态）
             ├── busy.ts           # BusyTracker（通用异步任务跟踪，域前缀 note/<ws>/<name>）
             ├── note-text.ts      # 记入笔记文本提取（从浏览器会话快照，与复制按钮同源）
+            ├── note-links.ts     # 笔记互链解析/预处理/路径解析（预览 fileMentions + 对话 chatFileMentions）
             ├── update.ts         # useUpdateAvailable（npm 版本检测，模块级共享缓存）
             ├── markdown.ts       # 共享小工具（fmtTime；渲染已改用 dsh MarkdownText）
             ├── locales/          # i18n：zh.ts（源字典）/ en.ts（同键映射）+ LocaleNamespaceMap 合并
@@ -102,6 +103,9 @@ dsh-md-notes/
   `write` / `appendConversation` / `delete` 三操作写入期间跨会话互斥，冲突返回错误码
   `note-writing`；client 端用 `busy.ts` 的 `BusyTracker` 镜像（`store.busy`）联动三处 UI。
   详见 [write-lock.md](write-lock.md) 与 [state.md](state.md)。
+- **git 互斥（host）**：同文件还实现 `KeyedMutex`（`repo/<repoDir>` 排队串行），在 `index.ts`
+  的 GitApi 装配处包住 `gitStatus/init/push/pull/sync` 顶层调用——消除同一 clone 的并发
+  checkout/add/commit/push 竞态（shared 模式多工作区共享 clone 尤其危险）。
 - **错误码协议**：git 操作失败返回 `{ ok: false, code, error }`（如 `no-repo`、`sync-branch`、
   `git-failed`、`identity`、`remote-changed`、`non-fast-forward`），`error` 为英文 detail；
   client 用 `gitErrorText` 按 `code` 渲染本地化文案。
