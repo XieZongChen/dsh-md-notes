@@ -15,7 +15,7 @@ import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicato
 import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
 import type { GitStatusData, NoteSummary, WorkspaceNotes } from '../api.ts'
 import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
-import { preprocessWikiLinks, resolveNoteLink } from '../note-links.ts'
+import { preprocessWikiLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
 import { useUpdateAvailable } from '../update.ts'
 import { fmtTime } from '../markdown.ts'
 import type { NotesUiStore } from '../store.ts'
@@ -745,10 +745,15 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
       const link = resolveNoteLink(value, workspaces, selectedWsId)
       if (link === undefined) return undefined
       const wsName = workspaces.find((w) => w.workspaceId === link.workspaceId)?.name ?? ''
+      const base = wsName === '' ? link.name : `${wsName} · ${link.name}`
+      // A title-based link is ambiguous when several notes in the resolved
+      // workspace share that title — surface it so the user switches to the
+      // file name (which is unique per workspace).
+      const dupCount = titleMatchCount(value, workspaces, link.workspaceId)
       return {
         open: () => openRef.current(link.name, link.workspaceId),
         label: link.title,
-        title: wsName === '' ? link.name : `${wsName} · ${link.name}`,
+        title: dupCount > 1 ? `${base} — ${t('link.duplicateHint', { count: dupCount })}` : base,
       }
     },
   }), [workspaces, selectedWsId])
