@@ -38,7 +38,7 @@ A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 ## Compatibility
 
 - **Verified plugin version**: 0.8.0 (see [CHANGELOG.md](CHANGELOG.md) for history).
-- **Verified dsh version**: deepseek-harness mainline `0.1.1-rc.2`.
+- **Verified dsh version**: deepseek-harness mainline `0.1.2-alpha.1`.
 - The plugin is not pinned to a specific mainline commit; pin the plugin version at install time if you need a fixed combination. Runtime dependencies (`@deepseek-ai/*`, `react`) are declared as optional peer dependencies and resolve from the dsh installation.
 
 ## Install / Uninstall
@@ -73,7 +73,7 @@ dsh plugin --profile web remove dsh-md-notes
 ## Quick start
 
 1. Install the plugin (above), restart dsh web.
-2. **Create a note**: click the notes entry at the bottom of the sidebar (above Settings) → click **+** on a workspace row (an "Untitled note <date>" title is generated) → type in the editor → **Save**.
+2. **Create a note**: click the notes entry at the bottom of the sidebar (above Settings) → click **+** on a workspace row → in the dialog enter a title (default "Untitled note <date>") and an optional **file name** → type in the editor → **Save**.
 3. **Capture a conversation**: below any assistant answer, click the notes icon (next to copy) → pick a target note (or create one on the spot) → **Write to note**. The user question + answer are appended to the note as a "<session title> -- <timestamp>" section.
 4. **Reference a note**: type `@` in the chat input to pick a note (cross-workspace included); on send the note's content enters the model context automatically.
 
