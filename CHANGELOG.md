@@ -43,6 +43,10 @@ Only user-visible functional changes are recorded (no documentation, code refact
   note's body render as clickable links that jump to the target note, including across workspaces.
   Links resolve by title or file name (case-insensitive), preferring the current workspace on name
   collisions. See [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+- **Clickable note references in chat**: when the model cites a note by its relative path in inline
+  code (`` `.dsh-notes/xxx.md` ``), the answer renders it as a clickable link that opens the notes
+  manager and jumps to that note. See
+  [User guide §4 — Referencing notes in a conversation](docs/usage.md#4-referencing-notes-in-a-conversation-).
 
 ## [0.8.0] - 2026-08-25
 

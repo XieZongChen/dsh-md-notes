@@ -136,6 +136,10 @@ Two things:
    see the injected content. The model gets the content directly — it does **not**
    depend on calling its `read` tool itself.
 
+When the model cites a note in its answer by wrapping the note's relative path in
+inline code (`` `.dsh-notes/xxx.md` ``), that path renders as a **clickable link** —
+click it to open the notes manager and jump to that note.
+
 ### 4.4 Common questions
 
 - **No need to re-reference for follow-ups**: the injected content stays in the
