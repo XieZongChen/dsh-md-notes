@@ -29,22 +29,10 @@
   `@` 引用失效（commit `61e0cfb`，`inject` 补 `inputTriggers`）。
 - 冒烟暴露的待修项见下节「冒烟待修」。
 
-**待办**：
+## 冒烟待修（2026-08）
 
-1. 更新 README 兼容性章节到 `0.1.2-alpha.1`，更新后删除本条。
-
-## 冒烟待修（2026-08，按优先级）
-
-1. ✅ **跨工作区重名消歧**（2026-08-27）：`resolveNoteLink` 新增 `工作区名/笔记名` 限定语法——
-   前缀匹配工作区显示名或 id（大小写不敏感）时只在该工作区内匹配，可显式链接另一工作区的
-   重名笔记；前缀不是工作区时回退原有整体匹配。未限定 token 行为不变（优先当前工作区、无重名
-   仍可跨区）。commit `e8ca314`。
-2. **Git 卡片可收起**：工作区 Git 同步卡片改为可折叠，**默认收起**；收起时仍显示关键状态
+1. **Git 卡片可收起**：工作区 Git 同步卡片改为可折叠，**默认收起**；收起时仍显示关键状态
    （「已同步 / 未推送 N 处」pill + 分支），展开后再显示更新/推送按钮与最近提交等完整信息。
-3. ✅ **标题与文件名创建时解耦**（2026-08-27）：根因是文件名在创建时由默认标题 `sanitizeName`
-   派生且不可改。现新建笔记走共享弹窗 `CreateNoteDialog`（管理器 + 记入笔记两处复用），
-   标题默认「未命名笔记 <date>」、文件名可选（留空回退标题派生）；host `createNote` 支持
-   显式 `name`。commit `a5ba7cf` + `593390d` + `e3b4f9d` + `cbca75f` + `acc8dfa`。
 
 ## dsh 0.1.2-alpha.1 开放能力盘点（2026-08-27，供体验优化选用）
 
@@ -200,12 +188,14 @@ HTML / 危险协议禁用）。自研 `renderMd` 已移除，`markdown.ts` 只�
 - **4.3 笔记互链 + 反链**（中）。**互链部分 ✅ 已实现（2026-08，commit `116aec4`+`196ddc8`）**：
   预览里 `` `笔记名` ``（反引号）与 `[[笔记名]]`（wiki，代码围栏外预处理成反引号）两种拼写
   都会渲染成可点链接，点击经 `open()` 跳转（含跨工作区切换）。解析按「标题 / 文件名（去
-  `.md`、大小写不敏感）」匹配，同名跨工作区优先当前工作区；未命中 token 保持惰性（`[[…]]`
-  保留原样、反引号呈普通代码）。实现见 `note-links.ts`（`resolveNoteLink` / `preprocessWikiLinks`）。
+  `.md`、大小写不敏感）」匹配，未命中 token 保持惰性（`[[…]]` 保留原样、反引号呈普通代码）。
+  实现见 `note-links.ts`（`resolveNoteLink` / `preprocessWikiLinks`）。
   - **渲染链路**：dsh 0.1.2-alpha.1 的 `MarkdownText.fileMentions`（`resolve(value) → { open,
     label, title }`）把行内代码 token 渲染成可点链接——原「不接受自定义 mdast 节点渲染器」的
     根因已解除；`[[…]]` 经预处理喂给 fileMentions。
-  - **匹配规则**：标题或文件名；当前工作区优先 → 全工作区（同名歧义取当前工作区，后取首个）。
+  - **匹配规则（2026-08-27 增强）**：标题或文件名；未限定 token 优先当前工作区、无重名仍可跨区；
+    `工作区名/笔记名` 限定语法可精确链接另一工作区的重名笔记；同工作区标题重名时 tooltip 提示
+    「N 篇同名标题，建议用文件名区分」（`titleMatchCount`）。
   - **仍待做**：
     - **失效样式**：目标改名/删除时无「缺失」视觉（fileMentions 只分可点/惰性，无失效态），
       需评估 dsh 是否支持失效态或降级为「惰性 + 提示」。
@@ -231,10 +221,11 @@ HTML / 危险协议禁用）。自研 `renderMd` 已移除，`markdown.ts` 只�
   验收：笔记可脱离插件带走。
 
 - **4.8 配套测试**（中）✅ 已落地（2026-08）：引入 vitest（`npm test` / `test:watch`），
-  覆盖纯领域逻辑——`note-links`（互链解析/预处理/路径解析）、`notes`（sanitize/titleOf +
-  mkdtemp 文件读写 + 路径穿越回归）、`settings`（mergeSettings，含 L2 shared/own 直通回归）、
-  `keyed-lock`（锁/互斥并发语义）、`note-text`（文本提取）、`git`（仓库解析 + 同步/冲突纯函数）。
-  共 6 个测试文件 48 例，`npm test` 全绿。`MarkdownText` 为 dsh 组件无需自测。
+  覆盖纯领域逻辑——`note-links`（互链解析/预处理/限定消歧/重名标题计数）、`notes`
+  （sanitize/titleOf + mkdtemp 文件读写 + 显式文件名 + 路径穿越回归）、`sanitize`（客户端
+  文件名镜像）、`settings`（mergeSettings，含 L2 shared/own 直通回归）、`keyed-lock`
+  （锁/互斥并发语义）、`note-text`（文本提取）、`git`（仓库解析 + 同步/冲突纯函数）。
+  共 7 个测试文件 62 例，`npm test` 全绿。`MarkdownText` 为 dsh 组件无需自测。
   验收：✅ `npm test` 全绿；领域逻辑改动有用例保护。
 
 **安全 / 平台约束**：搜索、反链走 host 只读遍历，不碰笔记外文件；互链 / 反链复用既有
