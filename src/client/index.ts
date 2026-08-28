@@ -8,16 +8,22 @@
  */
 
 import * as React from 'react'
-import type { ClientContext, SessionId, ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 // Declaration-merge triggers for slot maps + the ctx.locale service.
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+// The assistant-actions slot is now declared by ui-chat (was ui-conversation);
+// UseChat is the session-scope Chat-target selector backing text capture.
+import type { UseChat } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-ui-settings-general/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+// Type-only: pulls the SlotRegistry service merge (ctx.slots), now provided by ui-renderer.
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type { InputTriggerServiceContract } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
-import type { SnapshotSelectorHook, TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { createNotesUiStore, type NotesUiState, type NotesUiStore } from './features/store.ts'
 import { createBusyTracker, type BusyTracker } from './features/busy.ts'
 import { en, zh } from './features/locales/index.ts'
@@ -148,11 +154,11 @@ export function apply(ctx: ClientContext): void {
 
   ctx.effect(() => ctx.slots.inject('conversation.chat.assistant-actions', () => ctx.slots.register(
     { name: 'conversation.chat.assistant-actions', id: 'dsh-notes-save', order: 20, label: t('action.tooltip'), locale: 'md-notes' },
-    (props: { sessionId: SessionId; messageId: string; useSession: SnapshotSelectorHook<ConversationSnapshot>; t: TranslateNS<'md-notes'> }) =>
+    (props: { sessionId: SessionId; messageId: string; useChat: UseChat; t: TranslateNS<'md-notes'> }) =>
       React.createElement(NoteAction, {
         sessionId: String(props.sessionId),
         messageId: props.messageId,
-        useSession: props.useSession,
+        useChat: props.useChat,
         getSessionTitle,
         store,
         t: props.t,

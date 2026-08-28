@@ -14,7 +14,7 @@
  * @module dsh-md-notes/client/ContextSource
  */
 
-import type { SessionId } from '@deepseek-ai/dsh-client-runtime/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
   InputTriggerCandidate, InputTriggerSource, ReferenceInsert,
 } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
@@ -25,9 +25,10 @@ import { api } from '../api.ts'
 /** Source identity: the menu group title and the chip `source` field. */
 export const NOTES_SOURCE = 'notes'
 
-/** Candidate row glyph (the pipeline renders `icon` as text — a URL cannot
- *  render an image, so a small emoji stands in for the plugin SVG). */
-const NOTE_ICON = '📝'
+/** Candidate row glyph: a semantic icon kind — ui-input-trigger now renders a
+ *  real glyph for `file`/`folder`/`session` (arbitrary emoji/URL no longer
+ *  valid), so notes use the built-in file glyph. */
+const NOTE_ICON = 'file'
 
 /** One candidate's resolved note identity (built at candidates time, picked by object identity). */
 interface NoteRef {
@@ -293,7 +294,7 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
           const candidate: InputTriggerCandidate = {
             name: `${w.name}/`,
             description: t('context.workspaceRow'),
-            icon: '🗂️',
+            icon: 'folder',
           }
           wsRows.push(candidate)
           wsMap.set(candidate, w.name)

@@ -8,7 +8,7 @@
  * @module dsh-md-notes/client/note-text
  */
 
-import type { AssistantBlock, ConversationNode } from '@deepseek-ai/dsh-client-runtime/client'
+import type { AssistantBlock, ConversationNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
 
 /** The captured texts for one note append. */
 export interface CapturedMessageText {

@@ -14,7 +14,7 @@
  * @module dsh-md-notes/client/store
  */
 
-import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client'
+import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
 
 /** Which overlay is open, and the conversation a note picker was opened for. */
 export interface NotesUiState {

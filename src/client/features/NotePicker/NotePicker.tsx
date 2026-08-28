@@ -136,7 +136,6 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
       open
       headless
       title={t('picker.title')}
-      closeLabel={t('picker.close')}
       onClose={close}
       className={styles.dialog}
     >

@@ -14,8 +14,7 @@
 import * as React from 'react'
 import { Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-ui-slots'
-import type { ConversationSnapshot } from '@deepseek-ai/dsh-client-runtime/client'
+import type { UseChat } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { NotesUiStore } from '../store.ts'
 import { captureMessageText } from '../note-text.ts'
 import { ICON_URL } from '../api.ts'
@@ -24,8 +23,9 @@ import styles from './note-action.module.css'
 export interface NoteActionProps {
   sessionId: string
   messageId: string
-  /** Framework-injected conversation snapshot selector (session-scope kit). */
-  useSession: SnapshotSelectorHook<ConversationSnapshot>
+  /** Framework-injected Chat-target selector (session-scope kit); its legacy
+   *  node slice backs the text capture. */
+  useChat: UseChat
   /** Resolve the session's durable title (client-side sessions list). */
   getSessionTitle: (sessionId: string) => string
   /** Shared store; opening the picker sets `picker`. */
@@ -38,13 +38,13 @@ export interface NoteActionProps {
  * The per-answer note action button.
  */
 export function NoteAction(props: NoteActionProps): React.ReactElement {
-  const { sessionId, messageId, useSession, getSessionTitle, store, t } = props
-  const snap = useSession((s) => s)
+  const { sessionId, messageId, useChat, getSessionTitle, store, t } = props
+  const snap = useChat((s) => s)
   const openPicker = (): void => {
     // Capture the text in the browser (like the copy button) — the host
     // append then only writes the file, no session query (docs/context.md).
     // Image placeholder follows the UI language ([图片] / [image]).
-    const captured = captureMessageText(snap.chat.legacy.nodes, messageId, t('picker.labelImage'))
+    const captured = captureMessageText(snap.legacy.nodes, messageId, t('picker.labelImage'))
     if (captured === null) return
     store.update((d) => {
       d.picker = {

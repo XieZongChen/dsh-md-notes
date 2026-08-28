@@ -122,5 +122,8 @@ export const en: { [K in keyof typeof zh]: string } = {
   'context.errCheck': 'Failed to check the note reference. Please retry.',
   'context.reference': 'Referenced note [{title}]({path})',
   'context.workspaceRow': 'Workspace',
+  'markdown.copy': 'Copy',
+  'markdown.copied': 'Copied',
+  'markdown.footnotes': 'Footnotes',
 
 }

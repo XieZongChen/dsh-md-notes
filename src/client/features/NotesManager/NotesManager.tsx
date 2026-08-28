@@ -10,6 +10,7 @@
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSendOutline16, IconSettingsOutline16, IconTriangleRightFill14, MarkdownText, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import type { MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData, NoteSummary, WorkspaceNotes } from '../api.ts'
 import { api, gitErrorText, gitPullApi, gitPushApi, gitSettingsApi, gitStatusApi, gitSyncApi, ICON_URL } from '../api.ts'
@@ -704,6 +705,14 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     setConfirmState, close, openDshSettings,
   } = useNotesManager({ store, tracker, t })
 
+  // Localized Markdown chrome (code-fence copy + footnotes), memoized per
+  // locale revision so the preview does not rebuild MarkdownText's cached
+  // element table on every render.
+  const markdownLabels = React.useMemo<MarkdownLabels>(() => ({
+    code: { copyLabel: t('markdown.copy'), copiedLabel: t('markdown.copied') },
+    footnotes: t('markdown.footnotes'),
+  }), [t])
+
   return (
     <div className={shared.mask} onClick={(e) => { if (e.target === e.currentTarget) close() }}>
       <div className={styles.manager}>
@@ -783,7 +792,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     ? <div className={styles.editorLoading}><LoadingIndicator label={t('git.loading')} /></div>
                     : mode === 'edit'
                       ? <textarea className={styles.textarea} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
-                      : <div className={styles.preview}><MarkdownText text={content} /></div>}
+                      : <div className={styles.preview}><MarkdownText text={content} labels={markdownLabels} /></div>}
                 </>
               )}
           </div>

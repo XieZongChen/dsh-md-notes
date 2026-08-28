@@ -119,5 +119,8 @@ export const zh = {
   'context.errCheck': '检查笔记引用失败，请重试',
   'context.reference': '引用笔记 [{title}]({path})',
   'context.workspaceRow': '工作区',
+  'markdown.copy': '复制',
+  'markdown.copied': '已复制',
+  'markdown.footnotes': '脚注',
 
 } as const
