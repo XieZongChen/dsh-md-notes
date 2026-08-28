@@ -28,26 +28,53 @@ function normalize(value: string): string {
   return value.trim().replace(/\.md$/i, '').toLowerCase()
 }
 
+/** Match a note inside one workspace by display title or file basename. */
+function matchInWorkspace(ws: WorkspaceNotes, q: string): NoteLink | undefined {
+  const norm = normalize(q)
+  if (norm === '') return undefined
+  for (const note of ws.notes) {
+    const title = note.title.trim().toLowerCase()
+    const name = note.name.replace(/\.md$/i, '').toLowerCase()
+    if (title === norm || name === norm) {
+      return { workspaceId: ws.workspaceId, name: note.name, title: note.title }
+    }
+  }
+  return undefined
+}
+
 /**
  * Resolve a link token to a note, preferring `preferredWsId`. Matches the
  * display title or the file basename; returns undefined when no note matches.
+ *
+ * A `工作区名/笔记名` token resolves **only inside** the named workspace (matched
+ * by display name or workspace id, case-insensitive), letting a cross-workspace
+ * name collision address the other workspace's note explicitly. The prefix must
+ * match a workspace; otherwise the token falls through to the unqualified match
+ * below (a note title may itself contain `/`, while a file basename never does).
  */
 export function resolveNoteLink(
   value: string,
   workspaces: readonly WorkspaceNotes[],
   preferredWsId: string | null,
 ): NoteLink | undefined {
-  const q = normalize(value)
-  if (q === '') return undefined
+  const raw = value.trim()
+  if (raw === '') return undefined
+
+  const slash = raw.indexOf('/')
+  if (slash > 0) {
+    const wsPart = raw.slice(0, slash).trim()
+    const notePart = raw.slice(slash + 1).trim()
+    const ws = workspaces.find((w) =>
+      w.workspaceId.toLowerCase() === wsPart.toLowerCase() ||
+      w.name.trim().toLowerCase() === wsPart.toLowerCase())
+    if (ws !== undefined) return matchInWorkspace(ws, notePart)
+  }
+
+  const q = normalize(raw)
   const matches: NoteLink[] = []
   for (const ws of workspaces) {
-    for (const note of ws.notes) {
-      const title = note.title.trim().toLowerCase()
-      const name = note.name.replace(/\.md$/i, '').toLowerCase()
-      if (title === q || name === q) {
-        matches.push({ workspaceId: ws.workspaceId, name: note.name, title: note.title })
-      }
-    }
+    const match = matchInWorkspace(ws, q)
+    if (match !== undefined) matches.push(match)
   }
   if (matches.length === 0) return undefined
   return matches.find((m) => m.workspaceId === preferredWsId) ?? matches[0]

@@ -43,6 +43,22 @@ describe('resolveNoteLink', () => {
     expect(resolveNoteLink('foo', workspaces, null)).toMatchObject({ workspaceId: 'ws-a' })
   })
 
+  it('resolves a workspace-qualified token to the named workspace on a collision', () => {
+    expect(resolveNoteLink('工作区B/foo', workspaces, 'ws-a')).toMatchObject({ workspaceId: 'ws-b', title: 'Foo B' })
+  })
+
+  it('resolves a workspace-qualified token by workspace id', () => {
+    expect(resolveNoteLink('ws-b/foo', workspaces, 'ws-a')).toMatchObject({ workspaceId: 'ws-b', title: 'Foo B' })
+  })
+
+  it('returns undefined when the named workspace has no such note', () => {
+    expect(resolveNoteLink('工作区B/bar', workspaces, 'ws-a')).toBeUndefined()
+  })
+
+  it('falls through to a plain title match when the prefix is not a workspace', () => {
+    expect(resolveNoteLink('Bar 笔记', workspaces, 'ws-a')).toMatchObject({ workspaceId: 'ws-a', name: 'bar.md' })
+  })
+
   it('returns undefined for an unknown name', () => {
     expect(resolveNoteLink('nope', workspaces, 'ws-a')).toBeUndefined()
   })
@@ -55,6 +71,10 @@ describe('resolveNoteLink', () => {
 describe('preprocessWikiLinks', () => {
   it('rewrites a resolving [[name]] to a backtick token', () => {
     expect(preprocessWikiLinks('see [[foo]] here', workspaces, 'ws-a')).toBe('see `foo` here')
+  })
+
+  it('rewrites a workspace-qualified [[ws/name]] to a backtick token', () => {
+    expect(preprocessWikiLinks('see [[工作区B/foo]] here', workspaces, 'ws-a')).toBe('see `工作区B/foo` here')
   })
 
   it('leaves an unresolvable [[name]] literal', () => {
