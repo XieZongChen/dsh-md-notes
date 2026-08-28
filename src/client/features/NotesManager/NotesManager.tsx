@@ -706,18 +706,6 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     setConfirmState, close, openDshSettings,
   } = useNotesManager({ store, tracker, t })
 
-  // Consume a cross-slot open request (chat file mentions) once on mount: the
-  // resolver sets `pendingOpen`, and the freshly mounted manager jumps to it.
-  React.useEffect(() => {
-    const pending = store.getSnapshot().pendingOpen
-    if (pending !== null) {
-      open(pending.name, pending.workspaceId)
-      store.update((d) => { d.pendingOpen = null })
-    }
-    // Mount-only: a later chat click re-mounts the manager (overlay remount).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
   // Localized Markdown chrome (code-fence copy + footnotes), memoized per
   // locale revision so the preview does not rebuild MarkdownText's cached
   // element table on every render.

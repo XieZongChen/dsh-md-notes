@@ -32,18 +32,12 @@ export interface NotesUiState {
    * changes. Transient by design: never persisted.
    */
   busy: Record<string, true>
-  /**
-   * Note a cross-slot caller (the chat `chatFileMentions` resolver) asks the
-   * manager to open on next mount — the manager consumes and clears it.
-   * Transient: never persisted.
-   */
-  pendingOpen: { workspaceId: string; name: string } | null
 }
 
 /** The shared store: immutable snapshot source + immer-draft writes. */
 export type NotesUiStore = SnapshotStore<NotesUiState>
 
-const INITIAL: NotesUiState = { managerOpen: false, picker: null, busy: {}, pendingOpen: null }
+const INITIAL: NotesUiState = { managerOpen: false, picker: null, busy: {} }
 
 /** Create the root-scope notes UI store (one instance per plugin apply). */
 export function createNotesUiStore(): NotesUiStore {
