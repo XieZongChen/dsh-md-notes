@@ -5,9 +5,9 @@
 
 ## dsh 兼容性（dsh 0.1.1-rc.2 → 0.1.2-alpha.1，2026-08-25）
 
-**状态**：✅ 已适配（代码 + 构建通过，待冒烟）。dsh 0.1.2-alpha.1 删除了
+**状态**：✅ 已适配（已冒烟验证）。dsh 0.1.2-alpha.1 删除了
 `@deepseek-ai/dsh-client-runtime` 包（提交 `be531688f3`，整个 runtime 拆分到多个包），
-插件已按新布局完成迁移（commit `32e6b36` chore + `0179300` fix）。
+插件已按新布局完成迁移并通过冒烟（commit `32e6b36` chore + `0179300` fix）。
 
 **迁移内容**（已完成）：
 
@@ -22,12 +22,28 @@
   `'file' | 'folder' | 'session'`；`Modal` 的 `headless` 分支禁止 `closeLabel`；`MarkdownText`
   新增必填 `labels`；会话模型重写——记入笔记改从 `useChat` 的 `legacy.nodes` 取文本。
 
+**冒烟结果**（2026-08，已通过）：
+
+- 冒烟中发现并修复：`inputTriggers` 在 alpha.1 改成 cordis `Service`（`InputTriggerService`），
+  必须声明在 `inject` 里 `apply` 时才能拿到——原 `ctx.get('inputTriggers')` 返回 undefined 导致
+  `@` 引用失效（commit `61e0cfb`，`inject` 补 `inputTriggers`）。
+- 冒烟暴露的待修项见下节「冒烟待修」。
+
 **待办**：
 
-1. 冒烟实测：侧边栏入口 / 记入笔记 / @ 引用（候选+chip+注入）/ 笔记管理器 / Git 同步 /
-   写锁 / 设置面板在 alpha.1 上全功能验证（重点核验 `dsh.client.inject` 最小集、`useChat`
-   legacy 文本与旧版一致）。
-2. 冒烟通过后：更新 README 兼容性章节到 `0.1.2-alpha.1`，删除本条。
+1. 更新 README 兼容性章节到 `0.1.2-alpha.1`，更新后删除本条。
+
+## 冒烟待修（2026-08，按优先级）
+
+1. **笔记互链无法跨工作区**：预览里 `[[笔记名]]` / `` `笔记名` `` 点击只能跳当前工作区的笔记，
+   跨工作区的笔记跳不过去。待查：`resolveNoteLink` 已遍历全工作区按标题/文件名匹配（当前
+   工作区优先），需确认是 `workspaces` 列表不全，还是 `open()` 跨工作区切换/读取失败。
+2. **Git 卡片可收起**：工作区 Git 同步卡片改为可折叠，**默认收起**；收起时仍显示关键状态
+   （「已同步 / 未推送 N 处」pill + 分支），展开后再显示更新/推送按钮与最近提交等完整信息。
+3. **笔记改标题后推送仍是原标题**：笔记标题（`# heading`）修改后，左侧面板按新标题显示，
+   但文件名（创建时由标题 `sanitizeName` 派生、之后不变）未同步——推送到仓库仍用旧文件名。
+   需决策：改标题时同步重命名文件（要处理互链/引用指向旧名），或明确「标题 ≠ 文件名」并在
+   UI 区分两者。
 
 ## dsh 0.1.2-alpha.1 开放能力盘点（2026-08-27，供体验优化选用）
 
