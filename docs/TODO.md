@@ -213,10 +213,12 @@ HTML / 危险协议禁用）。自研 `renderMd` 已移除，`markdown.ts` 只�
   依赖，或逐篇下载）。
   验收：笔记可脱离插件带走。
 
-- **4.8 配套测试**（中，承接原剩余项）：`MarkdownText` 为 dsh 组件无需自测；可测领域
-  逻辑（`sanitizeName`、`titleOf`、`blocksToText` 等，用 `fs.mkdtemp` 跑真实读写），
-  引入 vitest + `npm test`。
-  验收：`npm test` 全绿；领域逻辑改动有用例保护。
+- **4.8 配套测试**（中）✅ 已落地（2026-08）：引入 vitest（`npm test` / `test:watch`），
+  覆盖纯领域逻辑——`note-links`（互链解析/预处理/路径解析）、`notes`（sanitize/titleOf +
+  mkdtemp 文件读写 + 路径穿越回归）、`settings`（mergeSettings，含 L2 shared/own 直通回归）、
+  `keyed-lock`（锁/互斥并发语义）、`note-text`（文本提取）、`git`（仓库解析 + 同步/冲突纯函数）。
+  共 6 个测试文件 48 例，`npm test` 全绿。`MarkdownText` 为 dsh 组件无需自测。
+  验收：✅ `npm test` 全绿；领域逻辑改动有用例保护。
 
 **安全 / 平台约束**：搜索、反链走 host 只读遍历，不碰笔记外文件；互链 / 反链复用既有
 name 解析与 @ 引用逻辑；新 UI 文案进 `md-notes` 字典（中英）；渲染安全由 MarkdownText

@@ -242,10 +242,13 @@
 
 ## 8. 测试
 
-- 引入 **vitest**（TODO 4.8 已列，未落地，§12 #16）。`npm test` 全绿作为合并前提。
-- 优先测**领域纯函数**：`sanitizeName`/`titleOf`、`syncNotes`/`threeWaySync`/`pushConflicts`/
-  `changedNotes`/`remoteOnlyNotes`、`ContextSource` 的 `relFrom`/`canon`、`mergeSettings`。
-- 文件操作用 `fs.mkdtemp` 跑真实读写；git 逻辑用临时仓库（`git init` + 本地 remote）做集成测试。
+- ✅ **vitest 已引入**（`npm test` / `test:watch`，`vitest.config.ts`，Node 环境、扫
+  `src/**/*.test.ts`）。`npm test` 全绿作为合并前提（当前 6 文件 48 例）。
+- **测纯领域函数**（当前已覆盖）：`note-links`（解析/预处理/路径）、`notes`（sanitize/titleOf +
+  mkdtemp 读写 + 路径穿越回归）、`settings`（mergeSettings）、`keyed-lock`（并发语义）、
+  `note-text`（文本提取）、`git`（仓库解析 + 同步/冲突纯函数）。
+- 文件操作用 `fs.mkdtemp` 跑真实读写；git 逻辑后续可用临时仓库（`git init` + 本地 remote）
+  做集成测试。
 
 ---
 
