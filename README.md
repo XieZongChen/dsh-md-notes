@@ -142,7 +142,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 | `src/client/` | Browser half: entry (`index.ts`) + feature modules under `features/` |
 | `src/client/features/locales/` | zh/en UI dictionaries (dsh locale namespace `md-notes`) |
 | `assets/` | Plugin icon (SVG source + PNG) |
-| `docs/` | Docs: `usage.md`/`usage.zh.md` (user guide), `features.md` (functional), `architecture.md`, `context.md` (@ references), `git.md` (Git sync), `state.md` / `write-lock.md` (state & write-mutex design), `manager-redesign.md` (manager redesign), `compatibility.md` (dsh ↔ plugin version compatibility matrix), `TODO.md` |
+| `docs/` | Docs: `usage.md`/`usage.zh.md` (user guide), `features.md` (functional), `architecture.md`, `context.md` (@ references), `git.md` (Git sync), `state.md` / `write-lock.md` (state & write-mutex design), `manager-redesign.md` (manager redesign), `compatibility.md` / `compatibility.zh.md` (dsh ↔ plugin version compatibility matrix, en/zh), `TODO.md` |
 | `scripts/` | Dev tooling (e.g. `link-deps.mjs`) |
 | `lib/` | Build output (gitignored; what npm publishes) |
 
