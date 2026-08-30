@@ -52,6 +52,6 @@ dsh 仍处于快速原型迭代阶段，**不做向下兼容**——固定 dsh �
 
 1. 主表顶部追加一行：`<插件版本> | <dsh 版本> | <验证日期> | <备注>`；
 2. 同步更新反查表（目标 dsh 版本行的插件版本列表）；
-3. 更新 README（[README.zh.md](../README.zh.md) / [README.md](../README.md)）兼容性章节——
-   只保留**最新三个插件版本**的对应表格；
+3. 更新 README（[README.zh.md](../README.zh.md)）兼容性章节——只保留**最新三个插件版本**
+   的对应表格；
 4. 完整流程见 `.agents/skills/dsh-compat-check/SKILL.md`。

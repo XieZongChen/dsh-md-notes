@@ -61,6 +61,6 @@ After every compatibility check (no-impact branch):
 1. Append a row at the top of the main table:
    `<plugin version> | <dsh version> | <verified date> | <notes>`;
 2. Update the reverse-table row of the target dsh version (plugin version list);
-3. Update the README compatibility section ([README.md](../README.md) / 
-   [README.zh.md](../README.zh.md)) — keep only the **latest three plugin versions** table;
+3. Update the README compatibility section ([README.md](../README.md)) — keep only the
+   **latest three plugin versions** table;
 4. Full procedure: `.agents/skills/dsh-compat-check/SKILL.md`.
