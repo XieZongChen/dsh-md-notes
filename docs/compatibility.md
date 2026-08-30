@@ -1,64 +1,66 @@
-# dsh ↔ 插件版本适配对照表（Compatibility Matrix）
+# dsh ↔ Plugin Version Compatibility Matrix
 
-> 本文档是中英双语版本（bilingual）：表格为唯一数据源，行/单元格同时给出中文与英文。
-> 维护方式见文末「如何更新本表」；每次 dsh 兼容性校验后由
-> `.agents/skills/dsh-compat-check/` 流程更新。
+> [中文](compatibility.zh.md) · English
 
-**背景 / Background**：dsh 仍处于快速原型迭代阶段，**不做向下兼容**（no backward
-compatibility）——固定 dsh 版本只适配固定插件版本。升级 dsh 或插件后必须重新校验
-（`dsh 兼容性校验`），并把已验证组合记入下表。
+dsh is still in rapid prototype iteration and provides **no backward compatibility** — a
+fixed dsh version only matches fixed plugin versions. After upgrading dsh or the plugin you
+must re-run the compatibility check (`dsh 兼容性校验`) and record the verified combination
+in the tables below.
 
 ---
 
-## 一、主表：插件版本 → dsh 版本（Main table: plugin → dsh）
+## 1. Main table: plugin version → dsh version
 
-> 最新在前（newest first）。每一行 = 一次「已验证」的适配组合。
-> 「验证日期」为该组合最后一次验证的日期（取自对应兼容性校验提交）。
+> Newest first. Each row = one **verified** combination.
+> "Verified on" is the date of the last verification for that combination (taken from the
+> corresponding compatibility-check commit).
 
-| 插件版本<br>Plugin version | dsh 版本<br>dsh version | 验证日期<br>Verified on | 备注<br>Notes |
+| Plugin version | dsh version | Verified on | Notes |
 |---|---|---|---|
-| `0.9.0` | `0.1.2-alpha.1` | 2026-08-29 | 当前最新 / Current latest |
-| `0.8.0` | `0.1.2-alpha.1` | 2026-08-29 | 0.8.0 亦在 `0.1.1-rc.2` 验证过（2026-08-25）<br>0.8.0 also verified on `0.1.1-rc.2` (2026-08-25) |
+| `0.9.0` | `0.1.2-alpha.1` | 2026-08-29 | Current latest |
+| `0.8.0` | `0.1.2-alpha.1` | 2026-08-29 | 0.8.0 was also verified on `0.1.1-rc.2` (2026-08-25) |
 | `0.7.1` | `0.1.1-rc.2` | 2026-08-25 | — |
-| `0.6.0` | `0.1.1-rc.2` | 2026-08-22 | 0.6.0 亦在 `0.1.0-rc.8` 验证过（2026-08-20）<br>0.6.0 also verified on `0.1.0-rc.8` (2026-08-20) |
+| `0.6.0` | `0.1.1-rc.2` | 2026-08-22 | 0.6.0 was also verified on `0.1.0-rc.8` (2026-08-20) |
 | `0.6.0` | `0.1.0-rc.8` | 2026-08-20 | — |
 | `0.5.0` | `0.1.0-rc.7` | 2026-08-19 | — |
 | `0.4.0` | `0.1.0-rc.7` | 2026-08-18 | — |
-| `0.3.0` | `0.1.0-rc.7` | 2026-08-17 | 插件依赖的契约自 `0.1.0-rc.5` 起未变<br>plugin contracts unchanged since `0.1.0-rc.5` |
+| `0.3.0` | `0.1.0-rc.7` | 2026-08-17 | Plugin contracts unchanged since `0.1.0-rc.5` |
 
----
+## 2. Reverse table: dsh version → verified plugin versions
 
-## 二、反查表：dsh 版本 → 已验证插件版本（Reverse table: dsh → plugin）
+> Check this table before upgrading dsh: find the target dsh version and pick the **newest**
+> verified plugin version listed for it. If the target dsh version is not listed, it has not
+> been checked yet — run the compatibility check first.
 
-> 升级 dsh 前先查此表：找到目标 dsh 版本对应列出的插件版本，从中选**最新**的已验证版本；
-> 若目标 dsh 版本不在表中，说明该 dsh 尚未校验过，需先跑 `dsh 兼容性校验`。
-
-| dsh 版本<br>dsh version | 已验证插件版本（新→旧）<br>Verified plugin versions (newest → oldest) | 最近验证<br>Last verified |
+| dsh version | Verified plugin versions (newest → oldest) | Last verified |
 |---|---|---|
-| `0.1.2-alpha.1` | `0.9.0`、`0.8.0` | 2026-08-29 |
-| `0.1.1-rc.2` | `0.8.0`、`0.7.1`、`0.6.0` | 2026-08-25 |
+| `0.1.2-alpha.1` | `0.9.0`, `0.8.0` | 2026-08-29 |
+| `0.1.1-rc.2` | `0.8.0`, `0.7.1`, `0.6.0` | 2026-08-25 |
 | `0.1.0-rc.8` | `0.6.0` | 2026-08-20 |
-| `0.1.0-rc.7` | `0.5.0`、`0.4.0`、`0.3.0` | 2026-08-19 |
+| `0.1.0-rc.7` | `0.5.0`, `0.4.0`, `0.3.0` | 2026-08-19 |
 
----
+## 3. Principles
 
-## 三、适配原则（Principles）
+- **Pin the combination**: the plugin is not bound to a specific mainline commit; to pin a
+  fixed dsh + plugin combo, pin the plugin version at install time —
+  `dsh plugin --profile web add dsh-md-notes@<version>`. Runtime dependencies
+  (`@deepseek-ai/*`, `react`) are declared as optional peer dependencies and resolve from the
+  dsh installation.
+- **Verified only**: the tables record only combinations that **passed the compatibility
+  check**. dsh versions that are not yet adapted/verified are **not** written into the
+  tables — they are tracked as compatibility TODOs at the top of
+  [docs/TODO.md](TODO.md) (`## dsh 兼容性（…）`) and enter the tables only after the
+  adaptation passes smoke tests.
+- **Version coupling**: dsh has no backward compatibility — don't use arbitrary
+  "old plugin + new dsh" or "new plugin + old dsh" combos; check the tables first, then pin.
 
-- **固定组合（pin）**：插件不绑定具体 mainline commit；需要固定 dsh + 插件组合时，
-  安装时固定插件版本即可——`dsh plugin --profile web add dsh-md-notes@<版本>`。
-  运行时依赖（`@deepseek-ai/*`、`react`）以可选 peer 依赖声明，从 dsh 安装中解析。
-- **只记已验证（verified only）**：表中只记录**已通过兼容性校验**的组合。dsh 发版后
-  尚未适配/未验证的版本**不写入表格**，而是以兼容 todo 记录在
-  [docs/TODO.md](TODO.md) 顶部（`## dsh 兼容性（…）`），适配并通过冒烟后再入表。
-- **版本对应（version coupling）**：dsh 不做向下兼容 ⇒ 不要用「旧插件 + 新 dsh」或
-  「新插件 + 旧 dsh」的任意组合；先查本表，再固定安装。
+## 4. How to update
 
-## 四、如何更新本表（How to update）
+After every compatibility check (no-impact branch):
 
-每次 dsh 兼容性校验（无影响分支）后：
-
-1. 主表顶部追加一行：`<插件版本> | <dsh 版本> | <验证日期> | <备注（中英）>`；
-2. 同步更新反查表（目标 dsh 版本行的插件版本列表）；
-3. 更新 README（`README.zh.md` / `README.md`）兼容性章节——只保留**最新三个插件版本**
-   的对应表格；
-4. 完整流程见 `.agents/skills/dsh-compat-check/SKILL.md`。
+1. Append a row at the top of the main table:
+   `<plugin version> | <dsh version> | <verified date> | <notes>`;
+2. Update the reverse-table row of the target dsh version (plugin version list);
+3. Update the README compatibility section ([README.md](../README.md) / 
+   [README.zh.md](../README.zh.md)) — keep only the **latest three plugin versions** table;
+4. Full procedure: `.agents/skills/dsh-compat-check/SKILL.md`.
