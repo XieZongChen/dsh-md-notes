@@ -37,9 +37,20 @@ A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 ## Compatibility
 
-- **Verified plugin version**: 0.9.0 (see [CHANGELOG.md](CHANGELOG.md) for history).
-- **Verified dsh version**: deepseek-harness mainline `0.1.2-alpha.1`.
-- The plugin is not pinned to a specific mainline commit; pin the plugin version at install time if you need a fixed combination. Runtime dependencies (`@deepseek-ai/*`, `react`) are declared as optional peer dependencies and resolve from the dsh installation.
+dsh iterates fast and provides **no backward compatibility**, so a fixed dsh version only
+matches fixed plugin versions. Verified combinations are listed below (full adaptation
+history in [docs/compatibility.md](docs/compatibility.md)):
+
+| Plugin version | dsh version | Verified on |
+|---|---|---|
+| 0.9.0 | `0.1.2-alpha.1` | 2026-08-29 |
+| 0.8.0 | `0.1.2-alpha.1` | 2026-08-29 |
+| 0.7.1 | `0.1.1-rc.2` | 2026-08-25 |
+
+The plugin is not pinned to a specific mainline commit; pin the plugin version at install
+time if you need a fixed combination (e.g. `dsh plugin --profile web add dsh-md-notes@0.9.0`).
+Runtime dependencies (`@deepseek-ai/*`, `react`) are declared as optional peer dependencies
+and resolve from the dsh installation.
 
 ## Install / Uninstall
 
@@ -131,7 +142,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 | `src/client/` | Browser half: entry (`index.ts`) + feature modules under `features/` |
 | `src/client/features/locales/` | zh/en UI dictionaries (dsh locale namespace `md-notes`) |
 | `assets/` | Plugin icon (SVG source + PNG) |
-| `docs/` | Docs: `usage.md`/`usage.zh.md` (user guide), `features.md` (functional), `architecture.md`, `context.md` (@ references), `git.md` (Git sync), `state.md` / `write-lock.md` (state & write-mutex design), `manager-redesign.md` (manager redesign), `TODO.md` |
+| `docs/` | Docs: `usage.md`/`usage.zh.md` (user guide), `features.md` (functional), `architecture.md`, `context.md` (@ references), `git.md` (Git sync), `state.md` / `write-lock.md` (state & write-mutex design), `manager-redesign.md` (manager redesign), `compatibility.md` (dsh ↔ plugin version compatibility matrix), `TODO.md` |
 | `scripts/` | Dev tooling (e.g. `link-deps.mjs`) |
 | `lib/` | Build output (gitignored; what npm publishes) |
 
