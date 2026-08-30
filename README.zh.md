@@ -37,9 +37,18 @@
 
 ## 兼容性（Compatibility）
 
-- **已验证插件版本**：0.9.0（历史见 [CHANGELOG.zh.md](CHANGELOG.zh.md)）。
-- **已验证dsh版本**：deepseek-harness mainline `0.1.2-alpha.1`。
-- 插件未绑定具体 mainline commit；如需固定组合，请在安装时固定插件版本。运行时依赖（`@deepseek-ai/*`、`react`）以可选 peer 依赖声明，从 dsh 安装中解析。
+dsh 快速迭代且**不做向下兼容**，固定 dsh 版本只适配固定插件版本。已验证组合见下表
+（完整适配历史见 [docs/compatibility.md](docs/compatibility.md)）：
+
+| 插件版本 | dsh 版本 | 验证日期 |
+|---|---|---|
+| 0.9.0 | `0.1.2-alpha.1` | 2026-08-29 |
+| 0.8.0 | `0.1.2-alpha.1` | 2026-08-29 |
+| 0.7.1 | `0.1.1-rc.2` | 2026-08-25 |
+
+插件未绑定具体 mainline commit；如需固定组合，请在安装时固定插件版本
+（如 `dsh plugin --profile web add dsh-md-notes@0.9.0`）。运行时依赖（`@deepseek-ai/*`、`react`）
+以可选 peer 依赖声明，从 dsh 安装中解析。
 
 ## 安装 / 卸载（Install / Uninstall）
 
@@ -131,7 +140,7 @@ dsh plugin --profile web remove dsh-md-notes
 | `src/client/` | 浏览器半：入口（`index.ts`）+ `features/` 下的功能模块 |
 | `src/client/features/locales/` | 中/英 UI 字典（dsh locale 命名空间 `md-notes`） |
 | `assets/` | 插件图标（SVG 源文件 + PNG） |
-| `docs/` | 文档：`usage.md`/`usage.zh.md`（使用）、`features.md`（功能）、`architecture.md`（架构）、`context.md`（@ 引用）、`git.md`（Git 同步）、`state.md` / `write-lock.md`（状态与写锁设计）、`manager-redesign.md`（面板改版）、`TODO.md` |
+| `docs/` | 文档：`usage.md`/`usage.zh.md`（使用）、`features.md`（功能）、`architecture.md`（架构）、`context.md`（@ 引用）、`git.md`（Git 同步）、`state.md` / `write-lock.md`（状态与写锁设计）、`manager-redesign.md`（面板改版）、`compatibility.md`（dsh↔插件版本适配对照表）、`TODO.md` |
 | `scripts/` | 开发工具（如 `link-deps.mjs`） |
 | `lib/` | 构建产物（gitignored；npm 发布内容） |
 
