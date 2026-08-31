@@ -651,7 +651,7 @@
   padding: 8px 12px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   border-top: 1px solid var(--dsw-alias-border-l1, #eee);
 }
 .gitCardPush input {
@@ -666,11 +666,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  /* Icon-sized so the visual gap between input / confirm / cancel is uniform. */
+  width: 16px;
+  height: 16px;
   padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 4px;
   background: transparent;
   color: var(--dsw-alias-label-secondary, #888);
   cursor: pointer;
