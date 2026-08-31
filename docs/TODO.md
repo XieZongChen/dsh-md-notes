@@ -3,6 +3,50 @@
 > 未来功能规划清单，按优先级排序。每项实现后请移入 [CHANGELOG.md](../CHANGELOG.md)
 > （只记用户可见的功能性改动）。
 
+## dsh 兼容性（dsh 0.1.2-alpha.1 → 0.1.2-alpha.2，2026-08-31）
+
+**状态**：⚠️ 未适配（待迁移）。dsh 0.1.2-alpha.2 从 `@deepseek-ai/dsh-settings` 移除了
+`settingsNamespace` 导出——settings 命名空间由「运行时辅助函数」改为「品牌字符串类型 +
+`register` 内校验」（`parseSettingsNamespace`，约束 `[a-z][a-z0-9-]*`）。插件 0.9.0 上次在
+0.1.2-alpha.1 上验证通过；alpha.2 区间共 235 个提交、1604 文件变更，其中仅此一处触及插件契约面。
+
+**受影响功能与影响范围**：
+
+- 插件 host 半 `src/host/settings.ts:22` 用 `settingsNamespace('md-notes')` 生成 L3 命名空间
+  `MD_NOTES_NS`，并在 `src/index.ts` 里 `settings.register(MD_NOTES_NS, MdNotesSettingsSchema)`
+  注册设置面板。`settingsNamespace` 被移除后**插件构建直接报错**（导入不存在的导出），导致
+  「dsh 设置 → MD 笔记」设置面板无法注册与读写（模式 / 仓库 URL / 分支 / 子路径 / 自动拉取 /
+  提交作者全部失效）。
+
+**需要的动作**：
+
+- `src/host/settings.ts`：删除 `import { settingsNamespace }`，把
+  `export const MD_NOTES_NS = settingsNamespace('md-notes')` 改为
+  `export const MD_NOTES_NS = 'md-notes'`（纯字符串字面量即可；`'md-notes'` 满足新的命名空间
+  校验，`settings.register(ns, schema)` 的签名与 scope 的 `get()/update()` 均未变，其余无需改动）。
+
+**其余契约面复核（alpha.1 → alpha.2，未发现其它破坏）**：
+
+- 仍存在、签名未变：`PreStepDecision`（dsh-agent）、`createUserMessage`（dsh-llm）、
+  `UserMessage`（dsh-session）、`createSnapshotStore`/`SnapshotStore`（dsh-client-store）、
+  `MarkdownText`/`Modal`/`Tooltip`/`StateDot`/`MarkdownFileMentions`/`MarkdownLabels` 与所用
+  图标（dsh-client-ui-primitives）、`TranslateNS`（dsh-client-ui-slots）、
+  `InputTriggerCandidate`/`inputTriggers` 服务（dsh-client-ui-input-trigger）、
+  `conversation.input.for()`（ui-conversation）、session `header.cwd`、workspace
+  `id`/`title`/`path`、槽位 `sidebar.footer.action` / `conversation.chat.assistant-actions` /
+  `shell.overlay` / `settings.section`。
+- 仅内部重构/新增：session 的 `JsonValue` 迁到 `@deepseek-ai/dsh-util-values`（公共入口仍
+  re-export）；ui-primitives 移除 `ConnectionBanner`（插件未用）、图标只增不删；
+  input-trigger 的菜单 stale-while-revalidate 与 drill claim 时机调整（候选类型未变）。
+
+**验收标准**：
+
+- `npm run build` 通过（0 error）；
+- dsh 0.1.2-alpha.2 上冒烟：设置面板（dsh 设置 → MD 笔记）可正常读写；@ 引用、记入笔记、
+  Git 同步、侧边栏入口行为与 alpha.1 一致；
+- 冒烟通过后，把「迁移后的插件版本 → 0.1.2-alpha.2」写入
+  `docs/compatibility.zh.md` / `docs/compatibility.md` 并刷新 README 兼容性表格。
+
 ## dsh 兼容性（dsh 0.1.1-rc.2 → 0.1.2-alpha.1，2026-08-25）
 
 **状态**：✅ 已适配（已冒烟验证）。dsh 0.1.2-alpha.1 删除了
