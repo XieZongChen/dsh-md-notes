@@ -3,83 +3,6 @@
 > 未来功能规划清单，按优先级排序。每项实现后请移入 [CHANGELOG.md](../CHANGELOG.md)
 > （只记用户可见的功能性改动）。
 
-## dsh 兼容性（dsh 0.1.2-alpha.1 → 0.1.2-alpha.2，2026-08-31）
-
-**状态**：✅ 已适配（代码已迁移，`npm run build` 通过 + 69 项测试全绿；运行时冒烟与发版后
-更新对照表待做）。dsh 0.1.2-alpha.2 从 `@deepseek-ai/dsh-settings` 移除了 `settingsNamespace`
-导出——settings 命名空间由「运行时辅助函数」改为「品牌字符串类型 + `register` 内校验」
-（`parseSettingsNamespace`，约束 `[a-z][a-z0-9-]*`）。插件 0.9.0 上次在 0.1.2-alpha.1 上
-验证通过；alpha.2 区间共 235 个提交、1604 文件变更，其中仅此一处触及插件契约面。
-
-**受影响功能与影响范围**：
-
-- 插件 host 半 `src/host/settings.ts:22` 用 `settingsNamespace('md-notes')` 生成 L3 命名空间
-  `MD_NOTES_NS`，并在 `src/index.ts` 里 `settings.register(MD_NOTES_NS, MdNotesSettingsSchema)`
-  注册设置面板。`settingsNamespace` 被移除后**插件构建直接报错**（导入不存在的导出），导致
-  「dsh 设置 → MD 笔记」设置面板无法注册与读写（模式 / 仓库 URL / 分支 / 子路径 / 自动拉取 /
-  提交作者全部失效）。
-
-**迁移内容（已完成，commit `4072829`）**：
-
-- `src/host/settings.ts`：删除 `import { settingsNamespace }`，把
-  `export const MD_NOTES_NS = settingsNamespace('md-notes')` 改为
-  `export const MD_NOTES_NS = 'md-notes'`（纯字符串字面量即可；`'md-notes'` 满足新的命名空间
-  校验，`settings.register(ns, schema)` 的签名与 scope 的 `get()/update()` 均未变，其余无需改动）。
-
-**其余契约面复核（alpha.1 → alpha.2，未发现其它破坏）**：
-
-- 仍存在、签名未变：`PreStepDecision`（dsh-agent）、`createUserMessage`（dsh-llm）、
-  `UserMessage`（dsh-session）、`createSnapshotStore`/`SnapshotStore`（dsh-client-store）、
-  `MarkdownText`/`Modal`/`Tooltip`/`StateDot`/`MarkdownFileMentions`/`MarkdownLabels` 与所用
-  图标（dsh-client-ui-primitives）、`TranslateNS`（dsh-client-ui-slots）、
-  `InputTriggerCandidate`/`inputTriggers` 服务（dsh-client-ui-input-trigger）、
-  `conversation.input.for()`（ui-conversation）、session `header.cwd`、workspace
-  `id`/`title`/`path`、槽位 `sidebar.footer.action` / `conversation.chat.assistant-actions` /
-  `shell.overlay` / `settings.section`。
-- 仅内部重构/新增：session 的 `JsonValue` 迁到 `@deepseek-ai/dsh-util-values`（公共入口仍
-  re-export）；ui-primitives 移除 `ConnectionBanner`（插件未用）、图标只增不删；
-  input-trigger 的菜单 stale-while-revalidate 与 drill claim 时机调整（候选类型未变）。
-
-**验收标准**：
-
-- ✅ `npm run build` 通过（0 error）；产物 `lib/` 已无 `settingsNamespace` 引用；
-- ✅ `npm test` 通过（7 文件 69 例全绿）；
-- ⏳ dsh 0.1.2-alpha.2 上运行时冒烟：设置面板（dsh 设置 → MD 笔记）可正常读写；@ 引用、
-  记入笔记、Git 同步、侧边栏入口行为与 alpha.1 一致——待发版后在 alpha.2 上执行；
-- ⏳ 冒烟通过后，把「发版后的插件版本 → 0.1.2-alpha.2」写入
-  `docs/compatibility.zh.md` / `docs/compatibility.md` 并刷新 README 兼容性表格。
-
-## dsh 兼容性（dsh 0.1.1-rc.2 → 0.1.2-alpha.1，2026-08-25）
-
-**状态**：✅ 已适配（已冒烟验证）。dsh 0.1.2-alpha.1 删除了
-`@deepseek-ai/dsh-client-runtime` 包（提交 `be531688f3`，整个 runtime 拆分到多个包），
-插件已按新布局完成迁移并通过冒烟（commit `32e6b36` chore + `0179300` fix）。
-
-**迁移内容**（已完成）：
-
-- 依赖：移除 `@deepseek-ai/dsh-client-runtime`，新增 `dsh-client-store` /
-  `dsh-client-ui-chat` / `dsh-client-ui-renderer`；`dsh.client.inject` 改为
-  renderer / locale / conversation / input-trigger / chat。
-- 符号迁移：`createSnapshotStore`/`SnapshotStore` → `dsh-client-store`；
-  `ConversationSnapshot`/`AssistantBlock`/`ConversationNode` → `dsh-client-ui-conversation`；
-  `SessionId` → `dsh-session`；`ClientContext` → `cordis` 的 `Context`。
-- slot 归属：`conversation.chat.assistant-actions` 迁至 `dsh-client-ui-chat`（补声明合并）。
-- **额外 API 变更**（超出 runtime 拆分，已一并适配）：`InputTriggerCandidate.icon` 收紧为
-  `'file' | 'folder' | 'session'`；`Modal` 的 `headless` 分支禁止 `closeLabel`；`MarkdownText`
-  新增必填 `labels`；会话模型重写——记入笔记改从 `useChat` 的 `legacy.nodes` 取文本。
-
-**冒烟结果**（2026-08，已通过）：
-
-- 冒烟中发现并修复：`inputTriggers` 在 alpha.1 改成 cordis `Service`（`InputTriggerService`），
-  必须声明在 `inject` 里 `apply` 时才能拿到——原 `ctx.get('inputTriggers')` 返回 undefined 导致
-  `@` 引用失效（commit `61e0cfb`，`inject` 补 `inputTriggers`）。
-- 冒烟暴露的待修项见下节「冒烟待修」。
-
-## 冒烟待修（2026-08）
-
-1. ✅ **Git 卡片可收起**（已实现）：工作区 Git 同步卡片默认收起，点工作区行的 git 图标
-   展开/收起；收起时的关键状态改由 git 图标上的状态圆点（左下黄 = 远端有更新、右下红 =
-   本地未推送）展示。
 
 ## dsh 0.1.2-alpha.1 开放能力盘点（2026-08-27，供体验优化选用）
 
@@ -89,7 +12,7 @@
 
 - **`MarkdownText.fileMentions` / `MarkdownFileMentions`**（ui-primitives）：`resolve(value)`
   命中后把**行内代码 token（反引号）**渲染成可点击链接（`open()`/`label`/`title`）。→ 解决
-  §3「4.3 笔记互链」里「MarkdownText 不接受自定义 mdast 节点渲染器」的根因。⚠️ 仍只对
+  §3「3.3 笔记互链」里「MarkdownText 不接受自定义 mdast 节点渲染器」的根因。⚠️ 仍只对
   反引号 token 生效，`@笔记名`/`[[…]]` 语法需先预处理成反引号。
 - **`chatFileMentions` 服务**（ui-chat 声明的 ctx 可选服务）：`ctx.provide('chatFileMentions',
   { forClosing })` 让**对话气泡**里的行内代码 token 解析成链接。⚠️ **不可用**（2026-08 实测）：
@@ -99,7 +22,7 @@
 - **`InputTriggerCandidateIcon` 语义化**：收紧为 `'file' | 'folder' | 'session'`，dsh 渲染
   真实字形（替代 emoji）。✅ 本次迁移已适配。
 - **新 slot（可选入口）**：`conversation.chat.node`（按 `ChatNodeKind` 自定义聊天节点）、
-  `conversation.message.images`（图片渲染，§3「4.6 图片」）、`conversation.composer.dock` /
+  `conversation.message.images`（图片渲染，§3「3.6 图片」）、`conversation.composer.dock` /
   `conversation.input.left/right/dock`（输入区扩展）、`conversation.session.header.utilities`
   （会话头部工具）、`settings.action`/`settings.header`（设置区动作）、`tool.call.toolview`
   （工具卡片）。
@@ -118,17 +41,13 @@
   文档的 Remote（host→client 拉配置），非「打开面板到某分区」。插件 `openDshSettings` 目前
   靠 `querySelector` 模拟两次点击跳「MD 笔记」分区（脆弱，耦合 dsh DOM）——待 dsh 开放
   设置导航/跳转 API 后替换。
-- **插件级快捷键注册无公开 API**：composer 的 keymap 是 `ui-conversation` 内部实现。§3「4.5
-  编辑体验」与 §4「5.4 保存快捷键」的 Cmd/Ctrl+S 只能插件内自监听 `keydown`（需避免与 dsh
+- **插件级快捷键注册无公开 API**：composer 的 keymap 是 `ui-conversation` 内部实现。§3「3.5
+  编辑体验」与 §4「4.2 保存快捷键」的 Cmd/Ctrl+S 只能插件内自监听 `keydown`（需避免与 dsh
   冲突），待 dsh 开放快捷键注册扩展点。
 - **@ 引用 chip 尺寸/结构不可定制**：chip 为 4em 硬编码（`DshChipCell` 字体）；`conversation.chat.node`
   是节点级扩展点、非 chip 级。更宽的 chip 标签区需 dsh 开放 chip 尺寸/渲染扩展点。
 
 ## 1. 笔记引用进对话的细化（@ 引用已实现）
-
-**主体状态**：✅ 已实现（0.4.0 + 后续）：`@` 候选/chip/跨工作区、序列化为标准 markdown
-链接 `[标题](路径)`、host `agent/pre-step` 内容注入（含引用约定）、chip 前置插件 logo、
-引用路径 fallback（工作区改名后仍可定位）。细化项见下。
 
 ### 1.1 引用摘要（暂缓）
 
@@ -160,10 +79,6 @@
      chip 尺寸或渲染扩展点。
    - **菜单内全工作区列选**：带空格的工作区名无法用文本触发（dsh 触发 token 遇空白截断），
      改进方向——在候选菜单里提供「全工作区」浏览/列选入口（不依赖文本触发词）。
-2. **发送后的消息行**：✅ 已落地 **markdown 链接语法** `[标题](路径)`（标准、渲染器可识别）。
-   剩余：
-   - 等 dsh 提供用户消息内容块的渲染扩展点后，把引用渲染成可点击的行内卡片/链接；
-   - 或评估 dsh 的 `/name`、`@name` 词元 chip 渲染（`projectUserText` 的 `refChip`）能否套用。
 3. **注入上下文行**：
    - 来源标签显示**笔记标题**而非 `md-notes`（受 `contextProvenance` 的 kind 映射约束，
      需在 source 里携带标题字段或选用 dsh 已有 form/provenance 通道）；
@@ -214,25 +129,20 @@
 **目标**：围绕「记、查、找、读」提升笔记使用体验——从纯文件编辑升级为顺手的信息管理。
 笔记量大了之后，检索、导航、互链与快速访问比渲染细节更影响日常体验，优先做这些。
 
-**渲染基础**：✅ 已就绪（0.4.0）：预览改用 dsh `MarkdownText`（micromark/mdast 生态：
-GFM 全套、TeX 公式（KaTeX）、代码高亮（Shiki）、CJK 友好加粗、XSS 安全内置——原始
-HTML / 危险协议禁用）。自研 `renderMd` 已移除，`markdown.ts` 只留 `fmtTime`。因此表格 /
-任务列表 / 图片 / 嵌套列表 / 代码块语言高亮等语法开箱即用，且与 dsh 聊天渲染一致。
-
 **设想**（按优先级）：
 
-- **4.1 笔记搜索**（高）：管理器加搜索框，跨工作区**全文搜索**（标题 + 内容），输入即时
+- **3.1 笔记搜索**（高）：管理器加搜索框，跨工作区**全文搜索**（标题 + 内容），输入即时
   过滤、命中高亮，结果按工作区 / 笔记分组展示命中位置。host 侧只读遍历各工作区
   `.dsh-notes` 下的 `.md`（规模小每次现扫，量大再考虑索引 / 防抖）。
   验收：多笔记工作区秒级定位；结果展示命中上下文。
 
-- **4.2 标题目录（TOC）**（高）：预览顶部 / 侧栏按笔记标题生成目录，点击锚点跳转。
+- **3.2 标题目录（TOC）**（高）：预览顶部 / 侧栏按笔记标题生成目录，点击锚点跳转。
   约束：`MarkdownText` 标题渲染无锚点（dsh 未开放 heading 定制）——先评估 dsh 是否有
   heading id / 滚动定位扩展点；若无，降级为提取标题列表、点击 `scrollIntoView` 定位
   （需自建轻量标题提取，与 MarkdownText 输出并行）。
   验收：长笔记可一键跳到任意标题。
 
-- **4.3 笔记互链 + 反链**（中）。**互链部分 ✅ 已实现（2026-08，commit `116aec4`+`196ddc8`）**：
+- **3.3 笔记互链 + 反链**（中）。**互链部分 ✅ 已实现（2026-08，commit `116aec4`+`196ddc8`）**：
   预览里 `` `笔记名` ``（反引号）与 `[[笔记名]]`（wiki，代码围栏外预处理成反引号）两种拼写
   都会渲染成可点链接，点击经 `open()` 跳转（含跨工作区切换）。解析按「标题 / 文件名（去
   `.md`、大小写不敏感）」匹配，未命中 token 保持惰性（`[[…]]` 保留原样、反引号呈普通代码）。
@@ -250,30 +160,22 @@ HTML / 危险协议禁用）。自研 `renderMd` 已移除，`markdown.ts` 只�
       「谁引用了它」。
   验收：`[[笔记名]]` 点击直达、同名歧义可解决、失效可见；反链列表准确。
 
-- **4.4 快速访问**（中）：星标置顶 + 最近编辑列表（管理器顶部快捷区）；星标单独存
+- **3.4 快速访问**（中）：星标置顶 + 最近编辑列表（管理器顶部快捷区）；星标单独存
   （不入库，遵守 meta 缓存规则）。
   验收：常用笔记一步到达。
 
-- **4.5 编辑体验**（中）：自动保存（防抖）、字数统计、编辑 / 预览切换快捷键
+- **3.5 编辑体验**（中）：自动保存（防抖）、字数统计、编辑 / 预览切换快捷键
   （探索 dsh 快捷键注册扩展点；无扩展点则仅插件内监听）。
   验收：编辑不丢改动、字数可见。
 
-- **4.6 图片支持**（中）：拖拽 / 粘贴图片存入笔记同目录（或 `.dsh-notes/assets/`），
+- **3.6 图片支持**（中）：拖拽 / 粘贴图片存入笔记同目录（或 `.dsh-notes/assets/`），
   markdown 以相对路径引用并预览（MarkdownText 原生支持图片语法）。注意：Git 同步当前只
   同步 `.md`（「Only `.md` files sync」），图片入库需扩展同步范围，需一并评估。
   验收：截图可直接贴入并预览；若扩展同步则图片随笔记推送。
 
-- **4.7 导出**（低）：单篇导出 md / HTML（浏览器下载）；全部导出打包 zip（需引入打包
+- **3.7 导出**（低）：单篇导出 md / HTML（浏览器下载）；全部导出打包 zip（需引入打包
   依赖，或逐篇下载）。
   验收：笔记可脱离插件带走。
-
-- **4.8 配套测试**（中）✅ 已落地（2026-08）：引入 vitest（`npm test` / `test:watch`），
-  覆盖纯领域逻辑——`note-links`（互链解析/预处理/限定消歧/重名标题计数）、`notes`
-  （sanitize/titleOf + mkdtemp 文件读写 + 显式文件名 + 路径穿越回归）、`sanitize`（客户端
-  文件名镜像）、`settings`（mergeSettings，含 L2 shared/own 直通回归）、`keyed-lock`
-  （锁/互斥并发语义）、`note-text`（文本提取）、`git`（仓库解析 + 同步/冲突纯函数）。
-  共 7 个测试文件 62 例，`npm test` 全绿。`MarkdownText` 为 dsh 组件无需自测。
-  验收：✅ `npm test` 全绿；领域逻辑改动有用例保护。
 
 **安全 / 平台约束**：搜索、反链走 host 只读遍历，不碰笔记外文件；互链 / 反链复用既有
 name 解析与 @ 引用逻辑；新 UI 文案进 `md-notes` 字典（中英）；渲染安全由 MarkdownText
@@ -287,23 +189,11 @@ name 解析与 @ 引用逻辑；新 UI 文案进 `md-notes` 字典（中英）�
 
 **目标**：磨平日常使用中的摩擦点——本地改动与远端状态可见、长操作不阻塞界面、编辑不静默丢失。
 
-**已落地**（0.6.0–0.7.0）：
-
-- ✅ **5.2 记入笔记即时化**：文本改由 client 从浏览器会话快照提取（`note-text.ts`），
-  host 只写文件，不再 `sessionQuery.readSession` 全量读会话（曾同步阻塞事件循环卡住面板）。
-- ✅ **5.5 笔记写入互斥（写锁）+ 全局写入状态**：host 通用 `KeyedLock`（write /
-  appendConversation / delete 三操作互斥，冲突返回 `note-writing`）+ client 通用 busy 切片
-  （`store.busy` + `BusyTracker`）；笔记入口 / 记入弹窗 / 管理器三处联动，写入完成自动还原。
-  方案 [write-lock.md](write-lock.md)，状态总纲 [state.md](state.md)。
-- ✅ **5.1 本地编辑未推送提醒**：笔记面板改版（0.7.0）新增**工作区 Git 同步卡片**——每个
-  工作区显示「已同步 / 未推送 N 处」状态 pill + 分支/子路径/最近提交，底部全局汇总条
-  「X 个工作区 · Y 个待同步」（`git.unpushed` 按本地与仓库差异计算）。
-
 **待做**（按优先级）：
 
-- **5.3 编辑器脏状态提醒**（中）：✅ 部分落地——未保存时编辑器工具栏显示「未保存」pill
+- **4.1 编辑器脏状态提醒**（中）：✅ 部分落地——未保存时编辑器工具栏显示「未保存」pill
   （0.7.0）。剩余：切换笔记 / 关闭管理器前提示（或自动保存）——现状切换笔记直接丢弃未保存内容。
-- **5.4 保存快捷键**（中）：Cmd/Ctrl+S 保存当前笔记（探索 dsh 快捷键注册扩展点；无则插件内监听）。
+- **4.2 保存快捷键**（中）：Cmd/Ctrl+S 保存当前笔记（探索 dsh 快捷键注册扩展点；无则插件内监听）。
 - （可按需扩展：保存成功定位、操作 loading 统一、多标签编辑等。）
 
 **验收标准**：未推送改动在界面上清晰可见且关闭前有提醒；记入笔记不阻塞弹窗；未保存编辑
