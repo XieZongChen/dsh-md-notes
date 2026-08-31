@@ -64,9 +64,9 @@ function GitSyncCard({ status, busy, updating, pushing, pushOpen, pushMsg, remot
           : <span className={styles.gitPillUnpushed}>{t('git.unpushed', { count: unpushed })}</span>}
       </div>
       <div className={styles.gitCardRows}>
-        <div className={styles.gitCardRow}>{t('git.branch')}: {status.branch ?? 'main'}</div>
-        {status.subdir ? <div className={styles.gitCardRow}>{t('git.subpath')}: {status.subdir}</div> : null}
-        {status.lastCommit ? <div className={styles.gitCardRow}>{t('git.lastCommit', { time: status.lastCommit })}</div> : null}
+        <GitInfoRow text={`${t('git.branch')}: ${status.branch ?? 'main'}`} />
+        {status.subdir ? <GitInfoRow text={`${t('git.subpath')}: ${status.subdir}`} /> : null}
+        {status.lastCommit ? <GitInfoRow text={t('git.lastCommit', { time: status.lastCommit })} /> : null}
       </div>
       {(status.remoteAhead ?? 0) > 0 && (
         <div className={styles.gitCardHint}>{t('git.remoteAhead')}</div>
@@ -101,6 +101,20 @@ function GitSyncCard({ status, busy, updating, pushing, pushOpen, pushMsg, remot
       </div>
     </div>
   )
+}
+
+/** A single-line git-info row: no wrap, ellipsis, and a hover tooltip that
+ *  shows the full text only when the row actually overflows. */
+function GitInfoRow({ text }: { text: string }): React.ReactElement {
+  const ref = React.useRef<HTMLDivElement | null>(null)
+  const [overflowing, setOverflowing] = React.useState(false)
+  React.useLayoutEffect(() => {
+    const el = ref.current
+    setOverflowing(el !== null && el.scrollWidth > el.clientWidth)
+  }, [text])
+  const row = <div ref={ref} className={styles.gitCardRow}>{text}</div>
+  if (!overflowing) return row
+  return <Tooltip label={text} side="bottom">{row}</Tooltip>
 }
 
 /**
