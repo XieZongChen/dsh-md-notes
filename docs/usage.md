@@ -29,12 +29,10 @@ them, and — optionally — back them up / sync them with a Git repository.
 Click the **notes entry** at the bottom of the sidebar. A full-screen manager
 opens with two columns:
 
-- **Left — note list**, grouped by workspace. Each workspace row has a folder
-  icon (click to collapse/expand that workspace), a note count, a git icon
-  (**shown only when that workspace has a git repo configured** — see
-  [§5](#5-git-sync-optional)), and a **+** button to create a note. Click the
-  git icon to expand/collapse that workspace's **Git sync card** (status
-  "Synced" / "N unpushed" + update/push buttons).
+- **Left — note list**, grouped by workspace. Each workspace row ends with, in
+  order: a note count, a git entry, and a **+** button to create a note. With
+  Git enabled, the group also shows a **Git sync card** (status "Synced" /
+  "N unpushed" + update/push buttons — see [§5](#5-git-sync-optional)).
 - **Right — note content**, with **Preview / Edit** tabs and a **Save** button.
   **Clicking an existing note opens Preview by default**; a newly created note
   opens directly in Edit mode.
