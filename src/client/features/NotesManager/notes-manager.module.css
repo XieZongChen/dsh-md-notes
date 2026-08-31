@@ -64,7 +64,9 @@
 .listItems {
   flex: 1;
   overflow: auto;
-  padding: 6px;
+  /* Right padding is 0: the 6px scrollbar lane (scrollNarrow) fills the right
+     inset, so left and right stay symmetric. */
+  padding: 6px 0 6px 6px;
 }
 
 .noteItem {
