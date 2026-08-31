@@ -73,7 +73,7 @@ export const en: { [K in keyof typeof zh]: string } = {
   'git.urlPlaceholder': 'Git repo URL (https:// or git@…)',
   'git.subpath': 'In-repo path',
   'git.uncommitted': '{count} uncommitted',
-  'git.lastCommit': 'Last commit {time}',
+  'git.lastCommit': 'Last commit: {time}',
   'git.update': 'Update',
   'git.remoteUpdated': 'Remote has updates — update manually.',
   'git.remoteAhead': 'Remote has updates',

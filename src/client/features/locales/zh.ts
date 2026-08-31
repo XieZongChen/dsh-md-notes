@@ -70,7 +70,7 @@ export const zh = {
   'git.urlPlaceholder': 'git 仓库地址（https:// 或 git@…）',
   'git.subpath': '仓库内路径',
   'git.uncommitted': '未提交 {count} 处',
-  'git.lastCommit': '最近提交 {time}',
+  'git.lastCommit': '最近提交: {time}',
   'git.update': '更新',
   'git.remoteUpdated': '远端有更新，需手动更新',
   'git.remoteAhead': '远端有更新',
