@@ -85,8 +85,8 @@
   scrollbar-color: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.2)) transparent;
 }
 .scrollNarrow::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 .scrollNarrow::-webkit-scrollbar-thumb {
   background: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.2));
