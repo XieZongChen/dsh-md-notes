@@ -77,23 +77,18 @@
   color: var(--dsw-alias-label-secondary, #888);
 }
 
-/* Two global scrollbar widths. `.scrollNarrow` is for compact side panels and
-   pickers (thin, 6px); `.scrollWide` is reserved for the note editor/preview
-   where reading long content benefits from a wider, more comfortable bar. */
+/* Two scrollbar modes. `.scrollNarrow` is for compact side panels and pickers:
+   the scrollbar is hidden so it never reserves layout space and the content
+   never reflows (scrolling still works via wheel / trackpad / touch). It no
+   longer consumes a gutter. `.scrollWide` is reserved for the note
+   editor/preview, where a visible bar is more useful. */
 .scrollNarrow {
-  scrollbar-width: thin;
-  scrollbar-color: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.2)) transparent;
+  scrollbar-width: none;
 }
 .scrollNarrow::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
-}
-.scrollNarrow::-webkit-scrollbar-thumb {
-  background: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.2));
-  border-radius: 999px;
-}
-.scrollNarrow::-webkit-scrollbar-track {
-  background: transparent;
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .scrollWide {
