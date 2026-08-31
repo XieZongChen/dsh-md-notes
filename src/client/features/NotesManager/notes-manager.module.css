@@ -645,11 +645,13 @@
   margin-top: 8px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  height: 32px;
 }
 .gitCardPush input {
   flex: 1;
   min-width: 0;
+  height: 32px;
 }
 
 .gitCardPushBtn {
@@ -657,11 +659,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   background: transparent;
   color: var(--dsw-alias-label-secondary, #888);
   cursor: pointer;
