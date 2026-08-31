@@ -30,10 +30,11 @@ Click the **notes entry** at the bottom of the sidebar. A full-screen manager
 opens with two columns:
 
 - **Left — note list**, grouped by workspace. Each workspace row has a folder
-  icon, a collapse arrow, and a **+** button to create a note in that
-  workspace. With Git enabled, each workspace group also shows a **Git sync
-  card** below its note list (status "Synced" / "N unpushed" + update/push
-  buttons — see [§5](#5-git-sync-optional)).
+  icon (click to collapse/expand that workspace), a note count, a git icon
+  (**shown only when that workspace has a git repo configured** — see
+  [§5](#5-git-sync-optional)), and a **+** button to create a note. Click the
+  git icon to expand/collapse that workspace's **Git sync card** (status
+  "Synced" / "N unpushed" + update/push buttons).
 - **Right — note content**, with **Preview / Edit** tabs and a **Save** button.
   **Clicking an existing note opens Preview by default**; a newly created note
   opens directly in Edit mode.
@@ -181,6 +182,21 @@ need to give it a repository **URL**.
 > pushes them to / pulls them from a repository; it never changes where notes
 > are stored locally.
 
+**The workspace-row git icon**:
+
+- It **only appears for workspaces with a git repo configured**. In **Shared
+  repo** mode, once the shared URL is set, every workspace shows it. In
+  **Own repos** mode, **only a workspace that has its own repo configured
+  shows it**; unconfigured workspaces don't.
+- Click it to expand/collapse that workspace's **Git sync card**.
+- Two small dots under the icon appear **only when there is something to act on**:
+  - **bottom-left yellow** = the remote has updates (click **Update** to pull);
+  - **bottom-right red** = you have unpushed local changes (click **Push**);
+  - neither dot shows when there is nothing to do.
+- Hovering the icon shows two lines: the remote-update count and the
+  local-unpushed count (a line is omitted when its count is zero; when both are
+  zero there is no tooltip).
+
 ### 5.1 Two modes (choose one)
 
 In the settings panel (see [§6](#6-the-settings-panel)), pick a mode:
@@ -191,9 +207,9 @@ In the settings panel (see [§6](#6-the-settings-panel)), pick a mode:
 | **Shared repo** | One repository for all workspaces. Each workspace's notes sync into that repo's branch under a pinned folder (its name is fixed on the first sync and stays the same if the workspace is renamed). | Repo URL + optional branch (default `main`) |
 | **Own repos** | Each workspace has its own repository. | Per workspace: repo URL + branch (default `main`) + in-repo subpath (default repo root) |
 
-> Want a single repository for everything? Use **Shared repo** — every
-> workspace gets its own folder automatically. Want different repos per
-> project? Use **Own repos**.
+> **We recommend Shared repo**: one URL for everything, each workspace gets a
+> pinned subfolder automatically — the least configuration. Use **Own repos**
+> when you want per-project separation or different credentials per repo.
 
 ### 5.2 Pushing notes
 
