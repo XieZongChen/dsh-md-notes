@@ -207,9 +207,10 @@ In the settings panel (see [§6](#6-the-settings-panel)), pick a mode:
 
 ### 5.2 Pushing notes
 
-1. Open the notes manager and click **Push** on the workspace's **Git sync card**.
-2. A small panel asks for a commit message (default "Notes update <time>").
-   Confirm to commit & push.
+1. Open the notes manager and click **Push** on the workspace's **Git sync card** —
+   the button row switches to a commit-message row (input + confirm / cancel).
+2. Enter a commit message (default "Notes update <time>") and confirm to commit
+   & push; click cancel to go back to the buttons.
 3. First push clones the repository automatically (credentials come from git
    itself — HTTPS credential helper or your SSH key).
 
