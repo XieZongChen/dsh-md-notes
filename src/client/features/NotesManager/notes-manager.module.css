@@ -677,7 +677,6 @@
   cursor: pointer;
 }
 .gitCardPushBtn:hover {
-  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.15));
   color: var(--dsw-alias-label-primary, #222);
 }
 .gitCardPushBtn:disabled {
