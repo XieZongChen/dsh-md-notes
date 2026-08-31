@@ -383,6 +383,9 @@ function useNotesEditor(deps: {
     setSelectedWsId(wsId)
     setSelected(null)
     setContent('')
+    // Collapsing the workspace also folds its Git card, so re-expanding does
+    // not resurrect a previously-open card.
+    if (collapsed[wsId] !== true) setGitOpen((prev) => ({ ...prev, [wsId]: false }))
     setCollapsed((prev) => ({ ...prev, [wsId]: !prev[wsId] }))
     setGitMsg('')
     setRemoteChanged(null)
