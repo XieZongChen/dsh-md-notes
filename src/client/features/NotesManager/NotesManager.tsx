@@ -125,6 +125,7 @@ function GitInfoRow({ text }: { text: string }): React.ReactElement {
  * appear only when there is something to act on — remote ahead (bottom-left,
  * warn) and local unpushed (bottom-right, danger). A two-line tooltip surfaces
  * the counts; when neither side has anything, no dot and no tooltip show.
+ * Hidden entirely when the workspace has no git repo configured.
  */
 interface GitStatusIconProps {
   status: GitStatusData | null | undefined
@@ -133,9 +134,11 @@ interface GitStatusIconProps {
   onToggle: () => void
 }
 
-function GitStatusIcon({ status, open, t, onToggle }: GitStatusIconProps): React.ReactElement {
-  const remoteAhead = status?.remoteAhead ?? 0
-  const unpushed = status?.unpushed ?? 0
+function GitStatusIcon({ status, open, t, onToggle }: GitStatusIconProps): React.ReactElement | null {
+  // No git repo configured → hide the toggle entirely (mirrors GitSyncCard).
+  if (status === null || status === undefined || !status.repoDir) return null
+  const remoteAhead = status.remoteAhead ?? 0
+  const unpushed = status.unpushed ?? 0
   const lines: string[] = []
   if (remoteAhead > 0) lines.push(t('git.remoteAheadTip', { count: remoteAhead }))
   if (unpushed > 0) lines.push(t('git.unpushedTip', { count: unpushed }))
