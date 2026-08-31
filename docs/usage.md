@@ -184,18 +184,14 @@ need to give it a repository **URL**.
 
 **The workspace-row git icon**:
 
-- It **only appears for workspaces with a git repo configured**. In **Shared
-  repo** mode, once the shared URL is set, every workspace shows it. In
-  **Own repos** mode, **only a workspace that has its own repo configured
-  shows it**; unconfigured workspaces don't.
+- It **only appears for workspaces with a git repo configured**; unconfigured
+  workspaces don't show it.
 - Click it to expand/collapse that workspace's **Git sync card**.
 - Two small dots under the icon appear **only when there is something to act on**:
   - **bottom-left yellow** = the remote has updates (click **Update** to pull);
-  - **bottom-right red** = you have unpushed local changes (click **Push**);
-  - neither dot shows when there is nothing to do.
+  - **bottom-right red** = you have unpushed local changes (click **Push**).
 - Hovering the icon shows two lines: the remote-update count and the
-  local-unpushed count (a line is omitted when its count is zero; when both are
-  zero there is no tooltip).
+  local-unpushed count.
 
 ### 5.1 Two modes (choose one)
 
