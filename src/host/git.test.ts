@@ -42,6 +42,12 @@ describe('resolveWorkspaceRepo', () => {
     expect(resolveWorkspaceRepo({ gitMode: 'off' }, ws)).toBeUndefined()
     expect(resolveWorkspaceRepo({ gitMode: 'shared', gitCentral: {} }, ws)).toBeUndefined()
   })
+
+  it('returns undefined in own mode when this workspace has no own repo', () => {
+    expect(resolveWorkspaceRepo({ gitMode: 'own', gitRepos: {} }, ws)).toBeUndefined()
+    expect(resolveWorkspaceRepo({ gitMode: 'own', gitRepos: { 'other-ws': { remote: 'https://x' } } }, ws)).toBeUndefined()
+    expect(resolveWorkspaceRepo({ gitMode: 'own', gitRepos: { 'ws-1': {} } }, ws)).toBeUndefined()
+  })
 })
 
 describe('resolveSharedRepo / resolveNotesDir / repoTargetDir', () => {
