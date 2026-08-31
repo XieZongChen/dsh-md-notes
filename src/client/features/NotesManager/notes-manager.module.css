@@ -367,11 +367,11 @@
 }
 .gitDotRemote {
   left: -1px;
-  color: var(--dsw-alias-state-warn-primary, #f0b429);
+  color: var(--dsw-alias-state-warn-primary, #f59e0b);
 }
 .gitDotLocal {
   right: -1px;
-  color: var(--dsw-alias-danger, #d9534f);
+  color: var(--dsw-static-red-500, #ef4444);
 }
 
 /* No-workspace guidance in the left panel. */
