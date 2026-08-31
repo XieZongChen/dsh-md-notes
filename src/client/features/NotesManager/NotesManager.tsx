@@ -74,31 +74,34 @@ function GitSyncCard({ status, busy, updating, pushing, pushOpen, pushMsg, remot
       {remoteChanged !== null && remoteChanged.length > 0 && (
         <div className={styles.gitCardHint}>{t('git.remoteUpdated')}</div>
       )}
-      {pushOpen && (
-        <div className={styles.gitCardPush}>
-          <input
-            className={shared.input}
-            placeholder={t('git.commitPlaceholder')}
-            value={pushMsg}
-            onChange={(e) => onPushMsgChange(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') onConfirmPush() }}
-          />
-          <button type="button" className={styles.gitCardPushBtn} disabled={busy} onClick={onConfirmPush} title={t('git.confirmPush')}>
-            {pushing ? <LoadingIndicator size={14} /> : <IconSendOutline16 />}
-          </button>
-          <button type="button" className={styles.gitCardPushBtn} disabled={busy} onClick={onCancelPush} title={t('git.cancel')}>
-            <IconCloseOutline16 />
-          </button>
-        </div>
-      )}
-      <div className={styles.gitCardActions}>
-        <button type="button" className={styles.gitBtn} disabled={busy} onClick={onUpdate}>
-          {updating && <LoadingIndicator size={12} />}{t('git.update')}
-        </button>
-        <button type="button" className={styles.gitPushBtn} disabled={busy} onClick={onPush}>
-          {pushing && <LoadingIndicator size={12} />}{t('git.push')}
-        </button>
-      </div>
+      {pushOpen
+        ? (
+          <div className={styles.gitCardPush}>
+            <input
+              className={shared.input}
+              placeholder={t('git.commitPlaceholder')}
+              value={pushMsg}
+              onChange={(e) => onPushMsgChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') onConfirmPush() }}
+            />
+            <button type="button" className={styles.gitCardPushBtn} disabled={busy} onClick={onConfirmPush} title={t('git.confirmPush')}>
+              {pushing ? <LoadingIndicator size={14} /> : <IconSendOutline16 />}
+            </button>
+            <button type="button" className={styles.gitCardPushBtn} disabled={busy} onClick={onCancelPush} title={t('git.cancel')}>
+              <IconCloseOutline16 />
+            </button>
+          </div>
+        )
+        : (
+          <div className={styles.gitCardActions}>
+            <button type="button" className={styles.gitBtn} disabled={busy} onClick={onUpdate}>
+              {updating && <LoadingIndicator size={12} />}{t('git.update')}
+            </button>
+            <button type="button" className={styles.gitPushBtn} disabled={busy} onClick={onPush}>
+              {pushing && <LoadingIndicator size={12} />}{t('git.push')}
+            </button>
+          </div>
+        )}
     </div>
   )
 }
@@ -616,9 +619,8 @@ function useGitSync(deps: {
         })
       } else if (res.code === 'non-fast-forward') {
         // Rejected because the remote is ahead / histories are unrelated:
+        // keep the commit row open (a failure must not switch it back) and
         // offer an in-app merge-and-retry instead of a bare error.
-        setPushTargetWsId(null)
-        setPushMsg('')
         setPushConflict({ wsId, message, error: gitErrorText(t, res.code, res.error) })
       } else {
         setGitMsg(gitErrorText(t, res.code, res.error))
