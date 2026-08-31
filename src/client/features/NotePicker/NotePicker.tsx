@@ -10,7 +10,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconFolderClose16, IconFolderOpen16, IconPlusOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { WorkspaceNotes } from '../api.ts'
 import { api, ICON_URL } from '../api.ts'
 import type { NotesUiStore } from '../store.ts'
@@ -157,7 +157,9 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
       <div className={styles.dialogHead}>
         <img src={ICON_URL} width={16} height={16} alt="" className={styles.dialogIcon} />
         <span className={styles.dialogTitle}>{t('picker.title')}</span>
-        <button type="button" className={shared.iconBtn} onClick={close} title={t('picker.close')}>✕</button>
+        <button type="button" className={shared.closeBtn} aria-label={t('picker.close')} onClick={close}>
+          <IconCloseOutline16 size={14} />
+        </button>
       </div>
       <div className={`${styles.dialogBody} ${shared.scrollNarrow}`}>
         {loading
