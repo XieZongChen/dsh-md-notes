@@ -10,7 +10,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconTriangleRightFill14, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconFolderClose16, IconFolderOpen16, IconPlusOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { WorkspaceNotes } from '../api.ts'
 import { api, ICON_URL } from '../api.ts'
 import type { NotesUiStore } from '../store.ts'
@@ -159,7 +159,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
         <span className={styles.dialogTitle}>{t('picker.title')}</span>
         <button type="button" className={shared.iconBtn} onClick={close} title={t('picker.close')}>✕</button>
       </div>
-      <div className={styles.dialogBody}>
+      <div className={`${styles.dialogBody} ${shared.scrollNarrow}`}>
         {loading
           ? <div className={styles.pickerLoading}><LoadingIndicator label={t('picker.loading')} /></div>
           : noWorkspaces
@@ -167,7 +167,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
             : workspaces.length === 0
               ? <div className={shared.empty}>{t('picker.empty')}</div>
               : (
-              <div className={styles.noteList}>
+              <div className={`${styles.noteList} ${shared.scrollNarrow}`}>
                 {workspaces.map((ws) => (
               <div key={ws.workspaceId} className={styles.wsGroup}>
                 <div
@@ -178,9 +178,6 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
                 >
                   <span className={styles.wsFolder}>
                     {collapsed[ws.workspaceId] ? <IconFolderClose16 /> : <IconFolderOpen16 />}
-                  </span>
-                  <span className={styles.wsChevron}>
-                    <IconTriangleRightFill14 className={collapsed[ws.workspaceId] ? styles.wsArrow : `${styles.wsArrow} ${styles.wsArrowOpen}`} />
                   </span>
                   <span className={styles.wsGroupTitle}>{ws.name}</span>
                   <button

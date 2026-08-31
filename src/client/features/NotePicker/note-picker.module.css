@@ -102,24 +102,7 @@
   color: var(--dsw-alias-label-tertiary);
 }
 
-/* Expand chevron: caption grey, rotates to point down when expanded. */
-.wsChevron {
-  flex: none;
-  width: 16px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--dsw-alias-label-caption);
-}
-
-.wsArrow {
-  transition: transform 150ms var(--ds-ease-in-out);
-}
-
-.wsArrowOpen {
-  transform: rotate(90deg);
-}
+/* Expand chevron removed: the folder glyph already signals the fold state. */
 
 /* ---- Note item (mirrors notes-manager .noteItem) ---- */
 
