@@ -5,10 +5,11 @@
 
 ## dsh 兼容性（dsh 0.1.2-alpha.1 → 0.1.2-alpha.2，2026-08-31）
 
-**状态**：⚠️ 未适配（待迁移）。dsh 0.1.2-alpha.2 从 `@deepseek-ai/dsh-settings` 移除了
-`settingsNamespace` 导出——settings 命名空间由「运行时辅助函数」改为「品牌字符串类型 +
-`register` 内校验」（`parseSettingsNamespace`，约束 `[a-z][a-z0-9-]*`）。插件 0.9.0 上次在
-0.1.2-alpha.1 上验证通过；alpha.2 区间共 235 个提交、1604 文件变更，其中仅此一处触及插件契约面。
+**状态**：✅ 已适配（代码已迁移，`npm run build` 通过 + 69 项测试全绿；运行时冒烟与发版后
+更新对照表待做）。dsh 0.1.2-alpha.2 从 `@deepseek-ai/dsh-settings` 移除了 `settingsNamespace`
+导出——settings 命名空间由「运行时辅助函数」改为「品牌字符串类型 + `register` 内校验」
+（`parseSettingsNamespace`，约束 `[a-z][a-z0-9-]*`）。插件 0.9.0 上次在 0.1.2-alpha.1 上
+验证通过；alpha.2 区间共 235 个提交、1604 文件变更，其中仅此一处触及插件契约面。
 
 **受影响功能与影响范围**：
 
@@ -18,7 +19,7 @@
   「dsh 设置 → MD 笔记」设置面板无法注册与读写（模式 / 仓库 URL / 分支 / 子路径 / 自动拉取 /
   提交作者全部失效）。
 
-**需要的动作**：
+**迁移内容（已完成，commit `4072829`）**：
 
 - `src/host/settings.ts`：删除 `import { settingsNamespace }`，把
   `export const MD_NOTES_NS = settingsNamespace('md-notes')` 改为
@@ -41,10 +42,11 @@
 
 **验收标准**：
 
-- `npm run build` 通过（0 error）；
-- dsh 0.1.2-alpha.2 上冒烟：设置面板（dsh 设置 → MD 笔记）可正常读写；@ 引用、记入笔记、
-  Git 同步、侧边栏入口行为与 alpha.1 一致；
-- 冒烟通过后，把「迁移后的插件版本 → 0.1.2-alpha.2」写入
+- ✅ `npm run build` 通过（0 error）；产物 `lib/` 已无 `settingsNamespace` 引用；
+- ✅ `npm test` 通过（7 文件 69 例全绿）；
+- ⏳ dsh 0.1.2-alpha.2 上运行时冒烟：设置面板（dsh 设置 → MD 笔记）可正常读写；@ 引用、
+  记入笔记、Git 同步、侧边栏入口行为与 alpha.1 一致——待发版后在 alpha.2 上执行；
+- ⏳ 冒烟通过后，把「发版后的插件版本 → 0.1.2-alpha.2」写入
   `docs/compatibility.zh.md` / `docs/compatibility.md` 并刷新 README 兼容性表格。
 
 ## dsh 兼容性（dsh 0.1.1-rc.2 → 0.1.2-alpha.1，2026-08-25）
