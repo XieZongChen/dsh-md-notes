@@ -39,7 +39,9 @@
 }
 
 .dialogBody {
-  padding: 10px 6px 4px 12px;
+  /* Left padding (16px) = right padding (12px) + the 4px scrollbar lane, so
+     the content stays visually centered. */
+  padding: 10px 12px 4px 16px;
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -54,8 +56,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  /* Left padding matches the 6px scrollbar lane on the right. */
-  padding-left: 6px;
+  /* Left padding matches the 4px scrollbar lane on the right. */
+  padding-left: 4px;
 }
 
 /* ---- Workspace group (mirrors notes-manager .wsGroup/.wsGroupHead) ---- */
