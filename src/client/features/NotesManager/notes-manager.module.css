@@ -630,6 +630,9 @@
 .gitCardRow {
   font-size: 11px;
   color: var(--dsw-alias-label-secondary, #888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gitCardHint {
