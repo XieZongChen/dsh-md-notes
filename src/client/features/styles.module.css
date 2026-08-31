@@ -83,11 +83,20 @@
    Containers compensate for that lane: side panels subtract 4px from their
    `padding-right`, while the picker adds 4px to its `padding-left` — either
    way the left/right insets stay symmetric. `.scrollWide` is reserved for the
-   note editor/preview. */
+   note editor/preview.
+
+   NOTE: `scrollbar-width` must NOT be set on this class in Chromium — it
+   overrides `::-webkit-scrollbar` and widens the bar past the 4px we reserve
+   (breaking symmetry). It is only applied for Firefox below. */
 .scrollNarrow {
   scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.2)) transparent;
+}
+/* Firefox: its thinnest scrollbar (no ::-webkit-scrollbar / custom width). */
+@supports (-moz-appearance: none) {
+  .scrollNarrow {
+    scrollbar-width: thin;
+    scrollbar-color: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.2)) transparent;
+  }
 }
 .scrollNarrow::-webkit-scrollbar {
   width: 4px;
