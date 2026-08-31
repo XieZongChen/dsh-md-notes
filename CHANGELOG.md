@@ -24,6 +24,25 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## [0.10.0] - 2026-09-01
+
+### Added
+
+- **Git card interaction redesign**: workspace rows drop the collapse arrow for a
+  **git status icon** (theme-tinted + red/amber dots for local-unpushed /
+  remote-updated + tooltip); the Git card is collapsed by default and opens on
+  icon click, closing when its workspace collapses; card info lines (branch /
+  subpath / last commit) don't wrap, ellipsize when overflowing, and show the
+  full text on hover; workspaces without a configured repo don't show the git
+  icon. See [User guide §5 — Git sync](docs/usage.md#5-git-sync-optional).
+- **Push interaction redesign**: clicking **Push** switches the button row to a
+  **commit-message row** (replacing the old commit popover); it reverts on
+  success/cancel and stays on failure (including non-fast-forward). See
+  [User guide §5.2 — Pushing notes](docs/usage.md#52-pushing-notes).
+- **Dialog close buttons match dsh**: the notes manager and note picker close
+  buttons now use dsh's closeBtn (`IconCloseOutline16`). See
+  [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+
 ## [0.9.0] - 2026-08-29
 
 ### Breaking
