@@ -16,10 +16,15 @@
  */
 
 import s from '@deepseek-ai/schemastery'
-import { settingsNamespace } from '@deepseek-ai/dsh-settings'
 
-/** The plugin's settings namespace id. */
-export const MD_NOTES_NS = settingsNamespace('md-notes')
+/**
+ * The plugin's settings namespace id (L3). A plain string literal: since
+ * dsh `0.1.2-alpha.2` the `settingsNamespace()` helper was removed from
+ * `@deepseek-ai/dsh-settings` — namespaces are now branded-string-typed and
+ * validated inside `settings.register()` (`parseSettingsNamespace`, pattern
+ * `[a-z][a-z0-9-]*`), which `'md-notes'` satisfies.
+ */
+export const MD_NOTES_NS = 'md-notes'
 
 /** Per-repo record: URL + branch + in-repo subpath. */
 export interface RepoSettings {
