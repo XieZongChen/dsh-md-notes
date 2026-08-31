@@ -9,8 +9,9 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSendOutline16, IconSettingsOutline16, IconTriangleRightFill14, MarkdownText, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, IconSendOutline16, IconSettingsOutline16, MarkdownText, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
+import { GitIcon } from '../components/GitIcon.tsx'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
 import type { GitStatusData, NoteSummary, WorkspaceNotes } from '../api.ts'
@@ -101,6 +102,51 @@ function GitSyncCard({ status, busy, updating, pushing, pushOpen, pushMsg, remot
   )
 }
 
+/**
+ * Workspace-row git toggle: a decolorized git mark plus two corner dots
+ * (bottom-left = remote ahead ↓, bottom-right = local unpushed ↑). Each dot
+ * is green when idle and switches to warn (remote) / danger (local) when there
+ * is something to act on. A two-line tooltip surfaces the counts; when neither
+ * side has anything, the tooltip is suppressed.
+ */
+interface GitStatusIconProps {
+  status: GitStatusData | null | undefined
+  open: boolean
+  t: TranslateNS<'md-notes'>
+  onToggle: () => void
+}
+
+function GitStatusIcon({ status, open, t, onToggle }: GitStatusIconProps): React.ReactElement {
+  const remoteAhead = status?.remoteAhead ?? 0
+  const unpushed = status?.unpushed ?? 0
+  const lines: string[] = []
+  if (remoteAhead > 0) lines.push(t('git.remoteAheadTip', { count: remoteAhead }))
+  if (unpushed > 0) lines.push(t('git.unpushedTip', { count: unpushed }))
+  const tip = lines.length > 0 ? lines.join('\n') : null
+
+  const button = (
+    <button
+      type="button"
+      className={open ? `${styles.wsGitBtn} ${styles.wsGitBtnActive}` : styles.wsGitBtn}
+      aria-label={t('git.title')}
+      aria-expanded={open}
+      onClick={(e) => { e.stopPropagation(); onToggle() }}
+    >
+      <GitIcon className={styles.gitIcon} size={14} />
+      <span className={`${styles.gitBadge} ${styles.gitBadgeRemote}${remoteAhead > 0 ? ` ${styles.gitBadgeWarn}` : ''}`}>
+        <IconSendOutline16 size={6} className={`${styles.gitArrow} ${styles.gitArrowDown}`} />
+        <span className={styles.gitDot} />
+      </span>
+      <span className={`${styles.gitBadge} ${styles.gitBadgeLocal}${unpushed > 0 ? ` ${styles.gitBadgeDanger}` : ''}`}>
+        <IconSendOutline16 size={6} className={`${styles.gitArrow} ${styles.gitArrowUp}`} />
+        <span className={styles.gitDot} />
+      </span>
+    </button>
+  )
+  if (tip === null) return button
+  return <Tooltip label={tip} side="bottom">{button}</Tooltip>
+}
+
 /** One note row in the workspace list. */
 interface NoteItemProps {
   note: NoteSummary
@@ -137,6 +183,7 @@ interface WorkspaceListProps {
   selectedWsId: string | null
   selected: string | null
   collapsed: Record<string, boolean>
+  gitOpen: Record<string, boolean>
   statusByWs: Record<string, GitStatusData | null>
   busy: boolean
   updatingWsId: string | null
@@ -148,6 +195,7 @@ interface WorkspaceListProps {
   tracker: BusyTracker
   t: TranslateNS<'md-notes'>
   onToggleWorkspace: (wsId: string) => void
+  onToggleGit: (wsId: string) => void
   onCreate: (wsId: string) => void
   onOpen: (name: string, wsId: string) => void
   onRemove: (name: string, wsId: string) => void
@@ -160,9 +208,9 @@ interface WorkspaceListProps {
 
 function WorkspaceList(props: WorkspaceListProps): React.ReactElement {
   const {
-    workspaces, loading, noWorkspaces, selectedWsId, selected, collapsed, statusByWs, busy,
+    workspaces, loading, noWorkspaces, selectedWsId, selected, collapsed, gitOpen, statusByWs, busy,
     updatingWsId, pushingWsId, pushTargetWsId, pushMsg, remoteChanged, currentWsId, tracker, t,
-    onToggleWorkspace, onCreate, onOpen, onRemove, onUpdate, onPush, onPushMsgChange,
+    onToggleWorkspace, onToggleGit, onCreate, onOpen, onRemove, onUpdate, onPush, onPushMsgChange,
     onConfirmPush, onCancelPush,
   } = props
   const grouped = workspaces.length > 1
@@ -187,17 +235,20 @@ function WorkspaceList(props: WorkspaceListProps): React.ReactElement {
                       <span className={selectedWsId === ws.workspaceId ? `${styles.wsFolder} ${styles.wsFolderActive}` : styles.wsFolder}>
                         {collapsed[ws.workspaceId] ? <IconFolderClose16 /> : <IconFolderOpen16 />}
                       </span>
-                      <span className={styles.wsChevron}>
-                        <IconTriangleRightFill14 className={collapsed[ws.workspaceId] ? styles.wsArrow : `${styles.wsArrow} ${styles.wsArrowOpen}`} />
-                      </span>
                       <span className={styles.wsGroupTitle}>{ws.name}</span>
                       <span className={styles.wsCount}>{ws.notes.length}</span>
+                      <GitStatusIcon
+                        status={statusByWs[ws.workspaceId]}
+                        open={gitOpen[ws.workspaceId] === true}
+                        t={t}
+                        onToggle={() => onToggleGit(ws.workspaceId)}
+                      />
                       <span className={styles.wsNewBtn} role="button" title={t('manager.new')} onClick={(e) => { e.stopPropagation(); onCreate(ws.workspaceId) }}>
                         <IconPlusOutline16 />
                       </span>
                     </div>
                   )}
-                  {!collapsed[ws.workspaceId] && (
+                  {!collapsed[ws.workspaceId] && gitOpen[ws.workspaceId] === true && (
                     <GitSyncCard
                       status={statusByWs[ws.workspaceId]}
                       busy={busy}
@@ -304,6 +355,8 @@ function useNotesEditor(deps: {
   const [flash, setFlash] = React.useState<'' | MdNotesKey>('')
   const [contentLoading, setContentLoading] = React.useState(false)
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({})
+  /** Workspaces whose Git card is expanded (default: all collapsed). */
+  const [gitOpen, setGitOpen] = React.useState<Record<string, boolean>>({})
   const [createWsId, setCreateWsId] = React.useState<string | null>(null)
   const [createBusy, setCreateBusy] = React.useState(false)
   const selectionRef = React.useRef<{ wsId: string; name: string } | null>(null)
@@ -340,6 +393,11 @@ function useNotesEditor(deps: {
     setGitMsg('')
     setRemoteChanged(null)
     refreshStatus(wsId)
+  }
+
+  /** Toggle a workspace's Git card (independent of its note-list collapse). */
+  const toggleGit = (wsId: string): void => {
+    setGitOpen((prev) => ({ ...prev, [wsId]: !prev[wsId] }))
   }
 
   const currentWsId = (): string | null => selectedWsId ?? workspaces[0]?.workspaceId ?? null
@@ -443,8 +501,8 @@ function useNotesEditor(deps: {
   const dirty = content !== savedContent
 
   return {
-    selectedWsId, selected, content, mode, saving, flash, contentLoading, collapsed, dirty,
-    createWsId, createBusy, currentWsId, toggleWorkspace, open, save, createIn, submitCreate, cancelCreate,
+    selectedWsId, selected, content, mode, saving, flash, contentLoading, collapsed, gitOpen, dirty,
+    createWsId, createBusy, currentWsId, toggleWorkspace, toggleGit, open, save, createIn, submitCreate, cancelCreate,
     remove, setMode, setContent,
     refreshAndRereadSelected, setFlash,
   }
@@ -670,11 +728,13 @@ function useNotesManager({ store, tracker, t }: NotesManagerProps) {
     saving: editor.saving,
     flash: editor.flash,
     collapsed: editor.collapsed,
+    gitOpen: editor.gitOpen,
     dirty: editor.dirty,
     createWsId: editor.createWsId,
     createBusy: editor.createBusy,
     currentWsId: editor.currentWsId,
     toggleWorkspace: editor.toggleWorkspace,
+    toggleGit: editor.toggleGit,
     open: editor.open,
     save: editor.save,
     createIn: editor.createIn,
@@ -718,9 +778,9 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const {
     workspaces, noWorkspaces, loading, contentLoading, selectedWsId, selected, content,
     mode, saving, flash, statusByWs, gitMsg, pushTargetWsId, pushMsg,
-    updatingWsId, pushingWsId, pushConflict, remoteChanged, confirmState, collapsed,
+    updatingWsId, pushingWsId, pushConflict, remoteChanged, confirmState, collapsed, gitOpen,
     writingThis, dirty, busy, repoStatuses, unpushedTotal, pendingWsCount,
-    currentWsId, toggleWorkspace, open, save, createIn, submitCreate, cancelCreate, remove,
+    currentWsId, toggleWorkspace, toggleGit, open, save, createIn, submitCreate, cancelCreate, remove,
     updateClick, pushForWs, doPush, resolveAndRetry, setPushMsg, setPushTargetWsId, setMode,
     setContent, setConfirmState, close, openDshSettings, createWsId, createBusy,
   } = useNotesManager({ store, tracker, t })
@@ -791,6 +851,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
             selectedWsId={selectedWsId}
             selected={selected}
             collapsed={collapsed}
+            gitOpen={gitOpen}
             statusByWs={statusByWs}
             busy={busy}
             updatingWsId={updatingWsId}
@@ -802,6 +863,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
             tracker={tracker}
             t={t}
             onToggleWorkspace={toggleWorkspace}
+            onToggleGit={toggleGit}
             onCreate={createIn}
             onOpen={open}
             onRemove={remove}

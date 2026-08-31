@@ -301,24 +301,7 @@
   color: var(--dsw-alias-state-business-primary);
 }
 
-/* Expand chevron: caption grey, rotates to point down when expanded. */
-.wsChevron {
-  flex: none;
-  width: 16px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--dsw-alias-label-caption);
-}
-
-.wsArrow {
-  transition: transform 150ms var(--ds-ease-in-out);
-}
-
-.wsArrowOpen {
-  transform: rotate(90deg);
-}
+/* Expand chevron removed: the folder glyph already signals the collapse state. */
 
 /* Persistent new-note button on the active workspace row — mirrors dsh's
    workspace new-session iconButton (16px, radius 4, tertiary → primary on
@@ -340,6 +323,76 @@
 
 .wsNewBtn:hover {
   color: var(--dsw-alias-label-primary);
+}
+
+/* Git status toggle (workspace row) — same 16px geometry as .wsNewBtn. */
+.wsGitBtn {
+  flex: none;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 4px;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.wsGitBtn:hover,
+.wsGitBtnActive {
+  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.15));
+}
+
+/* Decolorized git mark: follows the theme foreground — near-black on light
+   (#100f0d) and white (#ffffff) on dark — so it reads correctly everywhere. */
+.gitIcon {
+  display: block;
+  color: #100f0d;
+  color: light-dark(#100f0d, #ffffff);
+}
+
+/* Status badges: a corner dot with a small arrow above it. The badge sets the
+   tone color; the arrow (currentColor) and dot (background: currentColor)
+   inherit it. Green = idle, warn = remote ahead (left), danger = unpushed
+   (right). */
+.gitBadge {
+  position: absolute;
+  bottom: -1px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  color: var(--dsw-alias-state-success-primary, #2e8b57);
+}
+.gitBadgeRemote {
+  left: -1px;
+}
+.gitBadgeLocal {
+  right: -1px;
+}
+.gitArrow {
+  display: block;
+}
+.gitArrowDown {
+  transform: rotate(180deg);
+}
+.gitDot {
+  display: block;
+  width: 5px;
+  height: 5px;
+  margin-top: 1px;
+  border-radius: 999px;
+  background: currentColor;
+  /* A thin panel-colored ring keeps the dot legible over the git mark. */
+  box-shadow: 0 0 0 1px var(--dsw-alias-bg-base, #fff);
+}
+.gitBadgeWarn {
+  color: var(--dsw-alias-state-warn-primary, #f0b429);
+}
+.gitBadgeDanger {
+  color: var(--dsw-alias-danger, #d9534f);
 }
 
 /* No-workspace guidance in the left panel. */
