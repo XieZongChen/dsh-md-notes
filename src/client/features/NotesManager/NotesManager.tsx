@@ -840,8 +840,8 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
               </span>
             )}
           </span>
-          <button type="button" className={shared.iconBtn} onClick={close} title={t('manager.close')}>
-            <IconCloseOutline16 />
+          <button type="button" className={shared.closeBtn} aria-label={t('manager.close')} onClick={close}>
+            <IconCloseOutline16 size={14} />
           </button>
         </div>
         <div className={styles.managerBody}>
