@@ -41,11 +41,11 @@ dsh iterates fast and provides **no backward compatibility**, so a fixed dsh ver
 matches fixed plugin versions. Verified combinations are listed below (full adaptation
 history in [docs/compatibility.md](docs/compatibility.md)):
 
-| Plugin version | dsh version | Verified on |
-|---|---|---|
-| 0.10.0 | `0.1.2-alpha.3` | 2026-09-01 |
-| 0.9.0 | `0.1.2-alpha.1` | 2026-08-29 |
-| 0.8.0 | `0.1.2-alpha.1` | 2026-08-29 |
+| Plugin version | dsh version | Verified on | Notes |
+|---|---|---|---|
+| 0.10.0 | `0.1.2-alpha.3` | 2026-09-01 | Current latest |
+| 0.10.0 | `0.1.2-alpha.2` | 2026-09-01 | 0.10.0 adapted alpha.2 (`settingsNamespace` migration) |
+| 0.9.0 | `0.1.2-alpha.1` | 2026-08-29 | — |
 
 The plugin is not pinned to a specific mainline commit; pin the plugin version at install
 time if you need a fixed combination (e.g. `dsh plugin --profile web add dsh-md-notes@0.10.0`).
