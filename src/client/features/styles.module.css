@@ -29,8 +29,9 @@
   color: var(--dsw-alias-label-primary, #222);
 }
 
-/* Dialog close button — identical to dsh's Modal close (28×28, radius 8,
-   secondary label color, hover interactive fill, IconCloseOutline16 @14). */
+/* Dialog close button — identical to dsh's settings-panel close
+   (SettingsRoot): 28×28 circular (radius 28), primary label color, hover
+   interactive fill, IconCloseOutline16 @14. */
 .closeBtn {
   flex: none;
   display: inline-flex;
@@ -38,11 +39,12 @@
   justify-content: center;
   width: 28px;
   height: 28px;
+  padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 28px;
   background: transparent;
   cursor: pointer;
-  color: var(--dsw-alias-label-secondary);
+  color: var(--dsw-alias-label-primary);
 }
 .closeBtn:hover {
   background: var(--dsw-alias-interactive-bg-hover);
