@@ -342,10 +342,6 @@
   background: transparent;
   cursor: pointer;
 }
-.wsGitBtn:hover,
-.wsGitBtnActive {
-  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.15));
-}
 
 /* Decolorized git mark: follows the theme foreground — near-black on light
    (#100f0d) and white (#ffffff) on dark — so it reads correctly everywhere. */
