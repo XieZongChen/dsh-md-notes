@@ -12,6 +12,10 @@
 - 某个功能在当前版本加入时，只在 **Added** 记录一次；**同一版本内**对该功能的修复
   **不再记入**（那是构建该功能的一部分，不是对已发布行为的修复）。
 - **Fixed** 只记录对**历史版本**已有功能的修复。
+- **dsh 版本适配**：升级适配某个 deepseek-harness 版本时，在对应版本的 **Added** 加一条
+  「适配 deepseek-harness `<版本>`」，说明迁移内容（依赖 / 符号 / API 变更）。它表达
+  「该插件版本已验证支持该 dsh 版本」，与[兼容性对照表](docs/compatibility.zh.md)互补——
+  表记「哪个插件版本 ↔ 哪个 dsh 版本」的组合，CHANGELOG 记「这次适配改了什么」。
 - **不写操作介绍**——一条改动只写功能说明，并链接到[使用文档](docs/usage.zh.md)对应章节
   （链接精确到标题）。用法说明放在使用文档里，不放进 CHANGELOG；若文档还没有该功能，
   先补进文档，再引用。
@@ -34,6 +38,8 @@
   [使用文档 §5.2 — 推送笔记](docs/usage.zh.md#52-推送笔记)。
 - **弹窗关闭按钮统一 dsh 同款**：笔记管理器与记入笔记弹窗的关闭按钮改用 dsh 同款
   closeBtn（`IconCloseOutline16`）。见 [使用文档 §2 — 打开笔记管理器](docs/usage.zh.md#2-打开笔记管理器)。
+- **适配 deepseek-harness `0.1.2-alpha.2`**：移除已删除的 `settingsNamespace` 依赖，
+  `MD_NOTES_NS` 改用纯字符串（register 内校验）。
 
 ## [0.9.0] - 2026-08-29
 
@@ -56,6 +62,14 @@
   非法字符转 `-`、强制 `.md` 后缀），弹窗实时显示「将创建」+ 重名红字提示并禁用创建；
   管理器与记入笔记面板两处新建都复用此弹窗。见
   [使用文档 §2 — 打开笔记管理器](docs/usage.zh.md#2-打开笔记管理器)。
+- **适配 deepseek-harness `0.1.2-alpha.1`**：`@deepseek-ai/dsh-client-runtime` 包被删除、
+  拆分到多个包——迁移依赖（新增 `dsh-client-store` / `dsh-client-ui-chat` /
+  `dsh-client-ui-renderer`，`dsh.client.inject` 改为 renderer / locale / conversation /
+  input-trigger / chat）；符号迁移（`createSnapshotStore`→store、`ConversationSnapshot`/
+  `AssistantBlock`/`ConversationNode`→ui-conversation、`SessionId`→session、
+  `ClientContext`→cordis `Context`）；`assistant-actions` slot 迁至 ui-chat；`inputTriggers`
+  改为 `inject` 硬依赖；`InputTriggerCandidate.icon` 收紧为 `'file' | 'folder' | 'session'`、
+  `Modal` 的 `headless` 分支禁止 `closeLabel`、`MarkdownText` 新增必填 `labels`。
 
 ### Fixed
 

@@ -14,6 +14,13 @@ Only user-visible functional changes are recorded (no documentation, code refact
   fixes to that same feature **within the same version** are **not** recorded
   (they are part of building the feature, not repairs of a shipped behavior).
 - **Fixed** only records fixes to features from **earlier versions**.
+- **dsh version adaptations**: when the plugin adapts to a new deepseek-harness
+  version, record one **Added** entry "Adapt to deepseek-harness `<version>`"
+  describing the migration (dependency / symbol / API changes). It means "this
+  plugin version is verified against that dsh version", complementing the
+  [compatibility table](docs/compatibility.md) — the table records which plugin
+  version maps to which dsh version, the CHANGELOG records what the adaptation
+  changed.
 - **No operational how-to details**: an entry states the feature and links to
   the matching section (anchor to the heading) of the [user guide](docs/usage.md).
   Usage instructions live in the guide, not here — if the guide lacks a feature,
@@ -42,6 +49,9 @@ Only user-visible functional changes are recorded (no documentation, code refact
 - **Dialog close buttons match dsh**: the notes manager and note picker close
   buttons now use dsh's closeBtn (`IconCloseOutline16`). See
   [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+- **Adapt to deepseek-harness `0.1.2-alpha.2`**: drop the removed
+  `settingsNamespace` dependency; `MD_NOTES_NS` is now a plain string (validated
+  at register time).
 
 ## [0.9.0] - 2026-08-29
 
@@ -69,6 +79,16 @@ Only user-visible functional changes are recorded (no documentation, code refact
   shows a live "Will create" preview plus a red duplicate warning that disables creation; both the
   manager and the note picker reuse this dialog. See
   [User guide §2 — Opening the notes manager](docs/usage.md#2-opening-the-notes-manager).
+- **Adapt to deepseek-harness `0.1.2-alpha.1`**: the `@deepseek-ai/dsh-client-runtime`
+  package was removed and split into several packages — migrated dependencies (added
+  `dsh-client-store` / `dsh-client-ui-chat` / `dsh-client-ui-renderer`; `dsh.client.inject`
+  now lists renderer / locale / conversation / input-trigger / chat); migrated symbols
+  (`createSnapshotStore` → store, `ConversationSnapshot`/`AssistantBlock`/`ConversationNode`
+  → ui-conversation, `SessionId` → session, `ClientContext` → cordis `Context`); the
+  `assistant-actions` slot moved to ui-chat; `inputTriggers` became an `inject` hard
+  dependency; `InputTriggerCandidate.icon` narrowed to `'file' | 'folder' | 'session'`,
+  `Modal`'s `headless` branch no longer accepts `closeLabel`, and `MarkdownText` gained a
+  required `labels` prop.
 
 ### Fixed
 
