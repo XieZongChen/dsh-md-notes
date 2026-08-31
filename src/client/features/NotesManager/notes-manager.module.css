@@ -580,10 +580,13 @@
 /* Git sync card (workspace-level) — scope-separated from the note editor. */
 .gitCard {
   margin: 2px 2px 8px;
-  padding: 10px 12px;
+  /* Bottom padding is 0 so the actions/push footer sits flush on the card's
+     bottom edge; the footer re-adds its own padding + top divider. */
+  padding: 10px 12px 0;
   border: 1px solid var(--dsw-alias-border-l2, #ddd);
   border-radius: 10px;
   background: var(--dsw-alias-bg-base, #fff);
+  overflow: hidden;
 }
 
 .gitCardHead {
@@ -642,16 +645,20 @@
 }
 
 .gitCardPush {
-  margin-top: 8px;
+  /* Full-bleed footer: negative side margins span the card's width, the top
+     border separates it from the info rows, and it sits flush on the bottom. */
+  margin: 8px -12px 0;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 32px;
+  border-top: 1px solid var(--dsw-alias-border-l1, #eee);
 }
 .gitCardPush input {
   flex: 1;
   min-width: 0;
   height: 32px;
+  box-sizing: border-box;
 }
 
 .gitCardPushBtn {
@@ -678,9 +685,13 @@
 }
 
 .gitCardActions {
-  margin-top: 8px;
+  /* Same full-bleed footer as .gitCardPush: spans the card width and sits
+     flush on the bottom edge. */
+  margin: 8px -12px 0;
+  padding: 8px 12px;
   display: flex;
   gap: 8px;
+  border-top: 1px solid var(--dsw-alias-border-l1, #eee);
 }
 
 .gitCardActions .gitBtn,
