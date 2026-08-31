@@ -74,6 +74,8 @@ export const zh = {
   'git.update': '更新',
   'git.remoteUpdated': '远端有更新，需手动更新',
   'git.remoteAhead': '远端有更新',
+  'git.remoteAheadTip': '远端更新 {count} 处',
+  'git.unpushedTip': '本地未推送 {count} 处',
   'git.push': '推送',
   'git.commitPlaceholder': '提交信息（可留空）',
   'git.commitDefault': '笔记更新 {time}',

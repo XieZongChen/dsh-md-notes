@@ -77,6 +77,8 @@ export const en: { [K in keyof typeof zh]: string } = {
   'git.update': 'Update',
   'git.remoteUpdated': 'Remote has updates — update manually.',
   'git.remoteAhead': 'Remote has updates',
+  'git.remoteAheadTip': 'Remote updates: {count}',
+  'git.unpushedTip': 'Local unpushed: {count}',
   'git.push': 'Push',
   'git.commitPlaceholder': 'Commit message (optional)',
   'git.commitDefault': 'Notes update {time}',
