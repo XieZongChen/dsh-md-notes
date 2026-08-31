@@ -78,10 +78,11 @@
 }
 
 /* Two scrollbar modes. `.scrollNarrow` is for compact side panels and pickers:
-   the bar stays visible but its lane is permanently reserved
-   (`scrollbar-gutter: stable`), so the bar appearing/disappearing never
-   reflows the content. The thumb is inset by a 2px transparent border, so it
-   sits centered in its lane with a small gap on each side (bar + 2px).
+   the bar stays visible and its lane (6px) is permanently reserved via
+   `scrollbar-gutter: stable`, so showing/hiding it never reflows content.
+   Containers using this class must subtract those 6px from their own
+   `padding-right` so the left/right insets stay symmetric. The thumb is inset
+   by a 1px transparent border, so it sits centered (4px) in the 6px lane.
    `.scrollWide` is reserved for the note editor/preview. */
 .scrollNarrow {
   scrollbar-gutter: stable;
@@ -89,13 +90,13 @@
   scrollbar-color: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.2)) transparent;
 }
 .scrollNarrow::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 .scrollNarrow::-webkit-scrollbar-thumb {
   background: var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.2));
   border-radius: 999px;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   background-clip: padding-box;
 }
 .scrollNarrow::-webkit-scrollbar-track {
