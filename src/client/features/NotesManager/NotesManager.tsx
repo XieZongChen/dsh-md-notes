@@ -103,11 +103,10 @@ function GitSyncCard({ status, busy, updating, pushing, pushOpen, pushMsg, remot
 }
 
 /**
- * Workspace-row git toggle: a decolorized git mark plus two corner dots
- * (bottom-left = remote ahead ↓, bottom-right = local unpushed ↑). Each dot
- * is green when idle and switches to warn (remote) / danger (local) when there
- * is something to act on. A two-line tooltip surfaces the counts; when neither
- * side has anything, the tooltip is suppressed.
+ * Workspace-row git toggle: a decolorized git mark plus activity dots that
+ * appear only when there is something to act on — remote ahead (bottom-left,
+ * warn) and local unpushed (bottom-right, danger). A two-line tooltip surfaces
+ * the counts; when neither side has anything, no dot and no tooltip show.
  */
 interface GitStatusIconProps {
   status: GitStatusData | null | undefined
@@ -133,14 +132,8 @@ function GitStatusIcon({ status, open, t, onToggle }: GitStatusIconProps): React
       onClick={(e) => { e.stopPropagation(); onToggle() }}
     >
       <GitIcon className={styles.gitIcon} size={14} />
-      <span className={`${styles.gitBadge} ${styles.gitBadgeRemote}${remoteAhead > 0 ? ` ${styles.gitBadgeWarn}` : ''}`}>
-        <IconSendOutline16 size={6} className={`${styles.gitArrow} ${styles.gitArrowDown}`} />
-        <span className={styles.gitDot} />
-      </span>
-      <span className={`${styles.gitBadge} ${styles.gitBadgeLocal}${unpushed > 0 ? ` ${styles.gitBadgeDanger}` : ''}`}>
-        <IconSendOutline16 size={6} className={`${styles.gitArrow} ${styles.gitArrowUp}`} />
-        <span className={styles.gitDot} />
-      </span>
+      {remoteAhead > 0 && <span className={`${styles.gitDot} ${styles.gitDotRemote}`} />}
+      {unpushed > 0 && <span className={`${styles.gitDot} ${styles.gitDotLocal}`} />}
     </button>
   )
   if (tip === null) return button

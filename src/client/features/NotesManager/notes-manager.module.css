@@ -353,45 +353,24 @@
   color: light-dark(#100f0d, #ffffff);
 }
 
-/* Status badges: a corner dot with a small arrow above it. The badge sets the
-   tone color; the arrow (currentColor) and dot (background: currentColor)
-   inherit it. Green = idle, warn = remote ahead (left), danger = unpushed
-   (right). */
-.gitBadge {
+/* Status dots: shown only when there is activity — remote ahead (bottom-left,
+   warn) and local unpushed (bottom-right, danger). `background: currentColor`
+   picks up the tone set by the modifier class. */
+.gitDot {
   position: absolute;
   bottom: -1px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-  color: var(--dsw-alias-state-success-primary, #2e8b57);
-}
-.gitBadgeRemote {
-  left: -1px;
-}
-.gitBadgeLocal {
-  right: -1px;
-}
-.gitArrow {
-  display: block;
-}
-.gitArrowDown {
-  transform: rotate(180deg);
-}
-.gitDot {
-  display: block;
   width: 5px;
   height: 5px;
-  margin-top: 1px;
   border-radius: 999px;
+  pointer-events: none;
   background: currentColor;
-  /* A thin panel-colored ring keeps the dot legible over the git mark. */
-  box-shadow: 0 0 0 1px var(--dsw-alias-bg-base, #fff);
 }
-.gitBadgeWarn {
+.gitDotRemote {
+  left: -1px;
   color: var(--dsw-alias-state-warn-primary, #f0b429);
 }
-.gitBadgeDanger {
+.gitDotLocal {
+  right: -1px;
   color: var(--dsw-alias-danger, #d9534f);
 }
 
