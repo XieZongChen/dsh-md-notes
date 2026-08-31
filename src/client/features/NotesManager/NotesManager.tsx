@@ -388,8 +388,13 @@ function useNotesEditor(deps: {
     refreshStatus(wsId)
   }
 
-  /** Toggle a workspace's Git card (independent of its note-list collapse). */
+  /**
+   * Toggle a workspace's Git card (independent of its note-list collapse).
+   * Opening the card also expands the workspace so the card is actually
+   * visible under a collapsed row.
+   */
   const toggleGit = (wsId: string): void => {
+    if (gitOpen[wsId] !== true) setCollapsed((prev) => ({ ...prev, [wsId]: false }))
     setGitOpen((prev) => ({ ...prev, [wsId]: !prev[wsId] }))
   }
 
@@ -446,6 +451,8 @@ function useNotesEditor(deps: {
   }
 
   const createIn = (wsId: string): void => {
+    // Expand the workspace first so the freshly created note shows up in the list.
+    setCollapsed((prev) => ({ ...prev, [wsId]: false }))
     setCreateWsId(wsId)
   }
 
