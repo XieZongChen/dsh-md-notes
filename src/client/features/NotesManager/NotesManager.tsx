@@ -209,7 +209,7 @@ function WorkspaceList(props: WorkspaceListProps): React.ReactElement {
   const grouped = workspaces.length > 1
   return (
     <div className={styles.list}>
-      <div className={styles.listItems}>
+      <div className={`${styles.listItems} ${shared.scrollNarrow}`}>
         {loading
           ? <div className={styles.listLoading}><LoadingIndicator /></div>
           : noWorkspaces
@@ -897,7 +897,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     ? <div className={styles.editorLoading}><LoadingIndicator label={t('git.loading')} /></div>
                     : mode === 'edit'
                       ? <textarea className={styles.textarea} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
-                      : <div className={styles.preview}><MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} /></div>}
+                      : <div className={`${styles.preview} ${shared.scrollWide}`}><MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} /></div>}
                 </>
               )}
           </div>
