@@ -31,7 +31,7 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
-## NEXT_VERSION
+## [0.10.1] - 2026-09-03
 
 ### Fixed
 
