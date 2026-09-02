@@ -17,7 +17,9 @@ in the tables below.
 
 | Plugin version | dsh version | Verified on | Notes |
 |---|---|---|---|
-| `0.10.0` | `0.1.2-alpha.3` | 2026-09-01 | Current latest |
+| `0.10.0` | `0.1.2-alpha.5` | 2026-09-02 | Current latest |
+| `0.10.0` | `0.1.2-alpha.4` | 2026-09-02 | — |
+| `0.10.0` | `0.1.2-alpha.3` | 2026-09-01 | — |
 | `0.10.0` | `0.1.2-alpha.2` | 2026-09-01 | 0.10.0 adapted alpha.2 (`settingsNamespace` migration) |
 | `0.9.0` | `0.1.2-alpha.1` | 2026-08-29 | — |
 | `0.8.0` | `0.1.2-alpha.1` | 2026-08-29 | 0.8.0 was also verified on `0.1.1-rc.2` (2026-08-25) |
@@ -36,6 +38,8 @@ in the tables below.
 
 | dsh version | Verified plugin versions (newest → oldest) | Last verified |
 |---|---|---|
+| `0.1.2-alpha.5` | `0.10.0` | 2026-09-02 |
+| `0.1.2-alpha.4` | `0.10.0` | 2026-09-02 |
 | `0.1.2-alpha.3` | `0.10.0` | 2026-09-01 |
 | `0.1.2-alpha.2` | `0.10.0` | 2026-09-01 |
 | `0.1.2-alpha.1` | `0.9.0`, `0.8.0` | 2026-08-29 |
