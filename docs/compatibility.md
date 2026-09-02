@@ -17,9 +17,10 @@ in the tables below.
 
 | Plugin version | dsh version | Verified on | Notes |
 |---|---|---|---|
-| `0.10.1` | `0.1.2-alpha.5` | 2026-09-03 | Current latest |
-| `0.10.0` | `0.1.2-alpha.5` | 2026-09-02 | — |
-| `0.10.0` | `0.1.2-alpha.4` | 2026-09-02 | — |
+| `0.10.1` | `0.1.2-alpha.5` | 2026-09-03 | Current latest (verified) |
+| `0.10.0` | `0.1.2-alpha.5` | 2026-09-02 | Chained inference: 0.10.0↔alpha.3 verified + alpha.3→alpha.5 zero contract change |
+| `0.10.0` | `0.1.2-alpha.4` | 2026-09-02 | Chained inference: 0.10.0↔alpha.3 verified + alpha.3→alpha.4 zero contract change |
+| `0.10.0` | `0.1.2-alpha.3` | 2026-09-01 | Verified |
 | `0.10.0` | `0.1.2-alpha.2` | 2026-09-01 | 0.10.0 adapted alpha.2 (`settingsNamespace` migration) |
 | `0.9.0` | `0.1.2-alpha.1` | 2026-08-29 | — |
 | `0.8.0` | `0.1.2-alpha.1` | 2026-08-29 | 0.8.0 was also verified on `0.1.1-rc.2` (2026-08-25) |
@@ -35,6 +36,9 @@ in the tables below.
 > Check this table before upgrading dsh: find the target dsh version and pick the **newest**
 > verified plugin version listed for it. If the target dsh version is not listed, it has not
 > been checked yet — run the compatibility check first.
+> Note: the list may include **chained-inference** combinations (the plugin was not verified
+> directly on that dsh, but inferred from a lower dsh verification + zero contract change);
+> see the main-table Notes. Prefer a "verified" version, then the newest inferred one.
 
 | dsh version | Verified plugin versions (newest → oldest) | Last verified |
 |---|---|---|
