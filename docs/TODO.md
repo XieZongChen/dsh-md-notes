@@ -3,6 +3,13 @@
 > 未来功能规划清单，按优先级排序。每项实现后请移入 [CHANGELOG.md](../CHANGELOG.md)
 > （只记用户可见的功能性改动）。
 
+## 待修（bug）
+
+- **@ 引用 re-track 失效**：`src/client/index.ts` 的 re-track 回调用了已废弃的
+  `conversation.input.for(actx).track(draft, caret)` / `.snapshot.draft`——dsh 输入系统重构后
+  `SessionInput` 已无 `track`/`snapshot`（改为 `state: SnapshotStore<InputState>`，re-track 走
+  `inputTriggers.sessionOf(actx).track(draft, caret, guard, draftRev)`）。后果：跨工作区 @ 引用时，
+  选中工作区自动补全后候选菜单不会重新打开。需迁移到新输入 API。
 
 ## dsh 0.1.2-alpha.1 开放能力盘点（2026-08-27，供体验优化选用）
 
