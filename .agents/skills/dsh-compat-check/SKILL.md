@@ -1,6 +1,6 @@
 ---
 name: dsh-compat-check
-description: dsh 兼容性校验。用户说"dsh 兼容性校验"、"兼容性检查"、"校验 dsh 兼容性"、"检查 dsh 兼容性"时触发——先拉取 dsh main（master）分支代码，对比兼容性对照表（docs/compatibility.zh.md 最新一行）最后验证的 deepseek-harness 版本到当前最新版本的变更，判断是否影响插件功能：有影响则将影响范围写成兼容 todo 放入 TODO 文档最上方；无影响则更新兼容性对照表（docs/compatibility.zh.md 主表顶部追加一行 + 反查表同步，英文版 compatibility.md 跟随翻译）并把 README 兼容性章节刷新为主表最新三行（含备注列）的对应表格。
+description: dsh 兼容性校验。用户说"dsh 兼容性校验"、"兼容性检查"、"校验 dsh 兼容性"、"检查 dsh 兼容性"时触发——先拉取 dsh main（master）分支代码，对比兼容性对照表（docs/compatibility.zh.md 最新一行）最后验证的 deepseek-harness 版本到当前最新版本的变更，判断是否影响插件功能：有影响则将影响范围写成兼容 todo 放入 TODO 文档最上方；无影响则更新兼容性对照表（docs/compatibility.zh.md 主表顶部追加一行 + 反查表同步，英文版 compatibility.md 跟随翻译）并把 README 兼容性章节刷新为主表最新三行（不含备注列）的对应表格。
 ---
 
 # dsh 兼容性校验（Compatibility Check）
@@ -57,7 +57,7 @@ git -C "$DSH" log --oneline -5 --grep="release(dsh)"
 - `docs/compatibility.zh.md`：中文版，主表（插件版本 → dsh 版本）+ 反查表（dsh 版本 →
   已验证插件版本）；
 - `docs/compatibility.md`：英文版，跟随中文版翻译（含中英互切链接）；
-- `README.zh.md` 的 `## 兼容性`：只展示**主表最新三行**（含备注列，不做去重）的对应表格；
+- `README.zh.md` 的 `## 兼容性`：只展示**主表最新三行**（不含备注列，不做去重）的对应表格；
 - `README.md`（英文）：跟随中文版翻译的同一表格。
 
 英文版不单独维护字段结构：**跟随中文版原样翻译即可**。
@@ -157,10 +157,10 @@ grep -n "^## NEXT_VERSION" CHANGELOG.zh.md
    - 反查表（dsh 版本 → 已验证插件版本）同步更新目标 dsh 版本那一行的插件版本列表
      （新 → 旧排列，含日期列更新）；
    - 定稿后，**英文版 `docs/compatibility.md` 跟随中文版原样翻译**（同一表格 + 互切链接）。
-2. **中文版 `README.zh.md`（`## 兼容性`，只保留**主表最新三行**的表格，含备注列）**：
-   - **直接取 `docs/compatibility.zh.md` 主表最上面的三行**（含插件版本、dsh 版本、
-     验证日期、备注四列），**不做去重**——同一插件版本可能因适配了多个 dsh 版本而
-     占据多行（如 `0.10.0` 同时对应 `alpha.3` 与 `alpha.2` 两行）；
+2. **中文版 `README.zh.md`（`## 兼容性`，只保留**主表最新三行**的表格，**不含备注列**）**：
+   - **直接取 `docs/compatibility.zh.md` 主表最上面的三行**，只保留插件版本、dsh 版本、
+     验证日期三列（**备注列不复制到 README**）——不做去重，同一插件版本可能因适配了
+     多个 dsh 版本而占据多行（如 `0.10.0` 同时对应 `alpha.3` 与 `alpha.2` 两行）；
    - 表格下方保留完整历史链接：`[docs/compatibility.zh.md](docs/compatibility.zh.md)`。
 3. **英文版 `README.md`**：中文版定稿后**跟随中文版原样翻译**（同一表格 + 链接
    `docs/compatibility.md`）。
