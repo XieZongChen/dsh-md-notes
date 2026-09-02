@@ -43,12 +43,12 @@ history in [docs/compatibility.md](docs/compatibility.md)):
 
 | Plugin version | dsh version | Verified on | Notes |
 |---|---|---|---|
-| 0.10.0 | `0.1.2-alpha.5` | 2026-09-02 | Current latest |
+| 0.10.1 | `0.1.2-alpha.5` | 2026-09-03 | Current latest |
+| 0.10.0 | `0.1.2-alpha.5` | 2026-09-02 | — |
 | 0.10.0 | `0.1.2-alpha.4` | 2026-09-02 | — |
-| 0.10.0 | `0.1.2-alpha.3` | 2026-09-01 | — |
 
 The plugin is not pinned to a specific mainline commit; pin the plugin version at install
-time if you need a fixed combination (e.g. `dsh plugin --profile web add dsh-md-notes@0.10.0`).
+time if you need a fixed combination (e.g. `dsh plugin --profile web add dsh-md-notes@0.10.1`).
 Runtime dependencies (`@deepseek-ai/*`, `react`) are declared as optional peer dependencies
 and resolve from the dsh installation.
 

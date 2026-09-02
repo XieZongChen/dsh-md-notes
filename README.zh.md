@@ -42,12 +42,12 @@ dsh 快速迭代且**不做向下兼容**，固定 dsh 版本只适配固定插�
 
 | 插件版本 | dsh 版本 | 验证日期 | 备注 |
 |---|---|---|---|
-| 0.10.0 | `0.1.2-alpha.5` | 2026-09-02 | 当前最新 |
+| 0.10.1 | `0.1.2-alpha.5` | 2026-09-03 | 当前最新 |
+| 0.10.0 | `0.1.2-alpha.5` | 2026-09-02 | — |
 | 0.10.0 | `0.1.2-alpha.4` | 2026-09-02 | — |
-| 0.10.0 | `0.1.2-alpha.3` | 2026-09-01 | — |
 
 插件未绑定具体 mainline commit；如需固定组合，请在安装时固定插件版本
-（如 `dsh plugin --profile web add dsh-md-notes@0.10.0`）。运行时依赖（`@deepseek-ai/*`、`react`）
+（如 `dsh plugin --profile web add dsh-md-notes@0.10.1`）。运行时依赖（`@deepseek-ai/*`、`react`）
 以可选 peer 依赖声明，从 dsh 安装中解析。
 
 ## 安装 / 卸载（Install / Uninstall）
