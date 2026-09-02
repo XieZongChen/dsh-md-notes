@@ -144,11 +144,11 @@ export function apply(ctx: ClientContext): void {
     if (actx === undefined) return
     const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract | undefined
     const conversation = actx.get('conversation') as {
-      input?: { for(a: ClientContext): { state: { get(): InputSnapshot } } | undefined }
+      input?: { for(a: ClientContext): { state: { getSnapshot(): InputSnapshot } } | undefined }
     } | undefined
     const sessionInput = conversation?.input?.for(actx)
     if (sessionInput === undefined || inputTriggers === undefined) return
-    const state = sessionInput.state.get()
+    const state = sessionInput.state.getSnapshot()
     queueMicrotask(() => {
       inputTriggers.sessionOf(actx).track(state.draft, caret, { tier: triggerGuard(state.phase) }, state.draftRev)
     })
