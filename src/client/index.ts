@@ -35,6 +35,22 @@ import { SettingsSection } from './features/Settings/SettingsSection.tsx'
 import { createNotesSource } from './features/ContextSource/ContextSource.ts'
 import { ICON_URL } from './features/api.ts'
 
+/** Minimal projection of the per-session input state the re-track hook reads. */
+interface InputSnapshot {
+  draft: string
+  draftRev: number
+  phase: 'plain' | 'claimed' | 'adjudicating' | 'submitting'
+}
+
+/** Trigger availability tier from the input phase (mirrors dsh facade's guardOf). */
+function triggerGuard(phase: InputSnapshot['phase']): 'plain' | 'claimed' | 'frozen' {
+  switch (phase) {
+    case 'plain': return 'plain'
+    case 'claimed': return 'claimed'
+    default: return 'frozen' // adjudicating / submitting
+  }
+}
+
 export const inject = ['slots', 'locale', 'inputTriggers']
 
 /** React hook: subscribe to the store via uSES, re-render on snapshot change. */
@@ -119,17 +135,22 @@ export function apply(ctx: ClientContext): void {
   // Registered under ctx.effect so HMR/unmount clears the per-session caches.
   // The re-track hook re-opens the candidate menu right after a workspace
   // auto-complete (machine-driven draft changes never pass through onChange).
+  // dsh's input refactor moved re-track off the SessionInput facade: the per-
+  // session controller (inputTriggers.sessionOf) owns track(), and the draft /
+  // revision / phase now come from the input state store.
   const notesSource = createNotesSource(t, (sessionId, caret) => {
     const sessions = ctx.get('sessions') as { scope(id: SessionId): ClientContext | undefined } | undefined
     const actx = sessions?.scope(sessionId)
     if (actx === undefined) return
+    const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract | undefined
     const conversation = actx.get('conversation') as {
-      input?: { for(a: ClientContext): { track(draft: string, caret: number): void; snapshot: { draft: string } } | undefined }
+      input?: { for(a: ClientContext): { state: { get(): InputSnapshot } } | undefined }
     } | undefined
-    const input = conversation?.input?.for(actx)
-    if (input === undefined) return
+    const sessionInput = conversation?.input?.for(actx)
+    if (sessionInput === undefined || inputTriggers === undefined) return
+    const state = sessionInput.state.get()
     queueMicrotask(() => {
-      input.track(input.snapshot.draft, caret)
+      inputTriggers.sessionOf(actx).track(state.draft, caret, { tier: triggerGuard(state.phase) }, state.draftRev)
     })
   })
   ctx.effect(() => {
