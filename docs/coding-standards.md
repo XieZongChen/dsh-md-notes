@@ -50,6 +50,10 @@
 - 入口 `index.ts` 只做装配（建 store/tracker、绑 locale、注册 slot），**不写 JSX**。
 - `features/` 下每个功能一个子目录（PascalCase：`NotePicker/`、`NotesManager/`、`ContextSource/`），
   目录内 `.tsx` + 同名前缀的 `.module.css`（kebab-case：`note-picker.module.css`）。
+- **功能目录长胖时按职责拆私有子目录**（`NotesManager/` 已示范，见 architecture.md §2 树）：
+  `components/` 放「抽取出来但放不进 `features/components/`」的功能私有子组件，`hooks/` 放按
+  关注点拆出的状态逻辑；功能私有 css module 随组件进 `components/`。能跨功能复用的仍必须放
+  `features/components/`，不允许堆在功能私有目录里。
 - `features/components/` 放跨功能复用的纯展示组件（`DshInput`/`DshSelect`/`LoadingIndicator`）。
 - `features/` 根放共享模块：`api.ts`（HTTP 封装）、`store.ts`（全局状态）、`busy.ts`（任务跟踪）、
   `note-text.ts`/`markdown.ts`（纯函数工具）、`locales/`、`styles.module.css`（共享样式）。
@@ -57,8 +61,8 @@
 **规则**：
 
 - 一个功能目录 = 一个对内聚的责任；文件超过 ~250 行就开始考虑拆子组件或自定义 hook
-  （`NotesManager.tsx` 目前 ~620 行，已越界，见 §12 隐患 #5）。
-- 两个功能目录出现**同一段 JSX/逻辑**时，抽取到 `components/` 或共享模块，禁止复制粘贴
+  （`NotesManager.tsx` 已示范：主文件瘦到 ~220 行，子组件进 `components/`、hook 进 `hooks/`）。
+- 两个功能目录出现**同一段 JSX/逻辑**时，抽取到 `features/components/` 或共享模块，禁止复制粘贴
   （当前 `NotePicker` 与 `NotesManager` 的「按工作区分组列表」重复，见 §12 #8）。
 
 ---
@@ -86,8 +90,8 @@
 - **CHANGELOG**：`CHANGELOG.md` / `CHANGELOG.zh.md` 中英双份，同步更新。
 - **i18n 文案**：`zh.ts` 是源字典（key 的权威全集），`en.ts` 用映射类型强制同键，缺失即编译报错。
 
-> 反例：`NotesManager.tsx` 内残留一段中文注释（`// ok 分支把 pushing 的生命周期…`），
-> 应改为英文或删除（见 §12 #10）。
+> 反例：代码注释夹中文（旧 `NotesManager.tsx` 曾残留 `// ok 分支把 pushing 的生命周期…`，
+> 已随拆分迁出并译为英文）——注释应全英文或删除。
 
 ---
 
@@ -177,7 +181,9 @@
 
 - 新增状态先走 state.md §5 决策清单分层（L0/L1/L2/L3），再落地；违背「五条铁律」视为缺陷。
 - L1 全局瞬时态用 `createSnapshotStore` 单例 + props 注入（现状路径 2），**不得**因为省事把所有
-  状态都塞进全局 store——组件局部的（NotesManager 的选中/内容/表单）留在组件内。
+  状态都塞进全局 store——组件局部的（NotesManager 的选中/内容/表单）留在组件内
+  （`NotesManager/` 已拆成 `useNotesList`/`useNotesEditor`/`useGitSync` 三个 hook，由
+  `useNotesManager` 编排，见 state.md §6 与 architecture.md §2）。
 - busy 一律走 `BusyTracker.run(key, task)`，**禁止手写 begin/finally**；`key` 用 `noteKey()` 等
   集中构造函数。
 
@@ -210,8 +216,9 @@
   setState 泄漏。
 - 跨请求的「单飞/缓存」要能失效：`ContextSource` 的 `dispose()` 清空所有 Map 是正确示范；
   `update.ts` 的模块级 `shared` promise 失败后永不重试，可接受但要写注释说明语义。
-- 列表刷新 + 重读选中笔记的「三连」（`refresh()` → 重读 → 更新选中）在 `open/doUpdate/updateClick`
-  三处重复——抽出**自定义 hook**（如 `useNoteListAndRead`）收敛，避免下次改逻辑漏一处（§12 #5）。
+- 列表刷新 + 重读选中笔记的「三连」（`refresh()` → 重读 → 更新选中）已在 `useNotesEditor` 收敛为
+  `refreshAndRereadSelected` 一个 hook 方法，`useGitSync` 的 update 两处复用它——新增同步入口时
+  直接调用它，不要重新内联「刷新+重读」序列。
 
 ---
 
@@ -243,7 +250,7 @@
 ## 8. 测试
 
 - ✅ **vitest 已引入**（`npm test` / `test:watch`，`vitest.config.ts`，Node 环境、扫
-  `src/**/*.test.ts`）。`npm test` 全绿作为合并前提（当前 6 文件 48 例）。
+  `src/**/*.test.ts`）。`npm test` 全绿作为合并前提（当前 7 文件 70 例）。
 - **测纯领域函数**（当前已覆盖）：`note-links`（解析/预处理/路径）、`notes`（sanitize/titleOf +
   mkdtemp 读写 + 路径穿越回归）、`settings`（mergeSettings）、`keyed-lock`（并发语义）、
   `note-text`（文本提取）、`git`（仓库解析 + 同步/冲突纯函数）。
@@ -284,9 +291,10 @@
    开始倒着写。
 2. **busy/锁通用化**：新「进行中的任务」域（git 任务、导出、图片上传）复用 `BusyTracker` 与
    `KeyedLock`，只新增 key 前缀与 host 锁接入点，不改 store/tracker 本体（state.md §4 已预留）。
-3. **面板拆分子组件**：NotesManager 继续膨胀前拆成 `NotesManager` + 子组件（工作区列表 / 编辑器 /
-   Git 卡片 / 确认弹窗）+ 自定义 hook（§5.5），右栏 TOC/反链（TODO 3.x）作为独立子组件挂入，
-   不再往主文件里堆 state。
+3. **面板拆分子组件（已完成）**：NotesManager 已拆成 `NotesManager`（纯渲染）+ 私有
+   `components/`（工作区列表 / Git 卡片 / 状态图标 / 笔记行）+ 私有 `hooks/`
+   （list/editor/git 三 hook 由 `useNotesManager` 编排），css module 在 `components/` 下共享。
+   后续新面板（或面板右栏 TOC/反链，TODO 3.x）照此模式挂独立子组件/hook，不再往主文件里堆 state。
 4. **类型收敛**：随功能增加，优先把 host↔client 共享实体收敛为一份（§3），API 返回用
    discriminated union，避免「猜字段」扩散。
 5. **信任边界固化**：凡「按用户输入访问文件/执行命令」的新能力，先写边界校验（§4.3）+ 锁（§4.5），
@@ -305,12 +313,12 @@
 | 2 | ✅ `host/keyed-lock.ts` + `index.ts` | 同一 clone 无并发互斥，并发 push/pull 会 race；shared 模式多工作区共享 clone 尤其危险 | 已修 | 新增 `KeyedMutex`，GitApi 边界按 `repo/<repoDir>` 串行化（commit `dc293c1`） |
 | 3 | `host/http.ts` | HTTP API 无鉴权，任意 client 可传任意 `workspaceId` 读写任意工作区；`gitStatus` 返回含凭据的 `remote` URL | 中（信任边界） | 文档化信任边界；评估 `remote` 是否脱敏/不下发 |
 | 4 | ✅ `host/git.ts` | shared 子目录原用 `sanitizeFolder(ws.title)`，工作区改名孤儿化旧目录 | 已修 | 仓库内 `.dsh-notes-workspaces.json` 以 `ws.id` 固定目录名（commit `e59f300`） |
-| 5 | ✅ `client/NotesManager.tsx` | 三处「刷新+重读」已去重、左栏拆 `NoteItem`/`WorkspaceList`、state 收敛并按 list/editor/git 拆成三个 hook | 已修 | commit `f1b5d98`/`8eda8ed`/`2fed9a7`/`44cf8c5` |
+| 5 | ✅ `client/NotesManager/` | 三处「刷新+重读」已去重；左栏拆 `NoteItem`/`WorkspaceList`；state 收敛并按 list/editor/git 拆成三个 hook；子组件与 css 迁入 `components/`、hook 迁入 `hooks/`，主文件瘦身至 ~220 行 | 已修 | commit `f1b5d98`/`8eda8ed`/`2fed9a7`/`44cf8c5` + `a26a9e4`/`f25093f`/`909225f` |
 | 6 | host/client 双份类型 | `NoteSummary`/`GitStatusData`/`GitSettingsData` 等两边各一份，易漂移 | 中 | 收敛为一份（§3），至少交叉注释 |
 | 7 | `client/api.ts` `ApiResult` | `ok:true` 分支 10+ optional 字段的大杂烩，调用方靠猜 | 中 | 改按 method 的 discriminated union |
 | 8 | `NotePicker`/`NotesManager` | 「按工作区分组列表」JSX 重复 | 低 | 抽共享列表组件 |
-| 9 | `NotesManager.openDshSettings` | `querySelector` 模拟两次点击跳设置，耦合 dsh DOM | 中 | 找平台扩展点；找不到则留 TODO |
-| 10 | `http.ts` 重复声明 + `NotesManager` 中文注释 | `hasWorkspaces` 接口重复声明；残留中文注释 | 低 | 顺手清理 |
+| 9 | `NotesManager.openDshSettings`（现居 `hooks/useNotesManager.ts`） | `querySelector` 模拟两次点击跳设置，耦合 dsh DOM | 中 | 找平台扩展点；找不到则留 TODO |
+| 10 | `http.ts` 重复声明 | `hasWorkspaces` 接口重复声明（`http.ts` 第 82/84 行） | 低 | 顺手清理（原 NotesManager 中文注释已随拆分迁出，代码注释均为英文） |
 | 11 | `api.ts` `gitErrorText` | `push-failed`/`merge-unrelated` 死 code（host 从不返回） | 低 | 删除 |
 | 12 | `git.ts` `fetchCache` | 模块级 Map 只增不清理，跨 repo 累积 | 低 | 移入 apply 闭包或加 TTL 清理 |
 | 13 | `notes.ts` `listNotes` | 首读无 meta.json 时全量读文件重建，笔记量大时慢 | 低 | 可接受（一次性），量大再评估索引 |

@@ -126,7 +126,7 @@ interface BusyTracker {
 | `managerOpen` / `picker` | L1 | createSnapshotStore 单例（路径 2） | 跨 scope（session 按钮写） |
 | `busy`（写入互斥镜像） | L1 | store.busy 通用切片 + BusyTracker（`src/client/features/busy.ts`） | 域前缀 `note/<ws>/<name>`；host 权威锁在 L3（KeyedLock） |
 | update-available | L1 | update.ts 模块级 promise | 请求级缓存（非可订阅状态）：语义「每页面加载查一次」，各组件 hook 各自订阅结果；模块级引用的 HMR 残留影响仅限「本页面不重查」，可接受 |
-| NotesManager 的 useState/useRef（22+ 个） | L0 | useState | 数据加载/选中/保存反馈/git 组 |
+| NotesManager 的面板局部 state | L0 | useState | 数据加载/选中/保存反馈/git 组——按关注点拆在 `features/NotesManager/hooks/`（`useNotesList`/`useNotesEditor`/`useGitSync`，由 `useNotesManager` 编排；后者还持有跨切面的 `gitMsg`/`remoteChanged`/`confirmState`） |
 | NotePicker / Settings 的 useState | L0 | useState | 弹窗与设置表单局部 |
 | host npm 版本缓存 `updateCache` | L3 | apply 闭包 | 10 分钟缓存 |
 | context-inject per-session 缓存 | L3 | host 闭包 Map | 引用注入去重 |

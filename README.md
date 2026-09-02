@@ -139,7 +139,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 |---|---|
 | `src/` | Source code (host half + client half) |
 | `src/host/` | Notes domain (`notes.ts`) + Git (`git.ts`) + HTTP layer (`http.ts`) + context injection (`context-inject.ts`) + write mutex (`keyed-lock.ts`) |
-| `src/client/` | Browser half: entry (`index.ts`) + feature modules under `features/` |
+| `src/client/` | Browser half: entry (`index.ts`) + feature modules under `features/` (one directory per feature; when one outgrows a single file it splits out feature-private `components/` and `hooks/` subdirectories — see `NotesManager/` for the pattern, `docs/architecture.md`) |
 | `src/client/features/locales/` | zh/en UI dictionaries (dsh locale namespace `md-notes`) |
 | `assets/` | Plugin icon (SVG source + PNG) |
 | `docs/` | Docs: `usage.md`/`usage.zh.md` (user guide), `features.md` (functional), `architecture.md`, `context.md` (@ references), `git.md` (Git sync), `state.md` / `write-lock.md` (state & write-mutex design), `manager-redesign.md` (manager redesign), `compatibility.md` / `compatibility.zh.md` (dsh ↔ plugin version compatibility matrix, en/zh), `TODO.md` |

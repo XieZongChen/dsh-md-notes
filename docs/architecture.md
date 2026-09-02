@@ -74,6 +74,19 @@ dsh-md-notes/
             ├── NoteAction/       # 记入笔记图标
             ├── NotePicker/       # 记入笔记弹窗
             ├── NotesManager/     # 笔记管理面板（列表 + 编辑器 + 工作区 Git 卡片 + 全局状态行）
+            │   ├── NotesManager.tsx # 纯渲染组件（所有 state/handler 都在 hooks 里）
+            │   ├── components/      # 面板私有子组件（复用不了才放这里，能跨功能的进 features/components/）
+            │   │   ├── WorkspaceList.tsx   # 左栏：工作区分组列表（组合 GitSyncCard/GitStatusIcon/NoteItem）
+            │   │   ├── GitSyncCard.tsx     # 每工作区 Git 同步卡片（状态行 + update/push）
+            │   │   ├── GitStatusIcon.tsx   # 工作区行 git 开关（图标 + 活动点 + tooltip）
+            │   │   ├── NoteItem.tsx        # 单篇笔记行
+            │   │   └── notes-manager.module.css  # 面板共享样式（components 内部 + NotesManager.tsx 共用）
+            │   └── hooks/             # 面板私有 hook（按关注点拆分，见 coding-standards §1.3）
+            │       ├── useNotesList.ts     # 列表加载 + 每工作区 git 状态
+            │       ├── useNotesEditor.ts   # 选中/内容/保存/删除/新建（依赖列表 hook）
+            │       ├── useGitSync.ts       # update/push/冲突流程（依赖前两者）
+            │       ├── useNotesManager.ts  # 编排三 hook，持有跨切面状态（gitMsg/remoteChanged/confirm）
+            │       └── types.ts            # ConfirmState / NotesManagerProps（hooks 与渲染器共用）
             ├── ContextSource/    # @ 引用 source（ui-input-trigger：candidates/onPick/codec）
             └── Settings/         # dsh 设置面板「MD 笔记」分区（SettingsSection + css）
 ```
@@ -165,6 +178,10 @@ dsh-md-notes/
 - 图标：`<img src="/plugins/md-notes/icon.svg">` 直接引用 host serve 的 SVG（`api.ts` 导出 `ICON_URL`）。
 - 目录约定：功能模块放在 `features/` 下，每个功能一个子目录；共享模块（`api.ts` / `store.ts` /
   `markdown.ts`）与共享样式 `styles.module.css` 在 `features/` 根；`components/` 放跨功能复用组件。
+  功能目录自己长胖时按职责拆出**私有子目录**（`NotesManager/` 已示范）：`components/` 放「复用了
+  但放不进 `features/components/`」的面板私有子组件，`hooks/` 放按关注点拆出的状态逻辑
+  （`useNotesManager.ts` 编排 `useNotesList`/`useNotesEditor`/`useGitSync`），css module 随组件
+  放在 `components/` 下共享；跨功能复用先考虑放 `features/components/`，别堆在功能私有目录里。
 - 样式用 **CSS Modules**（tsdown 的 `dsh-md-notes-css-modules` 插件注入
   `<style data-plugin-css="dsh-md-notes/<file>">`）。
 - **表单控件**：设置面板用 `DshInput` / `DshSelect`（`components/` 内本地副本，照抄 dsh
