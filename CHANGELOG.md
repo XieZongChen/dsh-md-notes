@@ -31,6 +31,14 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## NEXT_VERSION
+
+### Fixed
+
+- Fixed the @ reference candidate menu not re-opening after a cross-workspace
+  auto-complete (moved re-track off the deprecated `conversation.input.track/snapshot`
+  to `inputTriggers.sessionOf().track()`).
+
 ## [0.10.0] - 2026-09-01
 
 ### Added

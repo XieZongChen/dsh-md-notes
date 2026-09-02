@@ -24,6 +24,13 @@
   **不新增** `NEXT_VERSION`（开发空窗期不留空块）。写入改动时先检查是否存在 `NEXT_VERSION`
   块——没有就先添加一个，再在块下记录新改动。
 
+## NEXT_VERSION
+
+### Fixed
+
+- 修复 @ 引用跨工作区时，选中工作区自动补全后候选菜单不重新打开（re-track 迁移到新输入 API：
+  从废弃的 `conversation.input.track/snapshot` 迁到 `inputTriggers.sessionOf().track()`）。
+
 ## [0.10.0] - 2026-09-01
 
 ### Added
