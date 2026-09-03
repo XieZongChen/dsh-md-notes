@@ -324,7 +324,9 @@ export interface GitStatusView extends GitStatusData {
 }
 
 /** Status of one repo: branch, uncommitted file count, unpushed count, last commit, remote presence. */
-export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string, notesDir: string): Promise<GitStatusView> {
+export async function gitStatus(
+  ctx: Context, repo: ResolvedRepo, branch: string, notesDir: string, dedup: FetchDedup,
+): Promise<GitStatusView> {
   try {
     await gitInit(ctx, repo, branch)
   } catch (error) {
@@ -336,7 +338,7 @@ export async function gitStatus(ctx: Context, repo: ResolvedRepo, branch: string
   // Refresh origin refs so the "remote has updates" check reflects the real
   // remote — deduped per repo with a short TTL so a shared-repo panel doesn't
   // fetch the same clone once per workspace.
-  await fetchRemoteDeduped(ctx, repo)
+  await dedup.fetch(ctx, repo)
   const target = repoTargetDir(repo)
   const scope = repo.subdir === '' ? '.' : repo.subdir.replace(/\\/g, '/')
   const [branchRes, porcelain, lastLog, unpushed, aheadRes] = await Promise.all([
@@ -413,26 +415,39 @@ async function fetchOrigin(ctx: Context, repo: ResolvedRepo): Promise<GitRunResu
  * fetch that clone once per workspace on open. The TTL collapses such a burst
  * into one real fetch; `inFlight` makes concurrent callers await the same one.
  * Only `gitStatus` uses this — push/pull/sync always fetch fresh.
+ *
+ * A FACTORY (created once per plugin apply in `index.ts`, passed into
+ * `gitStatus`): the cache dies with the plugin instance instead of lingering
+ * module-level across HMR reloads / accumulating repos forever (§12 #12).
  */
-const FETCH_TTL_MS = 3000
-const fetchCache = new Map<string, { at: number; inFlight?: Promise<void> }>()
+export interface FetchDedup {
+  fetch(ctx: Context, repo: ResolvedRepo): Promise<void>
+}
 
-async function fetchRemoteDeduped(ctx: Context, repo: ResolvedRepo): Promise<void> {
-  const key = repo.repoDir
-  const now = Date.now()
-  const entry = fetchCache.get(key)
-  // A recently completed fetch within the TTL → skip.
-  if (entry !== undefined && entry.inFlight === undefined && now - entry.at < FETCH_TTL_MS) return
-  // A fetch for this repo is already in flight → await it.
-  if (entry?.inFlight !== undefined) {
-    await entry.inFlight
-    return
+const FETCH_TTL_MS = 3000
+
+/** Create a lifecycle-scoped fetch deduper (one per plugin apply). */
+export function createFetchDedup(): FetchDedup {
+  const cache = new Map<string, { at: number; inFlight?: Promise<void> }>()
+  return {
+    async fetch(ctx, repo) {
+      const key = repo.repoDir
+      const now = Date.now()
+      const entry = cache.get(key)
+      // A recently completed fetch within the TTL → skip.
+      if (entry !== undefined && entry.inFlight === undefined && now - entry.at < FETCH_TTL_MS) return
+      // A fetch for this repo is already in flight → await it.
+      if (entry?.inFlight !== undefined) {
+        await entry.inFlight
+        return
+      }
+      const inFlight = fetchOrigin(ctx, repo).then(() => {
+        cache.set(key, { at: Date.now() })
+      })
+      cache.set(key, { at: now, inFlight })
+      await inFlight
+    },
   }
-  const inFlight = fetchOrigin(ctx, repo).then(() => {
-    fetchCache.set(key, { at: Date.now() })
-  })
-  fetchCache.set(key, { at: now, inFlight })
-  await inFlight
 }
 
 /**

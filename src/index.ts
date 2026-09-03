@@ -22,8 +22,8 @@ import type {} from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-settings'
 import type {} from '@deepseek-ai/dsh-workspace'
 import {
-  gitInit, gitPull, gitPush, gitStatus, gitSync, normPath, resolveNotesDir, resolveSharedRepo,
-  resolveWorkspaceRepo,
+  createFetchDedup, gitInit, gitPull, gitPush, gitStatus, gitSync, normPath, resolveNotesDir,
+  resolveSharedRepo, resolveWorkspaceRepo,
   type ResolvedRepo, type WorkspaceInfo,
 } from './host/git.ts'
 import { iconHandler, notesApiHandler, type GitApi, type NotesApiDeps, type WorkspaceEntry } from './host/http.ts'
@@ -191,8 +191,11 @@ export function apply(ctx: Context, config: Config): void {
   // a per-function lock would self-deadlock. Wrapping here locks each top-level
   // API call exactly once.
   const gitMutex = createKeyedMutex()
+  // Lifecycle-scoped fetch deduper shared by every gitStatus call (dies with
+  // this apply — no module-level cache accumulating across HMR reloads).
+  const fetchDedup = createFetchDedup()
   const git: GitApi = {
-    status: (repo, notesDir) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitStatus(ctx, repo, repo.branch, notesDir)),
+    status: (repo, notesDir) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitStatus(ctx, repo, repo.branch, notesDir, fetchDedup)),
     init: (repo) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitInit(ctx, repo, repo.branch)),
     push: (repo, notesDir, message, overwrite) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitPush(ctx, repo, notesDir, message, {
       name: readSettings().gitAuthorName ?? '',

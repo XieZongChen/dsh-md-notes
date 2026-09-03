@@ -130,8 +130,9 @@
 - 所有副作用（路由注册、settings 注册、事件监听、样式）包 `ctx.effect(fn, 'label')`，label 命名
   `dsh-md-notes: <what>`（现状已遵守）。`ctx.on` 的返回 disposer 交给 `ctx.effect` 管理
   （`registerNoteContextInjection` 已示范）。
-- **模块级可变缓存禁止无清理地裸放在模块顶层**（`git.ts` 的 `fetchCache` 是反例，§12 #12）：
-  需要跨请求缓存时，放进 `apply` 闭包或给 Map 加 TTL 清理；随插件生命周期销毁。
+- **模块级可变缓存禁止无清理地裸放在模块顶层**（原 `git.ts` `fetchCache` 是反例，
+  §12 #12 已修）：需要跨请求缓存时，放进 `apply` 闭包或工厂（`createFetchDedup` 已示范），
+  随插件生命周期销毁。
 
 ### 4.3 输入安全（必须）
 
@@ -326,7 +327,7 @@
 | 9 | `NotesManager.openDshSettings`（现居 `hooks/useNotesManager.ts`） | `querySelector` 模拟两次点击跳设置，耦合 dsh DOM | 中 | 找平台扩展点；找不到则留 TODO |
 | 10 | ✅ `http.ts` 重复声明 | `hasWorkspaces` 接口重复声明（原第 82/84 行） | 已修 | 随鉴权栅栏改造顺手清理 |
 | 11 | ✅ `api.ts` `gitErrorText` | `push-failed`/`merge-unrelated` 死 code（host 从不返回） | 已修 | 随 gitSuggest 死链清理一并删除（含 zh/en 孤儿键） |
-| 12 | `git.ts` `fetchCache` | 模块级 Map 只增不清理，跨 repo 累积 | 低 | 移入 apply 闭包或加 TTL 清理 |
+| 12 | ✅ `git.ts` `fetchCache` | 模块级 Map 只增不清理，跨 repo 累积 | 已修 | 改为 `createFetchDedup()` 工厂，index.ts apply 闭包创建、gitStatus 增参持有，随插件生命周期销毁 |
 | 13 | `notes.ts` `listNotes` | 首读无 meta.json 时全量读文件重建，笔记量大时慢 | 低 | 可接受（一次性），量大再评估索引 |
 | 14 | `notes.ts` `createNote` | 并发同名 create 有 TOCTOU 竞态（未锁） | 低 | 可接受（write-lock.md 明示不锁 create），或加目录级锁 |
 | 15 | `client/update.ts` | 模块级 `shared` promise 失败后永不重试 | 低 | 可接受，加注释说明语义 |
