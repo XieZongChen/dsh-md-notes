@@ -22,6 +22,7 @@ export function useNotesManager({ store, tracker, t }: NotesManagerProps) {
     workspaces: list.workspaces,
     autoPull: list.autoPull,
     refresh: list.refresh,
+    refreshList: list.refreshList,
     refreshStatus: list.refreshStatus,
     setRemoteChanged,
     setGitMsg,

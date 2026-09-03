@@ -15,6 +15,7 @@ export function useNotesEditor(deps: {
   workspaces: WorkspaceNotes[]
   autoPull: boolean
   refresh: () => void
+  refreshList: () => void
   refreshStatus: (wsId: string | null) => void
   setRemoteChanged: (names: string[] | null) => void
   setGitMsg: (msg: string) => void
@@ -22,7 +23,7 @@ export function useNotesEditor(deps: {
   tracker: BusyTracker
   t: TranslateNS<'md-notes'>
 }) {
-  const { workspaces, autoPull, refresh, refreshStatus, setRemoteChanged, setGitMsg, setConfirmState, tracker, t } = deps
+  const { workspaces, autoPull, refresh, refreshList, refreshStatus, setRemoteChanged, setGitMsg, setConfirmState, tracker, t } = deps
   const [selectedWsId, setSelectedWsId] = React.useState<string | null>(null)
   const [selected, setSelected] = React.useState<string | null>(null)
   const [content, setContent] = React.useState('')
@@ -128,9 +129,10 @@ export function useNotesEditor(deps: {
           return
         }
         setRemoteChanged(null)
-        // The pull may have brought new notes down — re-list so the left
-        // panel shows them without reopening the manager.
-        refresh()
+        // The pull may have brought new notes down — re-list (notes only; no
+        // per-workspace status sweep — the opened workspace's status was just
+        // refreshed above) so the left panel shows them without reopening.
+        refreshList()
         readInto(wsId, name, () => setContentLoading(false))
       }
     })

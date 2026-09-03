@@ -23,6 +23,22 @@ export function useNotesList() {
     })
   }
 
+  /**
+   * Re-list workspaces only — no settings fetch, no per-workspace git status
+   * sweep. Each status costs a git fetch plus several subprocesses against
+   * that workspace's clone; the auto-pull on note open needs only the
+   * refreshed note list (new notes may have come down) plus the opened
+   * workspace's own status (refreshed separately), so fanning status out to
+   * EVERY workspace on each open would do N-1 needless fetches.
+   */
+  const refreshList = (): void => {
+    void api('list').then((res) => {
+      setLoading(false)
+      setNoWorkspaces(res.ok === true && res.noWorkspaces === true)
+      if (res.ok && res.workspaces) setWorkspaces(res.workspaces)
+    })
+  }
+
   const refresh = (): void => {
     void gitSettingsApi().then((res) => {
       if (res.ok && res.settings) setAutoPull(res.settings.gitAutoPull !== false)
@@ -41,5 +57,5 @@ export function useNotesList() {
 
   React.useEffect(() => { refresh() }, [])
 
-  return { workspaces, noWorkspaces, loading, statusByWs, autoPull, refresh, refreshStatus }
+  return { workspaces, noWorkspaces, loading, statusByWs, autoPull, refresh, refreshList, refreshStatus }
 }
