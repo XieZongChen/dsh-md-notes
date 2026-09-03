@@ -94,7 +94,6 @@ function makeDeps(overrides: Partial<NotesApiDeps> = {}): NotesApiDeps {
     workspaceIdForSession: () => undefined,
     updateSettings: vi.fn(async () => {}),
     readSettings: () => ({}),
-    suggest: () => ({}),
     hasWorkspaces: () => true,
     checkUpdate: vi.fn(async () => ({ ok: false as const, error: 'x' })),
     git: {
@@ -140,9 +139,10 @@ describe('notesApiHandler — trust fence', () => {
 
   it('passes through to dispatch when authorize allows', async () => {
     const deps = makeDeps({ authorize: () => undefined })
-    const { status, json } = await call(notesApiHandler(deps), 'POST', { method: 'gitSuggest' })
+    const { status, json } = await call(notesApiHandler(deps), 'POST', { method: 'gitSettings' })
     expect(status).toBe(200)
     expect(json.ok).toBe(true)
+    expect(json.settings).toEqual({})
   })
 })
 

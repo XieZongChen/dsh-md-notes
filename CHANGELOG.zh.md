@@ -28,6 +28,8 @@
 
 ### Breaking（破坏式变更）
 
+- 移除从未被使用的 `gitSuggest` API 方法（及其 client 封装）：插件内无任何
+  调用方，且它向任意调用者暴露工作区路径。
 - 移除 `route` 配置项。HTTP API 前缀在两半都固定为常量 `/plugins/md-notes`：
   浏览器半部本就硬编码该值，覆盖 host 侧前缀只会断开 client↔host 链接。
   已有配置里的 `route` 键不会导致加载失败（schemastery 放行未知键，值被忽略）。

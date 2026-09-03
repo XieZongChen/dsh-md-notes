@@ -35,6 +35,8 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Breaking
 
+- Removed the unused `gitSuggest` API method (and its client wrapper): nothing
+  in the plugin ever called it, and it exposed workspace paths to any caller.
 - Removed the `route` config option. The HTTP API prefix is now the fixed
   constant `/plugins/md-notes` on both halves: the browser half always
   hardcoded it, so overriding the host prefix only severed the client↔host

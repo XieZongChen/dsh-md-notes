@@ -11,7 +11,7 @@
  */
 
 import { fileURLToPath } from 'node:url'
-import path, { join } from 'node:path'
+import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
@@ -202,14 +202,6 @@ export function apply(ctx: Context, config: Config): void {
     sync: (repo) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitSync(ctx, repo)),
   }
 
-  const suggest = (): Record<string, unknown> => {
-    const registry = workspaces()
-    const wsEntries = registry === undefined ? [] : registry.list()
-    return {
-      workspaces: wsEntries.map((ws) => ({ workspaceId: ws.id, path: join(ws.path, '.dsh-notes') })),
-    }
-  }
-
   // --- update check: latest npm version vs the installed one (cached 10 min;
   // checkUpdate:false keeps it fully offline — host/update.ts owns the logic) ---
   const checkUpdate = createUpdateChecker(config.checkUpdate !== false)
@@ -231,7 +223,6 @@ export function apply(ctx: Context, config: Config): void {
     workspaceIdForSession,
     updateSettings,
     readSettings: () => (scope?.get() ?? {}) as Record<string, unknown>,
-    suggest,
     hasWorkspaces: () => {
       const registry = workspaces()
       return registry !== undefined && registry.list().length > 0

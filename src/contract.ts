@@ -80,11 +80,6 @@ export interface MdNotesSettings {
 /** Client-side alias: the settings/config forms' view of {@link MdNotesSettings}. */
 export type GitSettingsData = MdNotesSettings
 
-/** Suggested repo paths from the host (per-workspace `.dsh-notes`). */
-export interface GitSuggestData {
-  workspaces?: Array<{ workspaceId: string; path: string }>
-}
-
 /** npm update-check result. */
 export interface UpdateInfo {
   current: string
@@ -183,10 +178,6 @@ export interface ApiContract {
       gitRepos?: Record<string, RepoSettings>
     }
     res: ApiResult
-  }
-  gitSuggest: {
-    req: object
-    res: ApiResult<{ suggestions: GitSuggestData }>
   }
   checkUpdate: {
     req: object

@@ -15,7 +15,7 @@ export type {
   ApiContract, ApiError, ApiResult,
   NoteSummary, WorkspaceNotes, GitStatusData, GitMode,
   RepoSettings, CentralSettings, MdNotesSettings, GitSettingsData,
-  GitSuggestData, UpdateInfo, AppendLabels,
+  UpdateInfo, AppendLabels,
 } from '../../contract.ts'
 
 /** Host API route prefix; mirrors the host plugin's default. */
@@ -113,11 +113,6 @@ export function gitConfigApi(patch: ApiContract['gitConfig']['req']): Promise<Ap
   return api('gitConfig', patch)
 }
 
-/** Suggested repo paths from the host (per-workspace `.dsh-notes`). */
-export function gitSuggestApi(): Promise<ApiContract['gitSuggest']['res']> {
-  return api('gitSuggest')
-}
-
 /**
  * Map a host git error to localized UI text. The host returns a machine
  * `code` plus a raw `detail`; the client renders the right copy per locale.
@@ -130,12 +125,10 @@ export function gitErrorText(t: TranslateNS<'md-notes'>, code: string | undefine
     case 'sync-branch': return t('git.errSyncBranch', { detail: detail ?? '' })
     case 'sync-notes': return t('git.errSyncNotes', { detail: detail ?? '' })
     case 'git-failed': return t('git.errGitFailed', { detail: detail ?? '' })
-    case 'push-failed': return t('git.errPushFailed', { detail: detail ?? '' })
     case 'clone-failed': return t('git.errCloneFailed', { detail: detail ?? '' })
     case 'identity': return t('git.errIdentity')
     case 'remote-changed': return t('git.errRemoteChanged', { names: detail ?? '' })
     case 'non-fast-forward': return t('git.errNonFastForward')
-    case 'merge-unrelated': return t('git.errMergeUnrelated', { detail: detail ?? '' })
     case 'note-writing': return t('git.errNoteWriting')
     default: return t('git.failed', { error: detail ?? code ?? '' })
   }

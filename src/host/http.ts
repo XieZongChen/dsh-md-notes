@@ -96,8 +96,6 @@ export interface NotesApiDeps {
   updateSettings(patch: Record<string, unknown>): Promise<void>
   /** Current user-level (L3) settings for the config form. */
   readSettings(): Record<string, unknown>
-  /** Suggested repo paths (per workspace `.dsh-notes`, central under DSH_HOME). */
-  suggest(): Record<string, unknown>
   /** Whether the workspace registry has at least one real workspace. */
   hasWorkspaces(): boolean
   /**
@@ -255,9 +253,6 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       const r = await deps.checkUpdate()
       if (!r.ok) return r
       return { ok: true, update: { current: r.current, latest: r.latest, hasUpdate: r.hasUpdate } }
-    }
-    case 'gitSuggest': {
-      return { ok: true, suggestions: deps.suggest() }
     }
     case 'gitConfig': {
       // Whitelist the settings keys this API may write (L3), dropping anything else.

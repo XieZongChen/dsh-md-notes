@@ -325,7 +325,7 @@
 | 8 | `NotePicker`/`NotesManager` | 「按工作区分组列表」JSX 重复 | 低 | 抽共享列表组件 |
 | 9 | `NotesManager.openDshSettings`（现居 `hooks/useNotesManager.ts`） | `querySelector` 模拟两次点击跳设置，耦合 dsh DOM | 中 | 找平台扩展点；找不到则留 TODO |
 | 10 | ✅ `http.ts` 重复声明 | `hasWorkspaces` 接口重复声明（原第 82/84 行） | 已修 | 随鉴权栅栏改造顺手清理 |
-| 11 | `api.ts` `gitErrorText` | `push-failed`/`merge-unrelated` 死 code（host 从不返回） | 低 | 删除 |
+| 11 | ✅ `api.ts` `gitErrorText` | `push-failed`/`merge-unrelated` 死 code（host 从不返回） | 已修 | 随 gitSuggest 死链清理一并删除（含 zh/en 孤儿键） |
 | 12 | `git.ts` `fetchCache` | 模块级 Map 只增不清理，跨 repo 累积 | 低 | 移入 apply 闭包或加 TTL 清理 |
 | 13 | `notes.ts` `listNotes` | 首读无 meta.json 时全量读文件重建，笔记量大时慢 | 低 | 可接受（一次性），量大再评估索引 |
 | 14 | `notes.ts` `createNote` | 并发同名 create 有 TOCTOU 竞态（未锁） | 低 | 可接受（write-lock.md 明示不锁 create），或加目录级锁 |
