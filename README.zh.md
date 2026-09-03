@@ -107,6 +107,7 @@ HTTP API 前缀固定为 `/plugins/md-notes`（浏览器半部硬编码同值，
 |---|---|---|
 | `gitMode` | `'off'` | Git 同步模式：`'off'` 关闭 / `'shared'` 共享仓库 / `'own'` 每工作区独立仓库。 |
 | `gitAutoPull` | `true` | 打开笔记时是否自动拉取远程版本。 |
+| `checkUpdate` | `true` | 允许 host 向 registry.npmjs.org 查询插件新版本；`false` 保持完全离线。 |
 
 插件配置**不含环境变量，也不涉及任何密钥**。
 

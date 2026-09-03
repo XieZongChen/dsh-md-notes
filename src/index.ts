@@ -53,6 +53,11 @@ export interface Config {
   readonly gitAuthorName?: string
   /** Commit author email; empty uses git's global config. */
   readonly gitAuthorEmail?: string
+  /**
+   * Whether the npm update check may run (default true). When false the host
+   * never contacts registry.npmjs.org — for offline / managed deployments.
+   */
+  readonly checkUpdate?: boolean
 }
 
 export const name = 'md-notes'
@@ -69,6 +74,7 @@ export const Config: s<Config> = s.object({
   gitAutoPull: s.boolean().default(true),
   gitAuthorName: s.string().default(''),
   gitAuthorEmail: s.string().default(''),
+  checkUpdate: s.boolean().default(true),
 })
 
 /** Minimal shape of the webServer route registration used here. */
@@ -206,6 +212,8 @@ export function apply(ctx: Context, config: Config): void {
   // --- update check: latest npm version vs the installed one (cached 10 min) ---
   let updateCache: { at: number; latest: string; hasUpdate: boolean } | null = null
   const checkUpdate = async (): Promise<import('./contract.ts').ApiResult<import('./contract.ts').UpdateInfo>> => {
+    // Managed/offline deployments can switch the outbound registry call off.
+    if (config.checkUpdate === false) return { ok: false, error: 'update check disabled by config' }
     // Current version: read the package.json next to the built lib dir.
     let current = ''
     try {

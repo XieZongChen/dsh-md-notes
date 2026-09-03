@@ -258,6 +258,7 @@ npm run build
     gitAutoPull: true             # 打开笔记时自动拉取
     gitAuthorName: ''             # 提交作者名（空=用 git 全局配置）
     gitAuthorEmail: ''            # 提交作者邮箱
+    checkUpdate: true             # 允许向 registry.npmjs.org 查询插件新版（false=完全离线）
 ```
 
 用户级配置（L3）通过 dsh 设置面板「MD 笔记」分区写入 `md-notes` 命名空间，覆盖 L2。

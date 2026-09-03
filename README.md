@@ -109,6 +109,7 @@ The HTTP API prefix is fixed at `/plugins/md-notes` (the browser half hardcodes 
 |---|---|---|
 | `gitMode` | `'off'` | Git sync mode: `'off'` off / `'shared'` shared repo / `'own'` per-workspace repos. |
 | `gitAutoPull` | `true` | Pull the remote before opening a note. |
+| `checkUpdate` | `true` | Let the host query registry.npmjs.org for a newer plugin version; `false` keeps it fully offline. |
 
 There are **no environment variables and no secrets** in this plugin's configuration.
 

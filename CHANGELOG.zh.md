@@ -32,6 +32,11 @@
   浏览器半部本就硬编码该值，覆盖 host 侧前缀只会断开 client↔host 链接。
   已有配置里的 `route` 键不会导致加载失败（schemastery 放行未知键，值被忽略）。
 
+### Added（新功能）
+
+- 新增 `checkUpdate` 配置（默认 `true`）：设为 `false` 后 host 不再访问
+  registry.npmjs.org——离线/受管部署下，此前的版本检查是无条件外呼。
+
 ### Fixed
 
 - 安全：插件 HTTP API 与图标路由接入与 dsh 官方 `/api` 通道相同的信任栅栏

@@ -41,6 +41,12 @@ Only user-visible functional changes are recorded (no documentation, code refact
   link. Existing configs carrying a `route` key keep loading (schemastery
   passes unknown keys through; the value is ignored).
 
+### Added
+
+- New `checkUpdate` config (default `true`): set it to `false` and the host
+  never contacts registry.npmjs.org — for offline or managed deployments the
+  update check used to be an unconditional outbound call.
+
 ### Fixed
 
 - Security: the plugin's HTTP API and icon routes now run behind the same
