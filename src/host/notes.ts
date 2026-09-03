@@ -7,17 +7,14 @@
 
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
+import type { NoteSummary } from '../contract.ts'
+
+export type { NoteSummary }
 
 const META_NAME = 'meta.json'
 
 interface MetaValue { title?: string; updatedAt?: number }
 type Meta = Record<string, MetaValue>
-
-export interface NoteSummary {
-  name: string
-  title: string
-  updatedAt: number
-}
 
 /** Normalize a user-supplied note name into a safe `.md` basename. */
 export function sanitizeName(input: string | undefined): string {

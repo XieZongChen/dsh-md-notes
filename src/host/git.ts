@@ -19,6 +19,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, writeFileSync, existsSync, realpathSync } from 'node:fs'
 import { mkdir, readdir, readFile, copyFile, stat, rm, writeFile } from 'node:fs/promises'
 import type { Context } from '@deepseek-ai/cordis'
+import type { GitStatusData } from '../contract.ts'
 import type { MdNotesSettings } from './settings.ts'
 
 /** One dsh workspace: stable id, canonical path, display title. */
@@ -317,20 +318,9 @@ export async function gitInit(ctx: Context, repo: ResolvedRepo, _branch: string)
   }
 }
 
-export interface GitStatusView {
+/** Status of one repo: the wire view plus the host-only `ok` flag (field docs in `contract.ts`). */
+export interface GitStatusView extends GitStatusData {
   ok: boolean
-  repoDir?: string
-  /** In-repo subdir for this workspace ('' = repo root). */
-  subdir?: string
-  branch?: string
-  uncommitted?: number
-  /** Notes whose local state differs from the repo target (not yet pushed). */
-  unpushed?: number
-  /** Number of remote commits ahead of the local clone, scoped to this subdir. */
-  remoteAhead?: number
-  lastCommit?: string
-  remote?: string
-  error?: string
 }
 
 /** Status of one repo: branch, uncommitted file count, unpushed count, last commit, remote presence. */

@@ -104,14 +104,16 @@
   收窄到具体类型。对外部服务用**最小接口**（`WebServerLike`/`SubprocessLike`）而非 `any`。
 - **声明合并**（`declare module`）只用于给平台补类型（`LocaleNamespaceMap`、`MessageSourceMap`），
   集中放在相关模块顶部并注明作用。
-- **类型共享**：host 与 client 公用的实体（`NoteSummary`、`GitStatusData`、`GitSettingsData`、
-  `RepoSettings`）目前**两边各写一份**，是漂移隐患（§12 #6）。规则：新增共享实体时，先在
-  `src/host/` 定义权威类型，client 侧 `import type` 引用（前提是 tsconfig 边界允许——若两个
-  program 无法共享，则至少在两处加注释互相指向对方文件，避免静默漂移）。目标是在不破坏两
-  program 隔离的前提下逐步收敛到一份。
-- **API 结果类型**：用**可辨识联合（discriminated union）**按 method 精确表达，禁止
-  「一个 `ok:true` 分支塞十几个 optional 字段」（当前 `ApiResult` 是反例，见 §12 #7）。
-  新增 method 时应给出该 method 的专属返回类型。
+- **类型共享**：host 与 client 公用的 wire 实体（`NoteSummary`、`GitStatusData`、
+  `GitSettingsData`、`RepoSettings`…）**只在 `src/contract.ts` 定义一份**（纯类型、
+  零 dsh import，两个 tsc program 各自 include 编译）。host 领域模块与 client
+  features 一律 `import type` 引用或 re-export，禁止在本侧再写一份。新增共享实体：
+  先进 `contract.ts`，再两側引用。
+- **API 结果类型**：用**可辨识联合（discriminated union）**按 method 精确表达，
+  禁止「一个 `ok:true` 分支塞十几个 optional 字段」。`ApiContract`（`contract.ts`）
+  一 method 一条 `{ req, res }`，client 的 `api<M>()` 按 method 推导精确返回类型；
+  新增 method 时在 `ApiContract` 加一条，同时更新 host `handleApi` 的 case 与
+  architecture.md §3 的端点表。
 
 ---
 
@@ -314,8 +316,8 @@
 | 3 | ✅ `host/http.ts` + `index.ts` | HTTP API 无鉴权，任意 client 可传任意 `workspaceId` 读写任意工作区；`gitStatus` 返回含凭据的 `remote` URL | 已修 | 两条路由接入 `connection.requestRejection` 官方信任栅栏（401/403，见 architecture.md §3）；`gitStatus` 的 `remote` 经 `redactRemote` 脱敏（设置表单仍回填原值） |
 | 4 | ✅ `host/git.ts` | shared 子目录原用 `sanitizeFolder(ws.title)`，工作区改名孤儿化旧目录 | 已修 | 仓库内 `.dsh-notes-workspaces.json` 以 `ws.id` 固定目录名（commit `e59f300`） |
 | 5 | ✅ `client/NotesManager/` | 三处「刷新+重读」已去重；左栏拆 `NoteItem`/`WorkspaceList`；state 收敛并按 list/editor/git 拆成三个 hook；子组件与 css 迁入 `components/`、hook 迁入 `hooks/`，主文件瘦身至 ~220 行 | 已修 | commit `f1b5d98`/`8eda8ed`/`2fed9a7`/`44cf8c5` + `a26a9e4`/`f25093f`/`909225f` |
-| 6 | host/client 双份类型 | `NoteSummary`/`GitStatusData`/`GitSettingsData` 等两边各一份，易漂移 | 中 | 收敛为一份（§3），至少交叉注释 |
-| 7 | `client/api.ts` `ApiResult` | `ok:true` 分支 10+ optional 字段的大杂烩，调用方靠猜 | 中 | 改按 method 的 discriminated union |
+| 6 | ✅ host/client 双份类型 | `NoteSummary`/`GitStatusData`/`GitSettingsData` 等两边各一份，易漂移 | 已修 | 收敛到 `src/contract.ts` 单一契约（纯类型，两 program 各自编译），两侧 import/re-export（§3） |
+| 7 | ✅ `client/api.ts` `ApiResult` | `ok:true` 分支 10+ optional 字段的大杂烩，调用方靠猜 | 已修 | `ApiContract` 按 method 的 `{ req, res }` 契约 + `api<M>()` 泛型推导（§3）；顺带修复非 2xx 响应丢弃结构化错误体（code 丢失）与 client d.ts 产物路径（`lib/types/client/client/…` → `exports` 声明位置） |
 | 8 | `NotePicker`/`NotesManager` | 「按工作区分组列表」JSX 重复 | 低 | 抽共享列表组件 |
 | 9 | `NotesManager.openDshSettings`（现居 `hooks/useNotesManager.ts`） | `querySelector` 模拟两次点击跳设置，耦合 dsh DOM | 中 | 找平台扩展点；找不到则留 TODO |
 | 10 | ✅ `http.ts` 重复声明 | `hasWorkspaces` 接口重复声明（原第 82/84 行） | 已修 | 随鉴权栅栏改造顺手清理 |

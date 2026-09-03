@@ -19,7 +19,7 @@ import type {
   InputTriggerCandidate, InputTriggerSource, ReferenceInsert,
 } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { ApiResult, NoteSummary, WorkspaceNotes } from '../api.ts'
+import type { ListResult, NoteSummary, WorkspaceNotes } from '../api.ts'
 import { api } from '../api.ts'
 
 /** Source identity: the menu group title and the chip `source` field. */
@@ -193,9 +193,9 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
    * `signal.aborted` after awaiting.
    */
   const ALL_TTL_MS = 3000
-  let allFetch: Promise<ApiResult> | null = null
+  let allFetch: Promise<ListResult> | null = null
   let allSettled: { at: number; workspaces: WorkspaceNotes[] } | null = null
-  const fetchAll = (): Promise<ApiResult> => {
+  const fetchAll = (): Promise<ListResult> => {
     if (allSettled !== null && Date.now() - allSettled.at < ALL_TTL_MS) {
       return Promise.resolve({ ok: true, workspaces: allSettled.workspaces })
     }

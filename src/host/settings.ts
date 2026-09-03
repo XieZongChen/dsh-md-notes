@@ -16,6 +16,10 @@
  */
 
 import s from '@deepseek-ai/schemastery'
+import type { CentralSettings, GitMode, MdNotesSettings, RepoSettings } from '../contract.ts'
+
+// Wire entities live once in src/contract.ts; the schema below validates them.
+export type { CentralSettings, GitMode, MdNotesSettings, RepoSettings }
 
 /**
  * The plugin's settings namespace id (L3). A plain string literal: since
@@ -25,35 +29,6 @@ import s from '@deepseek-ai/schemastery'
  * `[a-z][a-z0-9-]*`), which `'md-notes'` satisfies.
  */
 export const MD_NOTES_NS = 'md-notes'
-
-/** Per-repo record: URL + branch + in-repo subpath. */
-export interface RepoSettings {
-  /** Git remote URL (the repo is identified by URL; plugin manages the local clone). */
-  remote?: string
-  /** Branch to push/pull on (default 'main'). */
-  branch?: string
-  /** In-repo subpath holding this workspace's notes ('' = repo root). */
-  subpath?: string
-}
-
-/** Shared (central) repo settings — `gitMode: 'shared'`. */
-export interface CentralSettings {
-  /** Git remote URL of the shared repo. */
-  remote?: string
-  /** Branch to push/pull on (default 'main'). */
-  branch?: string
-}
-
-/** The user-level (L3) settings section. */
-export interface MdNotesSettings {
-  /** 'off' = no git; 'shared' = shared repo for all workspaces; 'own' = per-workspace repos. */
-  gitMode?: 'off' | 'on' | 'shared' | 'own'
-  gitCentral?: CentralSettings
-  gitRepos?: Record<string, RepoSettings>
-  gitAutoPull?: boolean
-  gitAuthorName?: string
-  gitAuthorEmail?: string
-}
 
 /** Wire schema; also the envelope the browser scope validates against. */
 export const MdNotesSettingsSchema: s<MdNotesSettings> = s.object({

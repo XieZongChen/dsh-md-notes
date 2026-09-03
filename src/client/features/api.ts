@@ -1,77 +1,22 @@
 /**
- * HTTP API client for the dsh-md-notes host route (notes + git).
+ * HTTP API client for the dsh-md-notes host route (notes + git). The
+ * request/response shapes come from the shared wire contract
+ * (`src/contract.ts`, compiled by both tsc programs) — one entry per method,
+ * so every caller gets the method's exact result type instead of a grab-bag
+ * optional union.
  * @module dsh-md-notes/client/api
  */
 
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { ApiContract } from '../../contract.ts'
 
-export interface NoteSummary {
-  name: string
-  title: string
-  updatedAt: number
-}
-
-/** One workspace's note group (the grouped `list` result). */
-export interface WorkspaceNotes {
-  workspaceId: string
-  name: string
-  /** Absolute notes directory (`<ws>/.dsh-notes`) — used to build reference paths. */
-  notesDir: string
-  notes: NoteSummary[]
-}
-
-/** One repo's git status view. */
-export interface GitStatusData {
-  repoDir?: string
-  /** In-repo subdir for this workspace ('' = repo root). */
-  subdir?: string
-  branch?: string
-  uncommitted?: number
-  /** Notes whose local state differs from the repo target (not yet pushed). */
-  unpushed?: number
-  /** Number of remote commits ahead of the local clone (in this subdir). */
-  remoteAhead?: number
-  lastCommit?: string
-  remote?: string
-  error?: string
-}
-
-/** One repo record as configured (own-repo mode). */
-export interface RepoGitSettings {
-  remote?: string
-  branch?: string
-  subpath?: string
-}
-
-/** The user-level (L3) git settings surfaced to the config forms. */
-export interface GitSettingsData {
-  gitMode?: 'off' | 'on' | 'shared' | 'own'
-  gitCentral?: { remote?: string; branch?: string }
-  gitRepos?: Record<string, RepoGitSettings>
-  gitAutoPull?: boolean
-  gitAuthorName?: string
-  gitAuthorEmail?: string
-}
-
-export type ApiResult =
-  | {
-    ok: true
-    workspaces?: WorkspaceNotes[]
-    noWorkspaces?: boolean
-    content?: string
-    name?: string
-    dir?: string | null
-    status?: GitStatusData
-    settings?: GitSettingsData
-    suggestions?: GitSuggestData
-    /** Number of files skipped during a conservative pull (differed from remote). */
-    skipped?: number
-    /** Notes that differ on both sides after a conservative pull (conflict hint). */
-    changed?: string[]
-    /** npm update check result. */
-    update?: { current: string; latest: string; hasUpdate: boolean }
-  }
-  | { ok: false; error: string; code?: string; changed?: string[] }
+// Wire entities — re-exported for feature modules; the single source is the contract.
+export type {
+  ApiContract, ApiError, ApiResult,
+  NoteSummary, WorkspaceNotes, GitStatusData, GitMode,
+  RepoSettings, CentralSettings, MdNotesSettings, GitSettingsData,
+  GitSuggestData, UpdateInfo, AppendLabels,
+} from '../../contract.ts'
 
 /** Host API route prefix; mirrors the host plugin's default. */
 export const API = '/plugins/md-notes'
@@ -79,15 +24,36 @@ export const API = '/plugins/md-notes'
 /** Icon asset URL served by the host GET route (`<prefix>/icon.svg`). */
 export const ICON_URL = `${API}/icon.svg`
 
+/** The `list` result (the @ reference pipeline caches this exact shape). */
+export type ListResult = ApiContract['list']['res']
+
+/**
+ * Parse a response into the method's result. The host sends the structured
+ * failure body ({ ok:false, code, error }) on non-2xx too — parse it so
+ * error codes reach `gitErrorText` instead of being flattened to `http NNN`;
+ * a non-JSON body (proxies, 502 pages) falls back to the bare status.
+ */
+async function parseResult<M extends keyof ApiContract>(res: Response): Promise<ApiContract[M]['res']> {
+  try {
+    return (await res.json()) as ApiContract[M]['res']
+  } catch {
+    return { ok: false, error: `http ${String(res.status)}` } as ApiContract[M]['res']
+  }
+}
+
 /**
  * Call one host API method.
  * @param method - endpoint name (list/read/write/create/delete/appendConversation/git*).
  * @param body - endpoint arguments.
  * @param signal - optional abort signal (the @ reference pipeline supersedes
  * per-keystroke candidate fetches; a signal lets a stale call stop early).
- * @returns the parsed result, or a failure branch on transport/HTTP errors.
+ * @returns the method's typed result; transport failures become its ApiError branch.
  */
-export async function api(method: string, body: Record<string, unknown> = {}, signal?: AbortSignal): Promise<ApiResult> {
+export async function api<M extends keyof ApiContract>(
+  method: M,
+  body?: ApiContract[M]['req'],
+  signal?: AbortSignal,
+): Promise<ApiContract[M]['res']> {
   try {
     const res = await fetch(API, {
       method: 'POST',
@@ -95,17 +61,16 @@ export async function api(method: string, body: Record<string, unknown> = {}, si
       body: JSON.stringify({ method, ...body }),
       signal,
     })
-    if (!res.ok) return { ok: false, error: `http ${res.status}` }
-    return (await res.json()) as ApiResult
+    return await parseResult<M>(res)
   } catch (error) {
     // An aborted request is a superseded candidate fetch — report it as a
     // failure branch; the caller treats it as "no candidates yet".
-    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    return { ok: false, error: error instanceof Error ? error.message : String(error) } as ApiContract[M]['res']
   }
 }
 
 /** Git status of a workspace repo (or the central repo when `workspaceId` is omitted). */
-export function gitStatusApi(workspaceId?: string): Promise<ApiResult> {
+export function gitStatusApi(workspaceId?: string): Promise<ApiContract['gitStatus']['res']> {
   return api('gitStatus', workspaceId === undefined ? {} : { workspaceId })
 }
 
@@ -114,7 +79,7 @@ export function gitStatusApi(workspaceId?: string): Promise<ApiResult> {
  * confirmed overwriting the remote's newer version (the first push without it
  * blocks with `code: 'remote-changed'` when remote notes differ).
  */
-export function gitPushApi(workspaceId: string | undefined, message: string, overwrite?: boolean): Promise<ApiResult> {
+export function gitPushApi(workspaceId: string | undefined, message: string, overwrite?: boolean): Promise<ApiContract['gitPush']['res']> {
   const body = { message, overwrite: overwrite === true }
   return api('gitPush', workspaceId === undefined ? body : { workspaceId, ...body })
 }
@@ -124,36 +89,32 @@ export function gitPushApi(workspaceId: string | undefined, message: string, ove
  * locally-different files with the remote version; the auto-pull on open
  * omits it → conservative (never overwrites local changes).
  */
-export function gitPullApi(workspaceId: string | undefined, force?: boolean, manual?: boolean): Promise<ApiResult> {
+export function gitPullApi(workspaceId: string | undefined, force?: boolean, manual?: boolean): Promise<ApiContract['gitPull']['res']> {
   return api('gitPull', workspaceId === undefined ? { force: force === true, manual: manual === true } : { workspaceId, force: force === true, manual: manual === true })
 }
 
 /** User-initiated conflict resolution: merge the remote into the local branch. */
-export function gitSyncApi(workspaceId?: string): Promise<ApiResult> {
+export function gitSyncApi(workspaceId?: string): Promise<ApiContract['gitSync']['res']> {
   return api('gitSync', workspaceId === undefined ? {} : { workspaceId })
 }
 
 /** Current user-level (L3) git settings. */
-export function gitSettingsApi(): Promise<ApiResult> {
+export function gitSettingsApi(): Promise<ApiContract['gitSettings']['res']> {
   return api('gitSettings')
 }
 
 /** npm update check: is a newer plugin version available? */
-export function checkUpdateApi(): Promise<ApiResult> {
+export function checkUpdateApi(): Promise<ApiContract['checkUpdate']['res']> {
   return api('checkUpdate')
 }
 
 /** Write git settings (whitelisted keys, see the host `gitConfig`). */
-export function gitConfigApi(patch: Record<string, unknown>): Promise<ApiResult> {
+export function gitConfigApi(patch: ApiContract['gitConfig']['req']): Promise<ApiContract['gitConfig']['res']> {
   return api('gitConfig', patch)
 }
 
 /** Suggested repo paths from the host (per-workspace `.dsh-notes`). */
-export interface GitSuggestData {
-  workspaces?: Array<{ workspaceId: string; path: string }>
-}
-
-export function gitSuggestApi(): Promise<ApiResult> {
+export function gitSuggestApi(): Promise<ApiContract['gitSuggest']['res']> {
   return api('gitSuggest')
 }
 

@@ -46,6 +46,7 @@ dsh-md-notes/
 │   └── link-deps.mjs     # 开发期链接 deepseek-harness checkout 类型
 └── src/
     ├── index.ts          # host 插件入口（name/inject/Config/apply，纯装配）
+    ├── contract.ts       # host/client 共享 wire 契约（纯类型：实体 + 各 method 请求/响应；两个 tsc program 各自编译，见 §5）
     ├── host/
     │   ├── notes.ts      # 笔记领域逻辑（目录/元数据/各操作方法）
     │   ├── git.ts        # Git 领域逻辑（runGit/仓库解析/同步/冲突检测/隔离）
@@ -138,6 +139,9 @@ dsh-md-notes/
 
 ### Host API 端点
 
+端点的请求/响应形状以 `src/contract.ts` 为单一事实来源（`ApiContract` 一 method 一条，
+client 的 `api<M>()` 按其推导精确返回类型；下表为可读摘要）：
+
 | method | body | 返回 |
 |---|---|---|
 | `list` | — | `{ ok, workspaces: [{ workspaceId, name, notesDir, notes }], noWorkspaces }`（按工作区分组；带 `sessionId` 时只返回该会话工作区，会话无工作区返回空数组） |
@@ -223,6 +227,10 @@ npm run build
 - **host 与 client 必须两个 tsc program**：host 侧 `dsh-session` 与浏览器侧
   `dsh-client-runtime` 对 `Context.sessions` 的声明不同，同一 program 内会冲突；
   host program `exclude: ["src/client"]`，client program 只编译浏览器侧。
+  **共享 wire 契约** `src/contract.ts`（纯类型、零 dsh import）被两个 program 同时
+  include（client program 显式列入），是「两 program 不合并」约束下消除双份类型
+  （实体 + API 形状）的方式；client program 的 `declarationDir` 为 `lib/types`，
+  产物 `lib/types/client/index.d.ts` 与 package.json `exports["./client"].types` 对齐。
 - client bundle 协议（`tsdown.config.ts`）：输出 CJS closure-factory，经
   `window.__ModuleLoader__.load({ id, factory })` 加载；平台模块保持 external，其余依赖内联。
 

@@ -10,7 +10,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import type { GitSettingsData, WorkspaceNotes } from '../api.ts'
+import type { ApiContract, GitSettingsData, RepoSettings, WorkspaceNotes } from '../api.ts'
 import { api, gitConfigApi, gitSettingsApi } from '../api.ts'
 import { DshInput } from '../components/DshInput/DshInput.tsx'
 import { DshSelect } from '../components/DshSelect/DshSelect.tsx'
@@ -81,13 +81,18 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
       // is never clobbered.
       const merged = overlayDirty(res.settings, settings)
       setSettings(merged)
-      const patch: Record<string, unknown> = {}
-      for (const key of dirtyScalar.current) patch[key] = (merged as Record<string, unknown>)[key]
+      const patch: ApiContract['gitConfig']['req'] = {}
+      for (const key of dirtyScalar.current) {
+        (patch as Record<string, unknown>)[key] = (merged as Record<string, unknown>)[key]
+      }
       if (dirtyCentral.current) patch.gitCentral = merged.gitCentral
       if (dirtyWs.current.size > 0 && merged.gitRepos !== undefined) {
-        const repos: Record<string, unknown> = {}
-        for (const id of dirtyWs.current) repos[id] = merged.gitRepos[id]
-        patch.gitRepos = repos
+        const repos: Record<string, RepoSettings> = {}
+        for (const id of dirtyWs.current) {
+          const entry = merged.gitRepos[id]
+          if (entry !== undefined) repos[id] = entry
+        }
+        if (Object.keys(repos).length > 0) patch.gitRepos = repos
       }
       if (Object.keys(patch).length === 0) {
         setBusy(false)

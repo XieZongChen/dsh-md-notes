@@ -8,6 +8,7 @@
 
 import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import type { ApiResult, UpdateInfo, WorkspaceNotes } from '../contract.ts'
 import {
   appendConversation, createNote, deleteNote, listNotes, readNote, sanitizeName, writeNote,
 } from './notes.ts'
@@ -107,7 +108,7 @@ export interface NotesApiDeps {
    */
   authorize?: (req: IncomingMessage) => 401 | 403 | undefined
   /** npm update check: latest published version vs the installed one (cached). */
-  checkUpdate(): Promise<{ ok: true; current: string; latest: string; hasUpdate: boolean } | { ok: false }>
+  checkUpdate(): Promise<ApiResult<UpdateInfo>>
   /** Bound git operations. */
   git: GitApi
   /** Process-scoped write mutex (notes domain key: `<workspaceId>/<name>`). */
@@ -138,12 +139,7 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       const entries = sessionWsId !== undefined
         ? deps.listWorkspaces().filter((ws) => ws.workspaceId === sessionWsId)
         : deps.listWorkspaces()
-      const workspaces: Array<{
-        workspaceId: string
-        name: string
-        notesDir: string
-        notes: import('./notes.ts').NoteSummary[]
-      }> = []
+      const workspaces: WorkspaceNotes[] = []
       for (const ws of entries) {
         const result = await listNotes(ws.notesDir)
         workspaces.push({ workspaceId: ws.workspaceId, name: ws.name, notesDir: ws.notesDir, notes: result.ok ? result.notes : [] })
@@ -257,7 +253,7 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     }
     case 'checkUpdate': {
       const r = await deps.checkUpdate()
-      if (!r.ok) return { ok: false }
+      if (!r.ok) return r
       return { ok: true, update: { current: r.current, latest: r.latest, hasUpdate: r.hasUpdate } }
     }
     case 'gitSuggest': {

@@ -202,7 +202,7 @@ export function apply(ctx: Context, config: Config): void {
 
   // --- update check: latest npm version vs the installed one (cached 10 min) ---
   let updateCache: { at: number; latest: string; hasUpdate: boolean } | null = null
-  const checkUpdate = async (): Promise<{ ok: true; current: string; latest: string; hasUpdate: boolean } | { ok: false }> => {
+  const checkUpdate = async (): Promise<import('./contract.ts').ApiResult<import('./contract.ts').UpdateInfo>> => {
     // Current version: read the package.json next to the built lib dir.
     let current = ''
     try {
@@ -212,7 +212,7 @@ export function apply(ctx: Context, config: Config): void {
     } catch {
       current = ''
     }
-    if (current === '') return { ok: false }
+    if (current === '') return { ok: false, error: 'plugin version unavailable' }
     if (updateCache !== null && Date.now() - updateCache.at < 10 * 60 * 1000) {
       return { ok: true, current, latest: updateCache.latest, hasUpdate: updateCache.hasUpdate }
     }
@@ -221,15 +221,15 @@ export function apply(ctx: Context, config: Config): void {
       const timer = setTimeout(() => ac.abort(), 10_000)
       const res = await fetch('https://registry.npmjs.org/dsh-md-notes/latest', { signal: ac.signal })
       clearTimeout(timer)
-      if (!res.ok) return { ok: false }
+      if (!res.ok) return { ok: false, error: `registry responded ${String(res.status)}` }
       const data = await res.json() as { version?: string }
       const latest = data.version ?? ''
-      if (latest === '') return { ok: false }
+      if (latest === '') return { ok: false, error: 'registry response missing version' }
       const cmp = compareVersions(latest, current)
       updateCache = { at: Date.now(), latest, hasUpdate: cmp > 0 }
       return { ok: true, current, latest, hasUpdate: cmp > 0 }
-    } catch {
-      return { ok: false }
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) }
     }
   }
 
