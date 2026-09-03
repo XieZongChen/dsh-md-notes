@@ -37,7 +37,15 @@ export function useNotesEditor(deps: {
   const [gitOpen, setGitOpen] = React.useState<Record<string, boolean>>({})
   const [createWsId, setCreateWsId] = React.useState<string | null>(null)
   const [createBusy, setCreateBusy] = React.useState(false)
-  const selectionRef = React.useRef<{ wsId: string; name: string } | null>(null)
+  /**
+   * The current selection plus its read generation. Every `readInto` takes the
+   * next ticket; a response applies only when it is still the NEWEST read of
+   * the still-current selection — `open()` fires a pre-pull read and a
+   * post-pull re-read for the same note, and the first (slower) response must
+   * never land after the second (it would restore pre-pull content and pin
+   * `savedContent` to it, so a subsequent save would overwrite the pull).
+   */
+  const selectionRef = React.useRef<{ wsId: string; name: string; reads: number } | null>(null)
 
   // Default the selected workspace to the first one once the list arrives
   // (moved out of `refresh` so the list hook stays independent of selection).
@@ -48,11 +56,17 @@ export function useNotesEditor(deps: {
   const isCurrent = (wsId: string, name: string): boolean =>
     selectionRef.current !== null && selectionRef.current.wsId === wsId && selectionRef.current.name === name
 
-  /** Re-read one note's content into the editor, guarded by the current selection. */
+  /** Re-read one note's content into the editor; superseded responses never land. */
   const readInto = (wsId: string, name: string, onDone?: () => void): void => {
+    const sel = selectionRef.current
+    const ticket = sel === null ? -1 : (sel.reads += 1)
     void api('read', { name, workspaceId: wsId }).then((res) => {
-      if (res.ok && isCurrent(wsId, name)) { setContent(res.content ?? ''); setSavedContent(res.content ?? '') }
-      onDone?.()
+      const latest = sel !== null && sel.reads === ticket && selectionRef.current === sel
+      if (res.ok && latest) { setContent(res.content ?? ''); setSavedContent(res.content ?? '') }
+      // The loading state belongs to the newest read: a superseded read must
+      // not clear it early. A selection that moved on already started its own
+      // open() cycle (which re-arms the loading flag), so its onDone is moot.
+      if (sel === null || sel.reads === ticket) onDone?.()
     })
   }
 
@@ -89,7 +103,7 @@ export function useNotesEditor(deps: {
   const currentWsId = (): string | null => selectedWsId ?? workspaces[0]?.workspaceId ?? null
 
   const open = (name: string, wsId: string): void => {
-    selectionRef.current = { wsId, name }
+    selectionRef.current = { wsId, name, reads: 0 }
     setSelectedWsId(wsId)
     setSelected(name)
     setMode('preview')
