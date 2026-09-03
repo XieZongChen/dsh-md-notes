@@ -30,6 +30,7 @@ import { iconHandler, notesApiHandler, type GitApi, type NotesApiDeps, type Work
 import { createKeyedLock, createKeyedMutex } from './host/keyed-lock.ts'
 import { MdNotesSettingsSchema, mergeSettings, MD_NOTES_NS, type MdNotesSettings } from './host/settings.ts'
 import { registerNoteContextInjection } from './host/context-inject.ts'
+import { createUpdateChecker } from './host/update.ts'
 
 /** Plugin row config. */
 export interface Config {
@@ -209,51 +210,9 @@ export function apply(ctx: Context, config: Config): void {
     }
   }
 
-  // --- update check: latest npm version vs the installed one (cached 10 min) ---
-  let updateCache: { at: number; latest: string; hasUpdate: boolean } | null = null
-  const checkUpdate = async (): Promise<import('./contract.ts').ApiResult<import('./contract.ts').UpdateInfo>> => {
-    // Managed/offline deployments can switch the outbound registry call off.
-    if (config.checkUpdate === false) return { ok: false, error: 'update check disabled by config' }
-    // Current version: read the package.json next to the built lib dir.
-    let current = ''
-    try {
-      const pkgPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'package.json')
-      const pkg = JSON.parse(await import('node:fs/promises').then((m) => m.readFile(pkgPath, 'utf8'))) as { version?: string }
-      current = pkg.version ?? ''
-    } catch {
-      current = ''
-    }
-    if (current === '') return { ok: false, error: 'plugin version unavailable' }
-    if (updateCache !== null && Date.now() - updateCache.at < 10 * 60 * 1000) {
-      return { ok: true, current, latest: updateCache.latest, hasUpdate: updateCache.hasUpdate }
-    }
-    try {
-      const ac = new AbortController()
-      const timer = setTimeout(() => ac.abort(), 10_000)
-      const res = await fetch('https://registry.npmjs.org/dsh-md-notes/latest', { signal: ac.signal })
-      clearTimeout(timer)
-      if (!res.ok) return { ok: false, error: `registry responded ${String(res.status)}` }
-      const data = await res.json() as { version?: string }
-      const latest = data.version ?? ''
-      if (latest === '') return { ok: false, error: 'registry response missing version' }
-      const cmp = compareVersions(latest, current)
-      updateCache = { at: Date.now(), latest, hasUpdate: cmp > 0 }
-      return { ok: true, current, latest, hasUpdate: cmp > 0 }
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : String(error) }
-    }
-  }
-
-  /** Compare two semver-ish version strings; returns >0 when a is newer. */
-  const compareVersions = (a: string, b: string): number => {
-    const pa = a.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0)
-    const pb = b.replace(/^v/, '').split('.').map((n) => parseInt(n, 10) || 0)
-    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-      const d = (pa[i] ?? 0) - (pb[i] ?? 0)
-      if (d !== 0) return d
-    }
-    return 0
-  }
+  // --- update check: latest npm version vs the installed one (cached 10 min;
+  // checkUpdate:false keeps it fully offline — host/update.ts owns the logic) ---
+  const checkUpdate = createUpdateChecker(config.checkUpdate !== false)
 
   // Trust fence for both routes: when the connection service is present (the
   // web profile), requestRejection is exactly the gate the official /api route
