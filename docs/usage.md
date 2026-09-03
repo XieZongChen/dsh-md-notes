@@ -150,7 +150,7 @@ Two things:
    syntax) — e.g. `Referenced note [title](.dsh-notes/note.md)` (same workspace)
    or `Referenced note [title](../other-dir/.dsh-notes/note.md)` (cross-workspace)
    — it tells the model (and you) which note was referenced;
-2. **The host injects the note's content into the model context** — a collapsible
+2. **The plugin's backend (the local dsh process) injects the note's content into the model context** — a collapsible
    "context injection" row (source `md-notes`) appears in the chat; expand it to
    see the injected content. The model gets the content directly — it does **not**
    depend on calling its `read` tool itself.

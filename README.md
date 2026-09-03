@@ -26,7 +26,7 @@ A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 
 - **Sidebar notes entry** → full-screen notes manager: per-workspace note list (grouped, collapsible), markdown edit/preview, save, delete (in-page confirm), create with one click.
 - **Assistant-message action** (next to copy) → pick or create a note and append that conversation (user question + answer) to it **instantly** — the text is captured from the conversation itself, so there's no waiting; section labels are localized (reasoning is not captured — only the final answer).
-- **Reference notes in chat (`@`)**: type `@` to pick notes (cross-workspace included); on send the host injects each note's content into the model context, so the model can cite it without being asked to read files.
+- **Reference notes in chat (`@`)**: type `@` to pick notes (cross-workspace included); on send the plugin's backend injects each note's content into the model context, so the model can cite it without being asked to read files.
 - **Git sync** (optional, URL-driven): **shared repo** mode (one repo for all workspaces, per-workspace folders) or **own repos** mode (per workspace: URL + branch + subpath). Push = mirror-sync (deletions included), Update = pull with three-way conflict confirmation, auto-pull on open, merge-remote-and-retry. Each workspace shows a **Git sync card** in the manager: "Synced" / "N unpushed" status, plus a hint when the remote has new commits.
 - **Note write mutex**: writes to the same note are locked across sessions — the sidebar entry, picker and manager stay in sync until the write finishes.
 - **Settings panel** (dsh Settings → MD Notes): mode, repo URL/branch/subpath, auto-pull, commit author — with dsh-styled form controls.
@@ -103,20 +103,20 @@ All options are plugin Config keys, overridable in the profile's `cordis.patch.y
     gitAutoPull: true            # pull remote before opening a note
 ```
 
-The HTTP API prefix is fixed at `/plugins/md-notes` (the browser half hardcodes the same constant, so it is intentionally not configurable).
+The HTTP API prefix is fixed at `/plugins/md-notes` (the browser frontend hardcodes the same constant, so it is intentionally not configurable).
 
 | Key | Default | Meaning |
 |---|---|---|
 | `gitMode` | `'off'` | Git sync mode: `'off'` off / `'shared'` shared repo / `'own'` per-workspace repos. |
 | `gitAutoPull` | `true` | Pull the remote before opening a note. |
-| `checkUpdate` | `true` | Let the host query registry.npmjs.org for a newer plugin version; `false` keeps it fully offline. |
+| `checkUpdate` | `true` | Let the backend query registry.npmjs.org for a newer plugin version; `false` keeps it fully offline. |
 
 There are **no environment variables and no secrets** in this plugin's configuration.
 
 ## Permissions & data
 
 - **Filesystem**: reads and writes notes as plain `.md` files (plus a `meta.json` sidecar) under each workspace's `.dsh-notes` directory (notes are workspace-bound); git operations touch only the plugin-managed clones under `$DSH_HOME/md-notes-repos/`.
-- **Network**: a loopback HTTP API (`POST <route>`, browser ↔ local dsh server) and the icon served from the same origin. **No external network calls, no telemetry.**
+- **Network**: a loopback HTTP API (`POST <route>`, browser ↔ local dsh server) and the icon served from the same origin; the only other outbound call is the **optional** npm update check (`registry.npmjs.org`, fully off with `checkUpdate: false`). **No telemetry, no other external calls.**
 - **Credentials**: none collected or transmitted.
 
 ## Troubleshooting
@@ -138,9 +138,9 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 | Path | Contents |
 |---|---|
-| `src/` | Source code (host half + client half) |
+| `src/` | Source code (Node backend + browser frontend) |
 | `src/host/` | Notes domain (`notes.ts`) + Git (`git.ts`) + HTTP layer (`http.ts`) + context injection (`context-inject.ts`) + write mutex (`keyed-lock.ts`) |
-| `src/client/` | Browser half: entry (`index.ts`) + feature modules under `features/` (one directory per feature; when one outgrows a single file it splits out feature-private `components/` and `hooks/` subdirectories — see `NotesManager/` for the pattern, `docs/architecture.md`) |
+| `src/client/` | Browser frontend: entry (`index.ts`) + feature modules under `features/` (one directory per feature; when one outgrows a single file it splits out feature-private `components/` and `hooks/` subdirectories — see `NotesManager/` for the pattern, `docs/architecture.md`) |
 | `src/client/features/locales/` | zh/en UI dictionaries (dsh locale namespace `md-notes`) |
 | `assets/` | Plugin icon (SVG source + PNG) |
 | `docs/` | Docs: `usage.md`/`usage.zh.md` (user guide), `features.md` (functional), `architecture.md`, `context.md` (@ references), `git.md` (Git sync), `state.md` / `write-lock.md` (state & write-mutex design), `manager-redesign.md` (manager redesign), `compatibility.md` / `compatibility.zh.md` (dsh ↔ plugin version compatibility matrix, en/zh), `TODO.md` |

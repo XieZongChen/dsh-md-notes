@@ -1,5 +1,5 @@
 /**
- * The single wire contract shared by the host half (src/) and the client half
+ * The single wire contract shared by the backend (src/) and the frontend
  * (src/client/): the API's entity types plus the per-method request/response
  * shapes of `POST <route>` (`{ method, ...args }`). Pure types — no runtime,
  * no dsh imports — so both tsc programs compile it independently (the two

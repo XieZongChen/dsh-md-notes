@@ -1,9 +1,9 @@
 /**
- * dsh-md-notes host half plugin entry: a bundle plugin that serves the notes +
+ * dsh-md-notes backend plugin entry: a bundle plugin that serves the notes +
  * git API over the webServer HTTP route. Notes live as .md files under a
  * workspace-resolved directory; git sync is opt-in via the `md-notes` settings
  * namespace (three-layer config: schema default → cordis Config → user
- * settings). The browser half fetches this API; no typert/Remote toolchain.
+ * settings). The browser frontend fetches this API; no typert/Remote toolchain.
  *
  * Domain logic: `notes.ts` (notes), `git.ts` (git + workspace/repo resolution),
  * `settings.ts` (L3 namespace). HTTP assembly in `http.ts`.
@@ -37,7 +37,7 @@ export interface Config {
   /**
    * Git mode: 'off' | 'shared' | 'own' (legacy 'on' normalizes to shared/own).
    *
-   * (No `route` option on purpose: the browser half hardcodes the API prefix
+   * (No `route` option on purpose: the browser frontend hardcodes the API prefix
    * `/plugins/md-notes`, so a host-side override would silently sever the
    * client↔host link. The route is a fixed constant on both halves.)
    */
@@ -242,7 +242,7 @@ export function apply(ctx: Context, config: Config): void {
     '..', 'assets', 'dsh-md-notes.svg',
   )
 
-  // Fixed API prefix — must equal the client half's hardcoded API constant
+  // Fixed API prefix — must equal the frontend's hardcoded API constant
   // (features/api.ts); see the Config doc comment for why it is not an option.
   const prefix = '/plugins/md-notes'
   ctx.effect(() => web.register({

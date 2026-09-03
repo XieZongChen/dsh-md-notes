@@ -49,7 +49,7 @@ let warnedStaleHost = false
 function warnStaleHost(): void {
   if (warnedStaleHost) return
   warnedStaleHost = true
-  // The client bundle updates via a page refresh alone, but the host half is
+  // The client bundle updates via a page refresh alone, but the backend is
   // loaded at process start — a restart of dsh web is required for the new
   // `list` response shape (`notesDir`) to take effect.
   console.error('[dsh-md-notes] stale host: the list response lacks "notesDir"; restart dsh web so the host loads the updated plugin')

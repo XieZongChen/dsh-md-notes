@@ -38,8 +38,8 @@ Only user-visible functional changes are recorded (no documentation, code refact
 - Removed the unused `gitSuggest` API method (and its client wrapper): nothing
   in the plugin ever called it, and it exposed workspace paths to any caller.
 - Removed the `route` config option. The HTTP API prefix is now the fixed
-  constant `/plugins/md-notes` on both halves: the browser half always
-  hardcoded it, so overriding the host prefix only severed the client↔host
+  constant `/plugins/md-notes` on both sides: the browser frontend always
+  hardcoded it, so overriding the backend prefix only severed the frontend↔backend
   link. Existing configs carrying a `route` key keep loading (schemastery
   passes unknown keys through; the value is ignored).
 
@@ -55,7 +55,7 @@ Only user-visible functional changes are recorded (no documentation, code refact
   trust fence as dsh's official `/api` channel (`connection.requestRejection`):
   requests without an authenticated browser session are rejected with 401 and
   untrusted Host/Origin with 403, before any note/git operation or settings
-  write is dispatched (see [architecture §3](docs/architecture.md#3-host-半src)).
+  write is dispatched (see [architecture §3](docs/architecture.md#3-后端src)).
   Profiles without the connection service (e.g. Electron IPC) are unchanged.
 - Security: `gitStatus` no longer returns the raw git remote URL; embedded
   credentials (`https://user:token@…`) are redacted to `https://***@…` in the

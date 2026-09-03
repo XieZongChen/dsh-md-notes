@@ -24,8 +24,8 @@ npm 包 dsh-md-notes
 浏览器碰不到文件系统和 git，Node 进程画不了界面——功能因此天然劈成两半，
 **只能通过这一个 HTTP 接口说话**。
 
-> 措辞对照：旧文档与代码注释里把它们叫「Host 半 / Client 半」，本文统一说「后端 / 前端」，
-> 同一个意思。目录名、`tsconfig`、`exports["./client"]` 等代码标识沿用 host/client 原名。
+> 措辞对照：代码标识（目录名、`tsconfig`、`exports["./client"]` 等）沿用 host/client 原名，
+> 个别历史注释里的「Host 半 / Client 半」也是这两个东西，同一个意思。
 
 ## 硬不变量（AI 改动前自查）
 

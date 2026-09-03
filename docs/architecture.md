@@ -5,20 +5,23 @@ DSH 第三方插件（bundle）"MD 笔记管理"的架构设计：架构、目�
 
 ## 1. 架构
 
-插件是一个可安装的 npm bundle 包，同时扮演两个角色：
+插件是一个可安装的 npm bundle 包，里面装着**两个程序**（下文统一称「后端 / 前端」；
+旧称 Host 半 / Client 半，代码标识沿用 host/client 原名）：
 
-- **Host 半**（`lib/index.js`）：函数插件（`name` / `inject` / `Config` / `apply`），
+- **后端**（`src/`，构建产物 `lib/index.js`）：跑在 dsh 的 Node 进程里。函数插件
+  （`name` / `inject` / `Config` / `apply`），
   通过 `ctx.webServer` 暴露一个 JSON API 路由 `POST /plugins/md-notes`（body 携带 `method`：
   `list` / `read` / `write` / `create` / `delete` / `appendConversation` + `git*` 系列）。
   笔记以 `.md` 文件存储（**深度绑定工作区**：各工作区 `<工作区>/.dsh-notes`，无工作区时无法读写），
   `meta.json` 记录每篇笔记的标题与更新时间；Git 仓库由 URL 驱动，插件在
   `$DSH_HOME/md-notes-repos/<url-hash>/` 维护本地 clone。
-- **Client 半**（`lib/client.js`）：通过 `dsh.client` 声明 + `exports["./client"]` 被
-  `dsh-client-modules` 扫描进 `window.__DSH_BOOT__`，在浏览器里作为 cordis 插件运行；
+- **前端**（`src/client/`，构建产物 `lib/client.js`）：跑在 dsh web 的浏览器页面里，
+  通过 `dsh.client` 声明 + `exports["./client"]` 被
+  `dsh-client-modules` 扫描进 `window.__DSH_BOOT__`，作为 cordis 插件运行；
   注册四个 slot（`sidebar.footer.action`、`conversation.chat.assistant-actions`、
-  `shell.overlay`、`settings.section`），通过 `fetch` 调用 Host 的 HTTP API。
+  `shell.overlay`、`settings.section`），通过 `fetch` 调用后端的 HTTP API。
 
-**无 typert/Remote 依赖**：Client↔Host 通信走 HTTP 路由而非 `@Remote` 生成物，
+**无 typert/Remote 依赖**：前端↔后端通信走 HTTP 路由而非 `@Remote` 生成物，
 因此构建只需 tsc + tsdown，不需要仓库内的 typert 工具链。
 
 ## 2. 目录结构
@@ -100,7 +103,7 @@ dsh-md-notes/
             └── Settings/         # dsh 设置面板「MD 笔记」分区（SettingsSection + css）
 ```
 
-## 3. Host 半（src/）
+## 3. 后端（src/）
 
 - 插件入口 `index.ts`：导出 `name`（`md-notes`）、`inject`（`webServer`, `settings`）、
   `Config`（schemastery schema：`route`、`gitMode`、`gitCentralRemote/Branch`、
@@ -167,7 +170,7 @@ client 的 `api<M>()` 按其推导精确返回类型；下表为可读摘要）�
 | `gitConfig` | 白名单 L3 keys | `{ ok }`（写设置） |
 | `checkUpdate` | — | `{ ok, update: { current, latest, hasUpdate } }`（npm 版本检测，host 缓存 10 分钟） |
 
-## 4. Client 半（src/client/）
+## 4. 前端（src/client/）
 
 - 入口 `index.ts`（无 JSX，用 `React.createElement`）：`inject: ['slots', 'locale']`；`apply` 里
   注册 `md-notes` locale 字典（`ctx.locale.register`），创建共享 `NotesStore` 并注册四个 slot
@@ -242,7 +245,7 @@ npm run build
   **测试文件不进构建产物**：两个 build program 都 exclude `*.test.ts`（vitest 直接吃
   TS 源码，tsc 产出的 test.js 毫无用途且会随 `files: ["lib"]` 发布）；测试的类型检查
   由两个 noEmit program（`tsconfig.test.json` / `tsconfig.client-test.json`）承担，
-  挂在 `npm run typecheck` 里——两半测试不能同 program（同一 `Context.sessions` 冲突）。
+  挂在 `npm run typecheck` 里——前后端测试不能同 program（同一 `Context.sessions` 冲突）。
 - client bundle 协议（`tsdown.config.ts`）：输出 CJS closure-factory，经
   `window.__ModuleLoader__.load({ id, factory })` 加载；平台模块保持 external，其余依赖内联。
   该协议是**手工复刻** deepseek-harness `packages/client/tsdown.client.ts`——四个耦合点
@@ -254,7 +257,7 @@ npm run build
 
 ```yaml
 # 在 profile 的 cordis.patch.yml 或更高层覆盖（会整体替换该行的 config）
-# HTTP 路由前缀固定为 /plugins/md-notes（client 半硬编码同值，不可配置）
+# HTTP 路由前缀固定为 /plugins/md-notes（前端硬编码同值，不可配置）
 - id: md-notes
   config:
     gitMode: 'off'                # 'off' | 'shared' | 'own'（旧值 'on' 归一化）

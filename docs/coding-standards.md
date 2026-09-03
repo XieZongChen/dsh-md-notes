@@ -23,9 +23,9 @@
 
 ## 1. 目录与模块边界
 
-### 1.1 两半严格分离
+### 1.1 前后端严格分离
 
-- `src/` 是 **host 半**（Node 进程），`src/client/` 是 **client 半**（浏览器），由两个 tsconfig
+- `src/` 是**后端**（Node 进程），`src/client/` 是**前端**（浏览器），由两个 tsconfig
   程序分别编译（`tsconfig.json` exclude `src/client`；`tsconfig.client.json` 只 include `src/client`）。
   **两者不得互相 import**——这是两个 TS program 的硬边界。
 - host 可用的全局（`process`、`node:*`、`fetch` 服务端）不得出现在 client；`window`/`document`/

@@ -26,7 +26,7 @@
 
 - **侧边栏笔记入口** → 全屏笔记管理器：按工作区分组的笔记列表（可折叠）、markdown 编辑/预览、保存、删除（页面内确认）、一键新建。
 - **回答操作栏**（复制按钮旁）→ 选择或新建一篇笔记，把该段对话（用户提问 + 回答）**即时**追加进去——文本直接取自对话本身，无需等待；分段标签跟随界面语言（思考内容不记入，只保留最终回答）。
-- **对话引用笔记（`@`）**：输入 `@` 选择笔记（支持跨工作区），发送时 host 把笔记内容注入模型上下文——模型直接引用，无需提示它读取文件。
+- **对话引用笔记（`@`）**：输入 `@` 选择笔记（支持跨工作区），发送时插件后端把笔记内容注入模型上下文——模型直接引用，无需提示它读取文件。
 - **Git 同步**（可选，URL 驱动）：**共享仓库**模式（一个仓库管所有工作区，按工作区分子目录）或**独立仓库**模式（每工作区：URL + 分支 + 子路径）。推送 = 镜像同步（含删除）；更新 = 拉取 + 三向冲突确认；打开笔记自动拉取；推送被拒可「合并远端并重试」。管理器内每个工作区有 **Git 同步卡片**：显示「已同步 / 未推送 N 处」状态、远端有新提交时提示更新。
 - **笔记写入互斥（写锁）**：同一笔记写入期间跨会话锁定，入口 / 记入弹窗 / 管理器三处状态联动，写入完成自动还原。
 - **设置面板**（dsh 设置 → MD 笔记）：模式、仓库 URL / 分支 / 子路径、自动拉取、提交作者——表单控件与 dsh 原生一致。
@@ -101,20 +101,20 @@ dsh plugin --profile web remove dsh-md-notes
     gitAutoPull: true            # 打开笔记时自动拉取远程
 ```
 
-HTTP API 前缀固定为 `/plugins/md-notes`（浏览器半部硬编码同值，故刻意不做配置项）。
+HTTP API 前缀固定为 `/plugins/md-notes`（前端硬编码同值，故刻意不做配置项）。
 
 | 键 | 默认值 | 含义 |
 |---|---|---|
 | `gitMode` | `'off'` | Git 同步模式：`'off'` 关闭 / `'shared'` 共享仓库 / `'own'` 每工作区独立仓库。 |
 | `gitAutoPull` | `true` | 打开笔记时是否自动拉取远程版本。 |
-| `checkUpdate` | `true` | 允许 host 向 registry.npmjs.org 查询插件新版本；`false` 保持完全离线。 |
+| `checkUpdate` | `true` | 允许后端向 registry.npmjs.org 查询插件新版本；`false` 保持完全离线。 |
 
 插件配置**不含环境变量，也不涉及任何密钥**。
 
 ## 权限与数据（Permissions & data）
 
 - **文件系统**：只读写各工作区 `.dsh-notes` 目录下的笔记（普通 `.md` 文件 + `meta.json` 缓存；笔记深度绑定工作区）；git 操作只触碰 `$DSH_HOME/md-notes-repos/` 下插件管理的 clone。
-- **网络**：仅本机回环 HTTP API（`POST <route>`，浏览器 ↔ 本地 dsh 服务）与同源图标请求。**无外部网络调用、无遥测。**
+- **网络**：本机回环 HTTP API（`POST <route>`，浏览器 ↔ 本地 dsh 服务）与同源图标请求；此外仅有**可选**的 npm 版本检查（`registry.npmjs.org`，`checkUpdate: false` 可完全关闭）。**无遥测、无其他外呼。**
 - **凭据**：不收集、不传输任何凭据。
 
 ## 故障排查（Troubleshooting）
@@ -136,9 +136,9 @@ HTTP API 前缀固定为 `/plugins/md-notes`（浏览器半部硬编码同值，
 
 | 路径 | 内容 |
 |---|---|
-| `src/` | 源码（host 半 + client 半） |
+| `src/` | 源码（Node 后端 + 浏览器前端） |
 | `src/host/` | 笔记领域（`notes.ts`）+ Git（`git.ts`）+ HTTP 层（`http.ts`）+ 上下文注入（`context-inject.ts`）+ 写入互斥（`keyed-lock.ts`） |
-| `src/client/` | 浏览器半：入口（`index.ts`）+ `features/` 下的功能模块（每个功能一个目录；内部再长胖时拆出该功能私有的 `components/` 子组件与 `hooks/` 状态逻辑，`NotesManager/` 已示范，见 `docs/architecture.md`） |
+| `src/client/` | 浏览器前端：入口（`index.ts`）+ `features/` 下的功能模块（每个功能一个目录；内部再长胖时拆出该功能私有的 `components/` 子组件与 `hooks/` 状态逻辑，`NotesManager/` 已示范，见 `docs/architecture.md`） |
 | `src/client/features/locales/` | 中/英 UI 字典（dsh locale 命名空间 `md-notes`） |
 | `assets/` | 插件图标（SVG 源文件 + PNG） |
 | `docs/` | 文档：`usage.md`/`usage.zh.md`（使用）、`features.md`（功能）、`architecture.md`（架构）、`context.md`（@ 引用）、`git.md`（Git 同步）、`state.md` / `write-lock.md`（状态与写锁设计）、`manager-redesign.md`（面板改版）、`compatibility.md` / `compatibility.zh.md`（dsh↔插件版本适配对照表，中英各一版）、`TODO.md` |

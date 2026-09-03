@@ -30,8 +30,8 @@
 
 - 移除从未被使用的 `gitSuggest` API 方法（及其 client 封装）：插件内无任何
   调用方，且它向任意调用者暴露工作区路径。
-- 移除 `route` 配置项。HTTP API 前缀在两半都固定为常量 `/plugins/md-notes`：
-  浏览器半部本就硬编码该值，覆盖 host 侧前缀只会断开 client↔host 链接。
+- 移除 `route` 配置项。HTTP API 前缀在前后端都固定为常量 `/plugins/md-notes`：
+  前端本就硬编码该值，覆盖后端前缀只会断开前后端链接。
   已有配置里的 `route` 键不会导致加载失败（schemastery 放行未知键，值被忽略）。
 
 ### Added（新功能）
@@ -44,7 +44,7 @@
 - 安全：插件 HTTP API 与图标路由接入与 dsh 官方 `/api` 通道相同的信任栅栏
   （`connection.requestRejection`）——无已认证浏览器会话的请求返回 401、不可信
   Host/Origin 返回 403，在任何笔记/Git 操作或设置写入分发之前拒绝（见
-  [architecture §3](docs/architecture.md#3-host-半src)）。无 connection 服务的
+  [architecture §3](docs/architecture.md#3-后端src)）。无 connection 服务的
   profile（如 Electron IPC）行为不变。
 - 安全：`gitStatus` 不再返回原始 git remote URL——展示副本中内嵌凭据
   （`https://user:token@…`）脱敏为 `https://***@…`（设置表单仍编辑原始值）。

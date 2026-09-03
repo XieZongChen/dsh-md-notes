@@ -1,5 +1,5 @@
 /**
- * dsh-md-notes browser half entry: registers the feature's locale namespace,
+ * dsh-md-notes browser frontend entry: registers the feature's locale namespace,
  * then wires the shared store into the three registered slots (sidebar entry,
  * assistant action, overlay host). Uses React.createElement (no JSX) so this
  * file stays a plain `.ts` entry; feature modules live under
@@ -54,7 +54,7 @@ function triggerGuard(phase: InputSnapshot['phase']): 'plain' | 'claimed' | 'fro
 // inputTriggers is deliberately NOT here: it is an OPTIONAL service — without
 // it only the `@` notes source stays disabled (warn + no-op below), while the
 // sidebar entry, manager, picker and settings section keep working. Declaring
-// it in inject would make the whole client half fail to load on dsh builds
+// it in inject would make the whole frontend fail to load on dsh builds
 // without ui-input-trigger.
 export const inject = ['slots', 'locale']
 
