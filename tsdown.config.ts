@@ -3,6 +3,38 @@
  * packages/client/tsdown.client.ts protocol: emits lib/client.js as a
  * CJS closure-factory consumed by window.__ModuleLoader__, with CSS Modules
  * compiled to hashed classes and injected as <style data-plugin-css> tags.
+ *
+ * ─── Protocol coupling points (hand-copied from deepseek-harness; verify
+ * each on a dsh upgrade before rebuilding) ─────────────────────────────────
+ *
+ * 1. CJS closure-factory envelope — banner/footer/intro below. Official
+ *    source: packages/client/tsdown.client.ts (~L566-568). Consumer:
+ *    packages/client/modules/src/client/system.ts — the HTML-installed
+ *    `window.__ModuleLoader__` facade queues until the ClientModuleSystem
+ *    boots, then `load(registration)` → `register()` materializes the
+ *    factory and claims its injected styles. The id MUST equal the plugin's
+ *    client-module id (package name minus any /client suffix).
+ *
+ * 2. Platform externals — every specifier in PLATFORM_MODULES must appear in
+ *    the module table the browser boot provides (rows from dsh.client.inject
+ *    in package.json + the default client externals). An external that the
+ *    table cannot answer fails at materialization. Official source:
+ *    packages/client/tsdown.client.ts (`defaultClientExternals` /
+ *    `resolveExternals`) and packages/client/web/src/boot.ts (row assembly).
+ *
+ * 3. CSS Modules injection — a .module.css import must emit the compiled CSS
+ *    as a `<style data-plugin="dsh-md-notes" data-plugin-css="<tagId>">` tag
+ *    (tagId unique per file) plus the class-name map. Consumer:
+ *    packages/client/modules/src/client/system.ts `claimStyles` — tags
+ *    without data-plugin are claimed wholesale, `data-plugin-css` values are
+ *    the per-file inventory used for HMR style removal on unload. Hash
+ *    pattern `[hash]_[local]` matches the official `dsh-css-modules-inline`
+ *    plugin (tsdown.client.ts ~L508).
+ *
+ * 4. Entry/output contract — lib/client.js (this file's entry maps the tsc
+ *    client-program output lib/client/index.js) is what package.json
+ *    `exports["./client"]` points at and what dsh-client-modules scans;
+ *    moving it breaks the plugin's client half silently.
  */
 import { existsSync, readFileSync } from 'node:fs'
 import { basename, dirname, resolve as resolvePath, sep } from 'node:path'

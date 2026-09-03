@@ -233,6 +233,10 @@ npm run build
   产物 `lib/types/client/index.d.ts` 与 package.json `exports["./client"].types` 对齐。
 - client bundle 协议（`tsdown.config.ts`）：输出 CJS closure-factory，经
   `window.__ModuleLoader__.load({ id, factory })` 加载；平台模块保持 external，其余依赖内联。
+  该协议是**手工复刻** deepseek-harness `packages/client/tsdown.client.ts`——四个耦合点
+  （closure 包络 / 平台 externals 对齐模块表 / CSS Modules 注入的 `data-plugin-css`
+  标签约定 / 产物路径契约）及各自的 harness 源码位置与升级核对清单，见
+  `tsdown.config.ts` 头部「Protocol coupling points」注释；升级 dsh 后逐条核对再重构建。
 
 ## 6. 配置
 
