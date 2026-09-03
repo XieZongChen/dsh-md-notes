@@ -2,12 +2,15 @@
  * dsh-md-notes `@` reference source for the dsh input-trigger pipeline
  * (`ui-input-trigger`). Candidates are notes: by default the session's own
  * workspace; typing `@工作区名/` (ASCII names only) switches to that
- * workspace. A pick inserts a chip whose `ref` is the note's ABSOLUTE path
- * (`<ws>/.dsh-notes/<name>.md`) — workspace + name, unambiguous across
- * workspaces — and the codec serializes each chip at submit time to a
- * localized, readable path reference the model can `read` (fs sandbox reads
- * pass through, so cross-workspace paths work). A missing note at submit
- * time blocks the send with a localized notice (never a silent downgrade).
+ * workspace. A pick inserts a chip whose `ref` is a path RELATIVE to the
+ * session workspace root (same workspace `.dsh-notes/<name>.md`, other
+ * workspaces `../<dir>/.dsh-notes/<name>.md` — resolvable against the
+ * session cwd; an absolute fallback only when the session workspace is
+ * unknown at pick time) — and the codec serializes each chip at submit time
+ * to a localized, readable path reference the model can `read` (fs sandbox
+ * reads pass through, so cross-workspace paths work). A missing note at
+ * submit time blocks the send with a localized notice (never a silent
+ * downgrade).
  *
  * Plain-text `@标题` is decorative only (the lexicon hot roll highlights
  * exact `[\w-]+` matches); real references always go through the chip.
