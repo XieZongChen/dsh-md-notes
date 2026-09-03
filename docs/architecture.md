@@ -26,7 +26,7 @@ DSH 第三方插件（bundle）"MD 笔记管理"的架构设计：架构、目�
 ```
 dsh-md-notes/
 ├── package.json          # dsh.bundle + dsh.client + exports
-├── AGENTS.md             # agent 硬约束速查（两半模型/不变量/验证命令/场景清单）
+├── AGENTS.md             # agent 硬约束速查（后端/前端模型/不变量/验证命令/场景清单）
 ├── CLAUDE.md             # 指向 AGENTS.md
 ├── cordis.patch.yml      # bundle 补丁：插入 md-notes 行
 ├── assets/

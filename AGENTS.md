@@ -5,25 +5,39 @@ Markdown 笔记管理器（增删改查/预览/记入会话/`@` 引用注入）�
 改代码前先读 [docs/architecture.md](docs/architecture.md)；本文是**硬约束速查**，
 与 docs/ 不重复解释原理，只列「违反即坏」的规则和验证命令。
 
-## 两半模型（一切约束的根源）
+## 一个包，两个程序（先建立这个概念）
 
-一个 npm 包，两个 cordis 插件，运行在两个进程里：
+dsh-md-notes 发布为一个 npm 包，但里面装着**两个独立运行的程序**，各干各的活：
 
-- **Host 半** `src/`（Node，`lib/index.js`）：`webServer` HTTP API + 笔记/git 领域逻辑 + 设置命名空间 + 上下文注入。
-- **Client 半** `src/client/`（浏览器，`lib/client.js`）：slot 注册（侧边栏/管理器/记入笔记/设置分区）+ `@` 引用源。
-- 两者只通过 `POST /plugins/md-notes`（`{ method, ...args }`）通信；契约在 `src/contract.ts`。
+- **后端**（源码 `src/`）：跑在 dsh 的 Node 进程里，dsh 启动时被加载。能碰到真实机器——
+  读写笔记文件、执行 git 命令、对外提供 HTTP 接口、在模型请求前注入笔记内容。
+- **前端**（源码 `src/client/`）：跑在 dsh web 的浏览器页面里，打开页面时被加载。
+  全是界面——侧边栏入口、笔记管理面板、记入笔记弹窗、设置分区、`@` 引用菜单。
+
+```
+npm 包 dsh-md-notes
+├── 后端  src/         → dsh 的 Node 进程（lib/index.js）：文件 / Git / HTTP 接口 / 笔记注入
+└── 前端  src/client/  → 浏览器页面（lib/client.js）：全部界面 + @ 引用菜单
+        ↕ 唯一沟通通道：POST /plugins/md-notes（接口形状定义在 src/contract.ts）
+```
+
+浏览器碰不到文件系统和 git，Node 进程画不了界面——功能因此天然劈成两半，
+**只能通过这一个 HTTP 接口说话**。
+
+> 措辞对照：旧文档与代码注释里把它们叫「Host 半 / Client 半」，本文统一说「后端 / 前端」，
+> 同一个意思。目录名、`tsconfig`、`exports["./client"]` 等代码标识沿用 host/client 原名。
 
 ## 硬不变量（AI 改动前自查）
 
-1. **两个 tsc program 不得合并**：host `dsh-session` 与浏览器 `dsh-client-runtime` 对
-   `Context.sessions` 声明冲突。host program exclude `src/client`；client program 只含
-   browser 侧 + `src/contract.ts`。**host 与 client 源码互不 import**（type 也不行）。
-2. **wire 类型单一来源**：跨 host/client 的实体与 API 形状只写在 `src/contract.ts`
+1. **后端与前端是两个 tsc program，不得合并**：后端依赖的 `dsh-session` 与浏览器侧的
+   `dsh-client-runtime` 对 `Context.sessions` 声明冲突。后端 program exclude `src/client`；
+   前端 program 只含 browser 侧 + `src/contract.ts`。**两份源码互不 import**（type 也不行）。
+2. **wire 类型单一来源**：前后端共享的实体与 API 形状只写在 `src/contract.ts`
    （`ApiContract` 一 method 一条）。两侧 import/re-export，禁止在本侧再写一份。
-3. **client `features/api.ts` 保持零运行时 import**（contract 与 TranslateNS 都是
+3. **前端 `features/api.ts` 保持零运行时 import**（contract 与 TranslateNS 都是
    type-only）——这是它能脱离 dsh 运行时被单测的前提。
-4. **HTTP 路由前缀是两半固定常量** `/plugins/md-notes`：host `index.ts` 与 client
-   `api.ts` 各写一处同值，**不做配置项**（client 读不到 host 配置，可配即断链）。
+4. **HTTP 路由前缀是前后端各写一处的固定常量** `/plugins/md-notes`：后端 `src/index.ts`
+   与前端 `features/api.ts` 同值，**不做配置项**（前端读不到后端配置，可配即断链）。
 5. **两条 HTTP 路由必须过 `authorize` 栅栏**（`connection.requestRejection`，401/403
    先于一切分发）。新增路由照抄 `notesApiHandler`/`iconHandler` 的栅栏位置。
 6. **文件系统边界**：任何用户/请求提供的笔记名进 fs 前必经 `sanitizeName`；
@@ -33,16 +47,16 @@ Markdown 笔记管理器（增删改查/预览/记入会话/`@` 引用注入）�
 8. **客户端构建是手工复刻协议**：`tsdown.config.ts` 头部「Protocol coupling points」
    列了 4 个耦合点与 harness 源码位置。**升级 dsh 后先逐条核对再构建**。
 9. **UI 文案只走 i18n**：`features/locales/`（zh 源字典、en 同键映射，类型强制），
-   host 只返回错误码 + 英文 detail；新增错误码须同步 `gitErrorText` + 两份 locale。
+   后端只返回错误码 + 英文 detail；新增错误码须同步 `gitErrorText` + 两份 locale。
 10. **不碰 `lib/`**（构建产物、gitignored）；**不碰 harness checkout**
     （`../deepseek-harness`，只读参照）；不用 `--force` push。
 
 ## 验证命令（每个 commit 前跑）
 
 ```sh
-npm run typecheck   # 4 个 tsc program：host build / client build / 两个 noEmit 测试 program
+npm run typecheck   # 4 个 tsc program：后端 build / 前端 build / 两个 noEmit 测试 program
 npm test            # vitest，扫 src/**/*.test.ts（Node 环境，无需浏览器）
-npm run build       # tsc×2 + tsdown（改了 client 侧才需要）
+npm run build       # tsc×2 + tsdown（改了前端才需要）
 ```
 
 - Node ≥ 22.19（与 harness 支持矩阵一致；老 Node 会以 ESM/语法错误崩）。
@@ -52,10 +66,10 @@ npm run build       # tsc×2 + tsdown（改了 client 侧才需要）
 ## 按场景的修改清单
 
 - **改/加 API method**：`contract.ts` 的 `ApiContract` → host `http.ts` case（+必要时
-  `NotesApiDeps`）→ client `api.ts`（泛型自动生效）→ `docs/architecture.md` §3 端点表 →
+  `NotesApiDeps`）→ 前端 `api.ts`（泛型自动生效）→ `docs/architecture.md` §3 端点表 →
   `http.test.ts` 分发用例。
 - **新增 UI 文案**：`locales/zh.ts` + `en.ts` 同键（en 的类型由 zh 键联合强制），组件里 `t(key)`。
-- **新增 host 错误码**：host 侧返回 `{ ok:false, code, error }` → `gitErrorText` 加 case →
+- **新增后端错误码**：后端返回 `{ ok:false, code, error }` → 前端 `gitErrorText` 加 case →
   两份 locale 加文案。
 - **新增 slot / 扩展点**：先查 harness 对应包的 slot 声明（`*.client.ts` 的 SlotMap），
   注册照抄现有 `ctx.slots.inject` 模式；拿不到的扩展点进 `docs/TODO.md` 平台问题区。
@@ -74,7 +88,7 @@ npm run build       # tsc×2 + tsdown（改了 client 侧才需要）
 
 | 文档 | 内容 |
 |---|---|
-| [architecture.md](docs/architecture.md) | 两半架构、目录树、端点表、配置、开发环境、bundle 协议 |
+| [architecture.md](docs/architecture.md) | 架构（后端/前端）、目录树、端点表、配置、开发环境、bundle 协议 |
 | [features.md](docs/features.md) / [usage(.zh).md](docs/usage.zh.md) | 功能设计与使用指南（CHANGELOG 链接目标） |
 | [context.md](docs/context.md) | `@` 引用与注入链路设计（含 pre-step vs agent.inject 选型依据） |
 | [git.md](docs/git.md) | Git 同步模型（v4：URL 驱动 clone、镜像同步、三路合并） |
