@@ -51,7 +51,12 @@ function triggerGuard(phase: InputSnapshot['phase']): 'plain' | 'claimed' | 'fro
   }
 }
 
-export const inject = ['slots', 'locale', 'inputTriggers']
+// inputTriggers is deliberately NOT here: it is an OPTIONAL service — without
+// it only the `@` notes source stays disabled (warn + no-op below), while the
+// sidebar entry, manager, picker and settings section keep working. Declaring
+// it in inject would make the whole client half fail to load on dsh builds
+// without ui-input-trigger.
+export const inject = ['slots', 'locale']
 
 /** React hook: subscribe to the store via uSES, re-render on snapshot change. */
 function useStore(store: NotesUiStore): NotesUiState {
@@ -154,7 +159,13 @@ export function apply(ctx: ClientContext): void {
     })
   })
   ctx.effect(() => {
-    const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract
+    const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract | undefined
+    if (inputTriggers === undefined) {
+      // Graceful degradation (docs/architecture.md §4): only the `@` notes
+      // source is lost; every other slot keeps working.
+      console.warn('[dsh-md-notes] inputTriggers service unavailable — the @ notes reference source stays disabled')
+      return () => {}
+    }
     const unregister = inputTriggers.registerSource(notesSource.source)
     return () => {
       unregister()
