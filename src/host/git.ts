@@ -225,7 +225,7 @@ async function writeWorkspaceMapping(repoDir: string, mapping: WorkspaceFolderMa
  * exactly the legacy name). `create` controls whether a missing entry is
  * written back — push writes it, status/pull only read.
  */
-async function resolveSharedFolder(repo: ResolvedRepo, create: boolean): Promise<string> {
+export async function resolveSharedFolder(repo: ResolvedRepo, create: boolean): Promise<string> {
   const workspaceId = repo.workspaceId
   if (repo.kind !== 'shared' || workspaceId === undefined) return repo.subdir
   const mapping = await readWorkspaceMapping(repo.repoDir)
@@ -562,7 +562,7 @@ async function readNoteMap(dir: string): Promise<Map<string, string>> {
  * note the local side edited while the remote stayed at `base` is NOT a
  * conflict.
  */
-function pushConflicts(
+export function pushConflicts(
   base: Map<string, string>, local: Map<string, string>, remote: Map<string, string>,
 ): string[] {
   const names = new Set([...base.keys(), ...local.keys(), ...remote.keys()])
@@ -583,7 +583,7 @@ function pushConflicts(
  * did not (or is absent); a local-only edit is preserved silently; a note both
  * sides changed (a true conflict) is preserved and reported.
  */
-async function threeWaySync(
+export async function threeWaySync(
   srcDir: string, destDir: string,
   base: Map<string, string>, local: Map<string, string>, remote: Map<string, string>,
 ): Promise<{ copied: number; conflicts: string[] }> {
