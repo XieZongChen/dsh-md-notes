@@ -136,3 +136,26 @@ describe('notes file ops', () => {
     expect(listed.notes.some((n) => n.name === '..-..-escape.md')).toBe(true)
   })
 })
+
+describe('listNotes meta rebuild (fresh clone, no meta.json)', () => {
+  it('rebuilds titles from H1 headings and updatedAt from mtimes, then persists meta.json', async () => {
+    const dir = await tempDir()
+    const { writeFile } = await import('node:fs/promises')
+    await writeFile(join(dir, 'a.md'), '# 标题甲\n\n正文', 'utf8')
+    await writeFile(join(dir, 'b.md'), '没有一级标题的笔记', 'utf8')
+
+    const first = await listNotes(dir)
+    expect(first.ok).toBe(true)
+    const titles = Object.fromEntries(first.notes.map((n) => [n.name, n.title]))
+    expect(titles['a.md']).toBe('标题甲') // heading wins
+    expect(titles['b.md']).toBe('b') // filename fallback
+    expect(first.notes.every((n) => n.updatedAt > 0)).toBe(true) // mtime backfill
+
+    // The rebuilt cache is persisted so the second list does not re-read files.
+    const meta = JSON.parse(await readFile(join(dir, 'meta.json'), 'utf8')) as Record<string, { title: string }>
+    expect(meta['a.md']).toEqual({ title: '标题甲', updatedAt: expect.any(Number) })
+
+    const second = await listNotes(dir)
+    expect(second.notes).toEqual(first.notes)
+  })
+})

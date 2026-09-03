@@ -39,3 +39,17 @@ describe('mergeSettings', () => {
     })
   })
 })
+
+describe('mergeSettings — gitCentral.branch empty-string semantics (§12 #17)', () => {
+  it('an empty L3 branch falls back to the L2 branch (empty = unset, not "clear")', () => {
+    const s = mergeSettings({ gitCentralBranch: 'main' }, { gitCentral: { remote: 'https://x', branch: '' } })
+    expect(s.gitCentral?.branch).toBe('main')
+  })
+
+  it('a whitespace-only L3 branch falls back too; both unset leaves undefined', () => {
+    const s = mergeSettings({ gitCentralBranch: 'dev' }, { gitCentral: { remote: 'https://x', branch: '   ' } })
+    expect(s.gitCentral?.branch).toBe('dev')
+    const none = mergeSettings({}, { gitCentral: { remote: 'https://x', branch: '' } })
+    expect(none.gitCentral?.branch).toBeUndefined()
+  })
+})

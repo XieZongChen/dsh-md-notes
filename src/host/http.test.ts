@@ -7,11 +7,26 @@
  */
 
 import { Readable } from 'node:stream'
-import { describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { iconHandler, notesApiHandler, redactRemote, type NotesApiDeps } from './http.ts'
 import { createKeyedLock } from './keyed-lock.ts'
 import type { ResolvedRepo } from './git.ts'
+
+/** Per-test scratch dirs so no domain call ever touches the real /tmp/ws paths. */
+const scratchDirs: string[] = []
+function scratchDir(): string {
+  const dir = mkdtempSync(join(tmpdir(), 'md-notes-http-'))
+  scratchDirs.push(dir)
+  return dir
+}
+afterEach(() => {
+  for (const dir of scratchDirs) rmSync(dir, { recursive: true, force: true })
+  scratchDirs.length = 0
+})
 
 /** A POST request carrying one JSON body (strings pass through raw — malformed-JSON cases). */
 function makeReq(method: string, body?: unknown, headers?: Record<string, string>): IncomingMessage {
@@ -71,8 +86,9 @@ const REPO: ResolvedRepo = {
 
 /** Deps with every domain call spied; tests override what they exercise. */
 function makeDeps(overrides: Partial<NotesApiDeps> = {}): NotesApiDeps {
+  const notesDir = join(scratchDir(), '.dsh-notes')
   return {
-    resolveDir: () => '/tmp/ws/.dsh-notes',
+    resolveDir: () => notesDir,
     resolveRepo: () => REPO,
     listWorkspaces: () => [],
     workspaceIdForSession: () => undefined,
@@ -91,6 +107,11 @@ function makeDeps(overrides: Partial<NotesApiDeps> = {}): NotesApiDeps {
     lock: createKeyedLock(),
     ...overrides,
   }
+}
+
+/** The default deps' notes dir (gitPush/gitPull passthrough assertions compare it). */
+function defaultNotesDir(deps: NotesApiDeps): string {
+  return deps.resolveDir() ?? ''
 }
 
 describe('notesApiHandler — trust fence', () => {
@@ -277,5 +298,56 @@ describe('iconHandler', () => {
   it('answers 404 for a missing icon (no fence)', async () => {
     const { status } = await call(iconHandler('/nonexistent/icon.svg'), 'GET')
     expect(status).toBe(404)
+  })
+})
+
+describe('notesApiHandler — dispatch details', () => {
+  it('list with a session resolving a workspace shows ONLY that workspace', async () => {
+    const entry = (id: string) => ({
+      workspaceId: id, name: id, notesDir: join(scratchDir(), '.dsh-notes'),
+      notes: [{ name: `${id}.md`, title: id, updatedAt: 1 }],
+    })
+    const deps = makeDeps({
+      listWorkspaces: () => [entry('ws-1'), entry('ws-2')],
+      workspaceIdForSession: (sessionId: string | undefined) => sessionId === 's1' ? 'ws-1' : undefined,
+    })
+    const { json } = await call(notesApiHandler(deps), 'POST', { method: 'list', sessionId: 's1' })
+    const workspaces = (json.workspaces as Array<{ workspaceId: string }>)
+    expect(workspaces.map((w) => w.workspaceId)).toEqual(['ws-1'])
+  })
+
+  it('gitPush builds a default commit message when none is given', async () => {
+    const deps = makeDeps()
+    const push = deps.git.push as ReturnType<typeof vi.fn>
+    await call(notesApiHandler(deps), 'POST', { method: 'gitPush', workspaceId: 'ws-1', message: '   ' })
+    const message = push.mock.calls[0]?.[2] as string
+    expect(typeof message).toBe('string')
+    expect(message).toMatch(/^Notes update /u)
+  })
+
+  it('gitPull passes force/manual through to the git api', async () => {
+    const deps = makeDeps()
+    const pull = deps.git.pull as ReturnType<typeof vi.fn>
+    const notesDir = defaultNotesDir(deps)
+    await call(notesApiHandler(deps), 'POST', { method: 'gitPull', workspaceId: 'ws-1', force: true, manual: true })
+    expect(pull).toHaveBeenCalledWith(REPO, notesDir, true, true)
+    await call(notesApiHandler(deps), 'POST', { method: 'gitPull', workspaceId: 'ws-1' })
+    expect(pull).toHaveBeenLastCalledWith(REPO, notesDir, false, false)
+  })
+
+  it('appendConversation locks on the SANITIZED name (traversal input)', async () => {
+    let release: (() => void) | undefined
+    const lock = createKeyedLock()
+    // sanitizeName('../../evil.md') → '..-..-evil.md': the lock key must equal
+    // the sanitized target file, never the raw traversal input.
+    const held = lock.with('ws-1/..-..-evil.md', () => new Promise<void>((r) => { release = r }))
+    const deps = makeDeps({ lock })
+    const { json } = await call(notesApiHandler(deps), 'POST', {
+      method: 'appendConversation', workspaceId: 'ws-1', noteName: '../../evil.md',
+      questionText: 'q', answerText: 'a',
+    })
+    expect(json.code).toBe('note-writing')
+    release?.()
+    await held
   })
 })
