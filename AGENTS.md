@@ -24,8 +24,8 @@ npm 包 dsh-md-notes
 浏览器碰不到文件系统和 git，Node 进程画不了界面——功能因此天然劈成两半，
 **只能通过这一个 HTTP 接口说话**。
 
-> 措辞对照：代码标识（目录名、`tsconfig`、`exports["./client"]` 等）沿用 host/client 原名，
-> 个别历史注释里的「Host 半 / Client 半」也是这两个东西，同一个意思。
+> 措辞对照：代码与 harness 文档里的 host / client 即本文的「后端 / 前端」
+> （目录名、`tsconfig`、`exports["./client"]` 等标识沿用原名）。
 
 ## 硬不变量（AI 改动前自查）
 

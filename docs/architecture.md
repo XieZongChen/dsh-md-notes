@@ -5,8 +5,7 @@ DSH 第三方插件（bundle）"MD 笔记管理"的架构设计：架构、目�
 
 ## 1. 架构
 
-插件是一个可安装的 npm bundle 包，里面装着**两个程序**（下文统一称「后端 / 前端」；
-旧称 Host 半 / Client 半，代码标识沿用 host/client 原名）：
+插件是一个可安装的 npm bundle 包，里面装着**两个程序**——后端与前端：
 
 - **后端**（`src/`，构建产物 `lib/index.js`）：跑在 dsh 的 Node 进程里。函数插件
   （`name` / `inject` / `Config` / `apply`），
