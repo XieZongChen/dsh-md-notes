@@ -26,6 +26,8 @@ DSH 第三方插件（bundle）"MD 笔记管理"的架构设计：架构、目�
 ```
 dsh-md-notes/
 ├── package.json          # dsh.bundle + dsh.client + exports
+├── AGENTS.md             # agent 硬约束速查（两半模型/不变量/验证命令/场景清单）
+├── CLAUDE.md             # 指向 AGENTS.md
 ├── cordis.patch.yml      # bundle 补丁：插入 md-notes 行
 ├── assets/
 │   └── dsh-md-notes.svg  # 插件图标（唯一事实来源，host 直接 serve）
@@ -51,9 +53,10 @@ dsh-md-notes/
     ├── contract.ts       # host/client 共享 wire 契约（纯类型：实体 + 各 method 请求/响应；两个 tsc program 各自编译，见 §5）
     ├── host/
     │   ├── notes.ts      # 笔记领域逻辑（目录/元数据/各操作方法）
-    │   ├── git.ts        # Git 领域逻辑（runGit/仓库解析/同步/冲突检测/隔离）
+    │   ├── git.ts        # Git 领域逻辑（runGit/仓库解析/同步/冲突检测/隔离 + FetchDedup）
     │   ├── keyed-lock.ts # 通用键控并发：KeyedLock（笔记写互斥）+ KeyedMutex（git 按 repo 串行）
     │   ├── settings.ts   # L3 settings 命名空间（schema + mergeSettings）
+    │   ├── update.ts     # npm 版本检测（compareVersions + createUpdateChecker，I/O 全注入）
     │   ├── context-inject.ts # agent/pre-step 笔记内容注入（模型请求前折叠笔记内容）
     │   └── http.ts       # HTTP 工具 + 路由 handler 组装（notes + git 分发）
     └── client/

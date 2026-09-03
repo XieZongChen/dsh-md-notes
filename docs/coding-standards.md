@@ -253,14 +253,22 @@
 ## 8. 测试
 
 - ✅ **vitest 已引入**（`npm test` / `test:watch`，`vitest.config.ts`，Node 环境、扫
-  `src/**/*.test.ts`）。`npm test` 全绿作为合并前提（当前 8 文件 89 例）。
+  `src/**/*.test.ts`）。`npm test` 全绿作为合并前提（当前 14 文件 161 例）。
 - **测纯领域函数**（当前已覆盖）：`note-links`（解析/预处理/路径）、`notes`（sanitize/titleOf +
-  mkdtemp 读写 + 路径穿越回归）、`settings`（mergeSettings）、`keyed-lock`（并发语义）、
-  `note-text`（文本提取）、`git`（仓库解析 + 同步/冲突纯函数）、`sanitize`。
+  mkdtemp 读写 + 路径穿越回归 + meta 重建）、`settings`（mergeSettings + #17 空分支语义）、
+  `keyed-lock`（并发语义）、`note-text`（文本提取）、`git`（仓库解析 + 同步/冲突纯函数 +
+  threeWaySync/pushConflicts/resolveSharedFolder/cloneDirFor）、`sanitize`、
+  `update`（compareVersions + createUpdateChecker 全 I/O 注入）。
 - **测 HTTP 装配层**（`http.test.ts`，mock req/res + 依赖注入）：信任栅栏（401/403 先于分发
   与 405）、method 路由（非 POST 405 / 畸形 body 不崩 / 未知 method）、会话域 list
-  （无工作区会话看不到任何工作区）、写锁拒绝（`note-writing`）、`gitStatus` remote
-  凭据脱敏、`gitConfig` 白名单（未知键丢弃、转发精确性）、icon 路由。
+  （正反向过滤）、写锁拒绝（`note-writing`，锁键=消毒后名字）、`gitStatus` remote
+  凭据脱敏、`gitConfig` 白名单（未知键丢弃、转发精确性）、gitPush/gitPull 参数透传、
+  icon 路由。mock 的 notesDir 必须用 mkdtemp 临时目录（假路径会真实写盘）。
+- **测注入与 client 纯模块**：`context-inject.test.ts`（fake ctx.on 捕获 handler +
+  mkdtemp 真笔记；`createUserMessage` 用 vi.mock 桩——真实 lib 有未链接传递依赖）、
+  `api.test.ts`（stubGlobal fetch：非 2xx 结构化错误体/HTML 回退/网络异常）、
+  `busy.test.ts`（引用计数，手写 fake store）、`ContextSource/paths|resolve.test.ts`
+  （纯路径函数与三分支 ref 解析）。
 - 文件操作用 `fs.mkdtemp` 跑真实读写；git 逻辑后续可用临时仓库（`git init` + 本地 remote）
   做集成测试。
 

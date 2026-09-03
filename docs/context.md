@@ -229,6 +229,14 @@
 - 引用失效：文件已删除则跳过注入，用户消息里的路径行仍在（模型可尝试 read 或说明缺失）。
 - 内容边界：只读取 `.dsh-notes` 目录内的文件。
 
+**为什么是 `pre-step` 折叠而不是 `agent.inject()`（选型依据，勿"优化"掉）**：dsh 还提供
+`agent.inject(message)`——把注入上下文**排入下一个 pre-step**。它的文档明言「may miss a
+request whose pre-step already claimed its batch」：引用发生在用户消息里，笔记内容必须与
+该消息**同批**进入模型请求；`inject()` 排队语义下，正在 claim 的这批消息赶不上，引用
+会失效一个 step。`pre-step` 是 waterfall 且允许替换进入 step 的 messages
+（`packages/core/agent/src/runtime-types.ts`），折叠恰好满足「同批生效」。这两条都
+依据 harness 源码，升级 dsh 时如事件契约变化需重新核对。
+
 ## 4. 知识库式自动检索（超出 dsh 原生，可选阶段）
 
 - **现状**：dsh 无知识库/RAG 机制；引用是用户主动选择，非自动检索。
