@@ -1,11 +1,15 @@
 # TODO（功能规划）
 
-> 未来功能规划清单，按优先级排序。每项实现后请移入 [CHANGELOG.md](../CHANGELOG.md)
-> （只记用户可见的功能性改动）。
+> 插件的规划与平台问题追踪：§0 是 dsh 开放能力的历史盘点，其后是**平台问题清单**（等 dsh 开放），
+> §1–§4 是功能规划（按主题分组，组内标优先级 高/中/低）。
+> 状态标记：✅ 已完成 · 🚧 部分落地 · ⏸ 暂缓 · 未标记即待做。
+> **完全完结**的条目：实现后移入 [CHANGELOG.md](../CHANGELOG.md)（只记用户可见的功能性改动），
+> 并从本文删除；**部分落地**的条目保留，标注已完成部分与剩余工作。
 
-## dsh 0.1.2-alpha.1 开放能力盘点（2026-08-27，供体验优化选用）
+## 0. dsh 开放能力盘点（历史快照：2026-08-27，迁移 0.1.2-alpha.1 时）
 
-> 迁移时顺带盘点 alpha.1 对外放出、可优化插件体验的能力。
+> 迁移时顺带盘点当时对外放出、可优化插件体验的能力。此后 dsh 迭代到 alpha.5，本节仅作
+> 历史记录与教训留存；新的能力缺口记在下面「平台问题」一节。
 
 **可用（推荐用）**：
 
@@ -13,47 +17,53 @@
   命中后把**行内代码 token（反引号）**渲染成可点击链接（`open()`/`label`/`title`）。→ 解决
   §3「3.3 笔记互链」里「MarkdownText 不接受自定义 mdast 节点渲染器」的根因。⚠️ 仍只对
   反引号 token 生效，`@笔记名`/`[[…]]` 语法需先预处理成反引号。
-- **`chatFileMentions` 服务**（ui-chat 声明的 ctx 可选服务）：`ctx.provide('chatFileMentions',
-  { forClosing })` 让**对话气泡**里的行内代码 token 解析成链接。⚠️ **不可用**（2026-08 实测）：
-  该服务是 `ui-deliverables` 独占的单例服务，第三方插件 `ctx.provide` 会触发 cordis
-  「service has been registered」冲突、导致插件加载失败（已回退 commit `098fc05`）。
-  对话内笔记引用可点需另寻扩展点（如上游开放多 provider 或用户消息渲染扩展点）。
 - **`InputTriggerCandidateIcon` 语义化**：收紧为 `'file' | 'folder' | 'session'`，dsh 渲染
-  真实字形（替代 emoji）。✅ 本次迁移已适配。
+  真实字形（替代 emoji）。✅ 迁移时已适配。
 - **新 slot（可选入口）**：`conversation.chat.node`（按 `ChatNodeKind` 自定义聊天节点）、
   `conversation.message.images`（图片渲染，§3「3.6 图片」）、`conversation.composer.dock` /
   `conversation.input.left/right/dock`（输入区扩展）、`conversation.session.header.utilities`
   （会话头部工具）、`settings.action`/`settings.header`（设置区动作）、`tool.call.toolview`
   （工具卡片）。
 
-**仍未开放（继续等或降级）**：见下节「已知平台问题」。
+**教训留存**：
+
+- **`chatFileMentions` 服务不可用**（2026-08 实测）：该服务是 `ui-deliverables` 独占的单例，
+  第三方插件 `ctx.provide('chatFileMentions', …)` 会触发 cordis「service has been registered」
+  冲突、导致插件加载失败（已回退 commit `098fc05`）。对话内笔记引用可点需另寻扩展点
+  （上游开放多 provider 或用户消息渲染扩展点）。
+- **动态样式的合规口径**（issue #2 兜底之后确立）：`[data-slot]` 锚点是 harness 官方给动态
+  样式预留的接缝（ui-renderer scoped-slots.tsx 注释明示），**允许且只允许**经锚点定位注入
+  样式（示范：`client/index.ts` 的 sidebar-footer 规则）；不碰 css-modules 哈希类名、不写
+  任何祖先 inline 样式（历史反例见 [issue #1](https://github.com/XieZongChen/dsh-md-notes/issues/1)）。
 
 ## 已知平台问题 / 未开放能力（待 dsh）
 
-- **sidebar footer 入口无法独占一行（插件侧已兜底，根治待上游）**：dsh 的 `.footerActions`
-  （`sidebar.footer.action` 容器，`packages/client/ui-sidebar/src/client/SidebarRoot.module.css`）
-  是 `display: flex`（默认 nowrap，横排）；而 dsh 默认 web bundle 自带 `ui-cordis` 入口与
-  md-notes 入口都用 `width:100%` 想独占一行，两个 `width:100%` 入口在 nowrap 里互相挤压/溢出
-  （用户侧表现为 [issue #2](https://github.com/XieZongChen/dsh-md-notes/issues/2)）。
-  **插件侧兜底已落地**：`client/index.ts` 注入一条基于官方 `[data-slot]` 锚点的规则
-  `div:has(> [data-slot='sidebar.footer.action']) { flex-direction: column }`（单入口视觉
-  无变化、多入口各占一行、`:has()` 不支持时静默退回现状；与 issue #1 的祖先 inline 改写
-  完全不同类，详见该处注释）。**根治**仍需 dsh 把 `.footerActions` 改为
-  `flex-direction: column`（或 `flex-wrap: wrap`）——待向 dsh 提 issue/PR，上游落地后删除
-  插件侧兜底规则。
-- **设置面板「打开并跳到某 section」无客户端导航 API**：`openSettingsDocument` 是 settings
-  文档的 Remote（host→client 拉配置），非「打开面板到某分区」。插件 `openDshSettings` 目前
-  靠 `querySelector` 模拟两次点击跳「MD 笔记」分区（脆弱，耦合 dsh DOM）——待 dsh 开放
-  设置导航/跳转 API 后替换。
+格式：**问题** → 现状（含插件侧缓解）→ 根治条件。均需 dsh 上游开放，插件侧只能缓解或等待。
+
+- **sidebar footer 多入口挤压**：
+  - 问题：dsh 的 `.footerActions`（`sidebar.footer.action` 容器，
+    `packages/client/ui-sidebar/src/client/SidebarRoot.module.css`）是 `display: flex` row+nowrap，
+    而默认 web bundle 自带 `ui-cordis` 入口与本插件入口都是 `width:100%; flex:none`——
+    两个不可压缩的全宽子项互相挤压/溢出（[issue #2](https://github.com/XieZongChen/dsh-md-notes/issues/2)）。
+  - 现状（插件侧已兜底）：`client/index.ts` 注入
+    `div:has(> [data-slot='sidebar.footer.action']) { flex-direction: column }`——单入口视觉
+    无变化、多入口各占一行、`:has()` 不支持时静默退回现状。
+  - 根治：dsh 把 `.footerActions` 改为 `flex-direction: column`（或 `flex-wrap: wrap`）——
+    待向 dsh 提 issue/PR；**上游落地后删除插件侧兜底规则**。
+- **设置面板「打开并跳到某 section」无导航 API**：`openSettingsDocument` 是 settings 文档的
+  Remote（host→client 拉配置），非「打开面板到某分区」。插件 `openDshSettings` 目前靠
+  `querySelector` 模拟两次点击跳「MD 笔记」分区（脆弱，耦合 dsh DOM）——待 dsh 开放设置
+  导航/跳转 API 后替换。
 - **插件级快捷键注册无公开 API**：composer 的 keymap 是 `ui-conversation` 内部实现。§3「3.5
   编辑体验」与 §4「4.2 保存快捷键」的 Cmd/Ctrl+S 只能插件内自监听 `keydown`（需避免与 dsh
   冲突），待 dsh 开放快捷键注册扩展点。
-- **@ 引用 chip 尺寸/结构不可定制**：chip 为 4em 硬编码（`DshChipCell` 字体）；`conversation.chat.node`
+- **@ 引用 chip 尺寸/结构不可定制**：chip 为 4em 硬编码（`DshChipCell` 字体），且 chip DOM
+  无 `[data-slot]` 锚点（非 slot 渲染点），合规注入路径也不可用；`conversation.chat.node`
   是节点级扩展点、非 chip 级。更宽的 chip 标签区需 dsh 开放 chip 尺寸/渲染扩展点。
 
 ## 1. 笔记引用进对话的细化（@ 引用已实现）
 
-### 1.1 引用摘要（暂缓）
+### 1.1 引用摘要 ⏸
 
 - 在注入时只放「标题 + 前 N 字符摘要」（而不是全文），模型需要细节时再按路径 `read` 全文，
   减少注入内容的上下文占用。
@@ -77,19 +87,18 @@
 
 1. **输入框 chip**：
    - 跨工作区引用的 chip 能看出工作区来源（如标签带 `工作区·` 前缀，或 hover tooltip 显示完整路径）；
-   - 截断上限按 chip 实际像素宽自适应（当前 4 字符对中英混排偏保守）。
-   - 受限点：chip DOM 为 dsh 硬编码（`InputBar`），尺寸 4em 固定；曾用 `DshChipCell` 字体覆盖
-     放大（6em/10em），按平台「不注入核心样式」规范已移除——后续若要更大标签区，需平台开放
-     chip 尺寸或渲染扩展点。
+   - 截断上限按 chip 实际像素宽自适应（当前 4 字符对中英混排偏保守）；
    - **菜单内全工作区列选**：带空格的工作区名无法用文本触发（dsh 触发 token 遇空白截断），
-     改进方向——在候选菜单里提供「全工作区」浏览/列选入口（不依赖文本触发词）。
-3. **注入上下文行**：
+     在候选菜单里提供「全工作区」浏览/列选入口（不依赖文本触发词）。
+   - 受限点：chip 尺寸 4em 固定、无锚点不可合规注入（见上面平台问题最后一条），曾用
+     `DshChipCell` 字体覆盖放大（6em/10em）已按规范移除——更大标签区需平台开放 chip 扩展点。
+2. **注入上下文行**：
    - 来源标签显示**笔记标题**而非 `md-notes`（受 `contextProvenance` 的 kind 映射约束，
      需在 source 里携带标题字段或选用 dsh 已有 form/provenance 通道）；
-   - 行内摘要（标题 + 前 N 字）与更贴合的图标/配色（当前走通用 `OpaqueBody`）。
-   - **手动删除持久化**：注入的笔记内容会一直留在会话历史里（直到 compaction）。
-     在注入上下文行上加「删除」按钮：host 新增 API（如 `contextRemove(sessionId, path)`），
-     按 `source.kind === 'md-notes'` + `path` 定位该消息，用 surface `{ op: 'replace', start, end }`
+   - 行内摘要（标题 + 前 N 字）与更贴合的图标/配色（当前走通用 `OpaqueBody`）；
+   - **手动删除持久化**：注入的笔记内容会一直留在会话历史里（直到 compaction）。在注入
+     上下文行上加「删除」按钮：host 新增 API（如 `contextRemove(sessionId, path)`），按
+     `source.kind === 'md-notes'` + `path` 定位该消息，用 surface `{ op: 'replace', start, end }`
      把它从模型可见历史中移除（compaction 同款机制）；只删注入内容、不动用户自己的消息；
      删除后不会复活（pre-step 只扫描新提交消息找引用）。
 
@@ -146,7 +155,7 @@
   （需自建轻量标题提取，与 MarkdownText 输出并行）。
   验收：长笔记可一键跳到任意标题。
 
-- **3.3 笔记互链 + 反链**（中）。**互链部分 ✅ 已实现（2026-08，commit `116aec4`+`196ddc8`）**：
+- **3.3 笔记互链 + 反链**（中）。🚧 **互链已实现（2026-08，commit `116aec4`+`196ddc8`）**：
   预览里 `` `笔记名` ``（反引号）与 `[[笔记名]]`（wiki，代码围栏外预处理成反引号）两种拼写
   都会渲染成可点链接，点击经 `open()` 跳转（含跨工作区切换）。解析按「标题 / 文件名（去
   `.md`、大小写不敏感）」匹配，未命中 token 保持惰性（`[[…]]` 保留原样、反引号呈普通代码）。
@@ -183,8 +192,8 @@
 
 **安全 / 平台约束**：搜索、反链走 host 只读遍历，不碰笔记外文件；互链 / 反链复用既有
 name 解析与 @ 引用逻辑；新 UI 文案进 `md-notes` 字典（中英）；渲染安全由 MarkdownText
-保证（不引入原始 HTML 透传）；不注入核心样式——依赖注入样式的增强（如自定义标题锚点）
-受平台约束，标注「探索扩展点，受限则降级」。
+保证（不引入原始 HTML 透传）；动态样式只走官方 `[data-slot]` 锚点（口径见 §0「教训留存」），
+无锚点的增强（如自定义标题锚点）标注「探索扩展点，受限则降级」。
 
 **验收标准**：大笔记量下可秒级搜索定位；预览可按目录跳转；互链可点击直达、反链准确；
 星标 / 最近让常用笔记一步到达；新功能文案双语一致。
@@ -195,7 +204,7 @@ name 解析与 @ 引用逻辑；新 UI 文案进 `md-notes` 字典（中英）�
 
 **待做**（按优先级）：
 
-- **4.1 编辑器脏状态提醒**（中）：✅ 部分落地——未保存时编辑器工具栏显示「未保存」pill
+- **4.1 编辑器脏状态提醒**（中）：🚧 部分落地——未保存时编辑器工具栏显示「未保存」pill
   （0.7.0）。剩余：切换笔记 / 关闭管理器前提示（或自动保存）——现状切换笔记直接丢弃未保存内容。
 - **4.2 保存快捷键**（中）：Cmd/Ctrl+S 保存当前笔记（探索 dsh 快捷键注册扩展点；无则插件内监听）。
 - （可按需扩展：保存成功定位、操作 loading 统一、多标签编辑等。）
