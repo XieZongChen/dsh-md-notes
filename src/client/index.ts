@@ -129,6 +129,43 @@ export function apply(ctx: ClientContext): void {
     return () => { tag.remove() }
   }, 'dsh-md-notes: context chip stylesheet')
 
+  // Sidebar footer stacking (issue #2): dsh's `.footerActions` (the
+  // sidebar.footer.action container, packages/client/ui-sidebar
+  // SidebarRoot.module.css) is `display: flex` row + nowrap, while every
+  // registered entry — the default-bundled ui-cordis row AND this plugin's
+  // notes row — is `width: 100%; flex: none`. Two full-width non-shrinking
+  // children in one nowrap row squeeze/overflow each other. The root fix is
+  // upstream (column or wrap); until it lands, this rule stacks the
+  // container. DELETE this effect once upstream ships the fix.
+  //
+  // Scoping/safety notes (do not "simplify" into a hashed-class match):
+  // - `[data-slot]` anchors are an official harness contract — "every slot
+  //   render site exposes a stable [data-slot] wrapper — the addressable seam
+  //   dynamic styles target" (ui-renderer scoped-slots.tsx). No css-modules
+  //   hashed class names are involved, so there is no substring over-match.
+  // - The `>` direct-child combinator pins the match to exactly ONE element:
+  //   the anchor's parent (the footerActions flex box). Structurally it can
+  //   never climb to SidebarRoot or the session list.
+  // - Unlike the historical issue #1 workaround (JS walking ancestors writing
+  //   inline flex-wrap onto foreign nodes, widening the whole sidebar): this
+  //   is one declarative rule in our own effect-owned tag, sets ONLY
+  //   flex-direction (column over full-width rows renders identically for a
+  //   single entry), touches flex-wrap nowhere, and is removed on
+  //   unload/HMR with zero residue.
+  // - Failure modes are inert: browsers without :has(), or an upstream
+  //   column fix, make the rule a no-op back to today's layout; another
+  //   plugin shipping the same rule is idempotent, and a display-level
+  //   override from another plugin wins silently (flex-direction is a dead
+  //   property outside a flex container).
+  ctx.effect(() => {
+    const tag = document.createElement('style')
+    tag.dataset.plugin = 'dsh-md-notes'
+    tag.dataset.pluginCss = 'dsh-md-notes/sidebar-footer'
+    tag.textContent = "div:has(> [data-slot='sidebar.footer.action']) { flex-direction: column; }"
+    document.head.appendChild(tag)
+    return () => { tag.remove() }
+  }, 'dsh-md-notes: sidebar footer stack stylesheet')
+
   // Session title for the append section heading — read from the client-side
   // sessions list (in-memory, no host round-trip), see docs/context.md.
   const getSessionTitle = (sessionId: string): string => {

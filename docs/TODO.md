@@ -30,12 +30,17 @@
 
 ## 已知平台问题 / 未开放能力（待 dsh）
 
-- **sidebar footer 入口无法独占一行**：dsh 的 `.footerActions`（`sidebar.footer.action` 容器，
-  `packages/client/ui-sidebar/src/client/SidebarRoot.module.css`）是 `display: flex`（默认
-  nowrap，横排）；而 dsh 内置 `ui-cordis` 与 md-notes 都用 `width:100%` 想独占一行，两个
-  `width:100%` 入口在 nowrap 里会互相挤压/溢出。插件侧已给 `.notesRow` 加 `flex:none`
-  缓解（不被压缩），但根治需 dsh 把 `.footerActions` 改为 `flex-direction: column`（或
-  `flex-wrap: wrap`）——待向 dsh 提 issue/PR。
+- **sidebar footer 入口无法独占一行（插件侧已兜底，根治待上游）**：dsh 的 `.footerActions`
+  （`sidebar.footer.action` 容器，`packages/client/ui-sidebar/src/client/SidebarRoot.module.css`）
+  是 `display: flex`（默认 nowrap，横排）；而 dsh 默认 web bundle 自带 `ui-cordis` 入口与
+  md-notes 入口都用 `width:100%` 想独占一行，两个 `width:100%` 入口在 nowrap 里互相挤压/溢出
+  （用户侧表现为 [issue #2](https://github.com/XieZongChen/dsh-md-notes/issues/2)）。
+  **插件侧兜底已落地**：`client/index.ts` 注入一条基于官方 `[data-slot]` 锚点的规则
+  `div:has(> [data-slot='sidebar.footer.action']) { flex-direction: column }`（单入口视觉
+  无变化、多入口各占一行、`:has()` 不支持时静默退回现状；与 issue #1 的祖先 inline 改写
+  完全不同类，详见该处注释）。**根治**仍需 dsh 把 `.footerActions` 改为
+  `flex-direction: column`（或 `flex-wrap: wrap`）——待向 dsh 提 issue/PR，上游落地后删除
+  插件侧兜底规则。
 - **设置面板「打开并跳到某 section」无客户端导航 API**：`openSettingsDocument` 是 settings
   文档的 Remote（host→client 拉配置），非「打开面板到某分区」。插件 `openDshSettings` 目前
   靠 `querySelector` 模拟两次点击跳「MD 笔记」分区（脆弱，耦合 dsh DOM）——待 dsh 开放

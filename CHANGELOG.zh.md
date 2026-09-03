@@ -41,6 +41,11 @@
 
 ### Fixed
 
+- 修复侧边栏底部多个入口互相挤压/溢出（[#2]）：dsh 的 `.footerActions` 把
+  `width:100%` 的子项（默认自带的 cordis 入口与笔记入口）排在同一不换行行内。
+  插件现以 `[data-slot]` 锚点规则改为纵向堆叠——只加一条自己持有、卸载自动
+  移除的 `<style>`，不写任何祖先 inline 样式，单入口时视觉零变化。
+  （根治需上游调整，见 docs/TODO.md。）
 - 安全：插件 HTTP API 与图标路由接入与 dsh 官方 `/api` 通道相同的信任栅栏
   （`connection.requestRejection`）——无已认证浏览器会话的请求返回 401、不可信
   Host/Origin 返回 403，在任何笔记/Git 操作或设置写入分发之前拒绝（见
@@ -48,6 +53,8 @@
   profile（如 Electron IPC）行为不变。
 - 安全：`gitStatus` 不再返回原始 git remote URL——展示副本中内嵌凭据
   （`https://user:token@…`）脱敏为 `https://***@…`（设置表单仍编辑原始值）。
+
+[#2]: https://github.com/XieZongChen/dsh-md-notes/issues/2
 
 ## [0.10.1] - 2026-09-03
 

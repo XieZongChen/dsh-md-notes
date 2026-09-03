@@ -51,6 +51,13 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Fixed
 
+- Fixed the sidebar footer entries squeezing/overflowing each other ([#2]):
+  dsh's `.footerActions` lays its `width:100%` children (the default-bundled
+  cordis entry and the notes entry) out in one non-wrapping row. The plugin
+  now stacks them via a `[data-slot]`-anchored rule — one declarative
+  `<style>` of its own (auto-removed on unload), no ancestor inline styles,
+  visually unchanged when only one entry is present. (The root fix belongs
+  upstream; see docs/TODO.md.)
 - Security: the plugin's HTTP API and icon routes now run behind the same
   trust fence as dsh's official `/api` channel (`connection.requestRejection`):
   requests without an authenticated browser session are rejected with 401 and
@@ -60,6 +67,8 @@ Only user-visible functional changes are recorded (no documentation, code refact
 - Security: `gitStatus` no longer returns the raw git remote URL; embedded
   credentials (`https://user:token@…`) are redacted to `https://***@…` in the
   display copy (the settings form still edits the raw value).
+
+[#2]: https://github.com/XieZongChen/dsh-md-notes/issues/2
 
 ## [0.10.1] - 2026-09-03
 
