@@ -33,9 +33,13 @@ import { registerNoteContextInjection } from './host/context-inject.ts'
 
 /** Plugin row config. */
 export interface Config {
-  /** API route prefix (default /plugins/md-notes). */
-  readonly route?: string
-  /** Git mode: 'off' | 'shared' | 'own' (legacy 'on' normalizes to shared/own). */
+  /**
+   * Git mode: 'off' | 'shared' | 'own' (legacy 'on' normalizes to shared/own).
+   *
+   * (No `route` option on purpose: the browser half hardcodes the API prefix
+   * `/plugins/md-notes`, so a host-side override would silently sever the
+   * client↔host link. The route is a fixed constant on both halves.)
+   */
   readonly gitMode?: 'off' | 'on' | 'shared' | 'own'
   /** Shared repo remote URL — the deployment default for `gitCentral.remote`. */
   readonly gitCentralRemote?: string
@@ -54,7 +58,6 @@ export interface Config {
 export const name = 'md-notes'
 export const inject = ['webServer', 'settings']
 export const Config: s<Config> = s.object({
-  route: s.string().default('/plugins/md-notes'),
   gitMode: s.union([s.const('off'), s.const('on'), s.const('shared'), s.const('own')]).default('off'),
   gitCentralRemote: s.string().default(''),
   gitCentralBranch: s.string().default(''),
@@ -278,7 +281,9 @@ export function apply(ctx: Context, config: Config): void {
     '..', 'assets', 'dsh-md-notes.svg',
   )
 
-  const prefix = config.route ?? '/plugins/md-notes'
+  // Fixed API prefix — must equal the client half's hardcoded API constant
+  // (features/api.ts); see the Config doc comment for why it is not an option.
+  const prefix = '/plugins/md-notes'
   ctx.effect(() => web.register({
     kind: 'prefix',
     path: prefix,

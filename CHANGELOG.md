@@ -33,6 +33,14 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ## NEXT_VERSION
 
+### Breaking
+
+- Removed the `route` config option. The HTTP API prefix is now the fixed
+  constant `/plugins/md-notes` on both halves: the browser half always
+  hardcoded it, so overriding the host prefix only severed the client↔host
+  link. Existing configs carrying a `route` key keep loading (schemastery
+  passes unknown keys through; the value is ignored).
+
 ### Fixed
 
 - Security: the plugin's HTTP API and icon routes now run behind the same

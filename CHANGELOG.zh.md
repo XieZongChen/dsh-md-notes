@@ -26,6 +26,12 @@
 
 ## NEXT_VERSION
 
+### Breaking（破坏式变更）
+
+- 移除 `route` 配置项。HTTP API 前缀在两半都固定为常量 `/plugins/md-notes`：
+  浏览器半部本就硬编码该值，覆盖 host 侧前缀只会断开 client↔host 链接。
+  已有配置里的 `route` 键不会导致加载失败（schemastery 放行未知键，值被忽略）。
+
 ### Fixed
 
 - 安全：插件 HTTP API 与图标路由接入与 dsh 官方 `/api` 通道相同的信任栅栏

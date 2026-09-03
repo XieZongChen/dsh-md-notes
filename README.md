@@ -99,14 +99,14 @@ All options are plugin Config keys, overridable in the profile's `cordis.patch.y
 ```yaml
 - id: md-notes
   config:
-    route: '/plugins/md-notes'   # HTTP API prefix; default is fine
     gitMode: 'off'               # 'off' | 'shared' | 'own'
     gitAutoPull: true            # pull remote before opening a note
 ```
 
+The HTTP API prefix is fixed at `/plugins/md-notes` (the browser half hardcodes the same constant, so it is intentionally not configurable).
+
 | Key | Default | Meaning |
 |---|---|---|
-| `route` | `/plugins/md-notes` | HTTP API prefix served by the plugin; also hosts the icon at `<route>/icon.svg`. |
 | `gitMode` | `'off'` | Git sync mode: `'off'` off / `'shared'` shared repo / `'own'` per-workspace repos. |
 | `gitAutoPull` | `true` | Pull the remote before opening a note. |
 

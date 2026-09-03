@@ -97,14 +97,14 @@ dsh plugin --profile web remove dsh-md-notes
 ```yaml
 - id: md-notes
   config:
-    route: '/plugins/md-notes'   # HTTP API 前缀；默认即可
     gitMode: 'off'               # 'off' | 'shared' | 'own'
     gitAutoPull: true            # 打开笔记时自动拉取远程
 ```
 
+HTTP API 前缀固定为 `/plugins/md-notes`（浏览器半部硬编码同值，故刻意不做配置项）。
+
 | 键 | 默认值 | 含义 |
 |---|---|---|
-| `route` | `/plugins/md-notes` | 插件提供的 HTTP API 前缀；图标同时由 `<route>/icon.svg` 提供。 |
 | `gitMode` | `'off'` | Git 同步模式：`'off'` 关闭 / `'shared'` 共享仓库 / `'own'` 每工作区独立仓库。 |
 | `gitAutoPull` | `true` | 打开笔记时是否自动拉取远程版本。 |
 

@@ -242,9 +242,9 @@ npm run build
 
 ```yaml
 # 在 profile 的 cordis.patch.yml 或更高层覆盖（会整体替换该行的 config）
+# HTTP 路由前缀固定为 /plugins/md-notes（client 半硬编码同值，不可配置）
 - id: md-notes
   config:
-    route: '/plugins/md-notes'    # HTTP API 前缀；默认即可
     gitMode: 'off'                # 'off' | 'shared' | 'own'（旧值 'on' 归一化）
     gitCentralRemote: ''          # 共享仓库 URL（L2 默认）
     gitCentralBranch: ''          # 共享仓库分支（L2 默认，留空=main）
