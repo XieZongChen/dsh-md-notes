@@ -8,5 +8,5 @@
     "outDir": "lib"
   },
   "include": ["src/client", "src/contract.ts", "src/css-modules.d.ts"],
-  "exclude": []
+  "exclude": ["src/**/*.test.ts"]
 }

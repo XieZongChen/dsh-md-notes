@@ -29,8 +29,10 @@ dsh-md-notes/
 ├── cordis.patch.yml      # bundle 补丁：插入 md-notes 行
 ├── assets/
 │   └── dsh-md-notes.svg  # 插件图标（唯一事实来源，host 直接 serve）
-├── tsconfig.json         # host program（exclude src/client）
-├── tsconfig.client.json  # client program（jsx: react-jsx）
+├── tsconfig.json         # host program（exclude src/client 与 *.test.ts）
+├── tsconfig.client.json  # client program（jsx: react-jsx；exclude *.test.ts）
+├── tsconfig.test.json        # host 测试 program（noEmit，仅 typecheck）
+├── tsconfig.client-test.json # client 测试 program（noEmit，仅 typecheck）
 ├── tsdown.config.ts      # client bundle 构建（复刻仓库 tsdown.client.ts 协议）
 ├── docs/
 │   ├── features.md        # 功能设计文档
@@ -231,6 +233,10 @@ npm run build
   include（client program 显式列入），是「两 program 不合并」约束下消除双份类型
   （实体 + API 形状）的方式；client program 的 `declarationDir` 为 `lib/types`，
   产物 `lib/types/client/index.d.ts` 与 package.json `exports["./client"].types` 对齐。
+  **测试文件不进构建产物**：两个 build program 都 exclude `*.test.ts`（vitest 直接吃
+  TS 源码，tsc 产出的 test.js 毫无用途且会随 `files: ["lib"]` 发布）；测试的类型检查
+  由两个 noEmit program（`tsconfig.test.json` / `tsconfig.client-test.json`）承担，
+  挂在 `npm run typecheck` 里——两半测试不能同 program（同一 `Context.sessions` 冲突）。
 - client bundle 协议（`tsdown.config.ts`）：输出 CJS closure-factory，经
   `window.__ModuleLoader__.load({ id, factory })` 加载；平台模块保持 external，其余依赖内联。
   该协议是**手工复刻** deepseek-harness `packages/client/tsdown.client.ts`——四个耦合点
