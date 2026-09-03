@@ -91,6 +91,9 @@ dsh-md-notes/
             │       ├── useNotesManager.ts  # 编排三 hook，持有跨切面状态（gitMsg/remoteChanged/confirm）
             │       └── types.ts            # ConfirmState / NotesManagerProps（hooks 与渲染器共用）
             ├── ContextSource/    # @ 引用 source（ui-input-trigger：candidates/onPick/codec）
+            │   ├── ContextSource.ts # source 组装（候选/插入/codec 胶水）
+            │   ├── paths.ts        # 纯路径函数（relFrom/canon/parentDir/refPath/chipLabel，有测试）
+            │   └── resolve.ts      # ref → 工作区 三分支解析（提交时序列化依赖，有测试）
             └── Settings/         # dsh 设置面板「MD 笔记」分区（SettingsSection + css）
 ```
 
