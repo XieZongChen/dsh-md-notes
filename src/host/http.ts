@@ -62,6 +62,25 @@ export interface WorkspaceEntry {
   repo?: ResolvedRepo | undefined
 }
 
+/**
+ * Redact userinfo credentials embedded in a remote URL
+ * (`https://user:token@host/…` → `https://***@host/…`) for display-only copies
+ * sent to the client; the settings form keeps the raw value (it round-trips
+ * through user edits). Non-URL remotes (scp-style, local paths) carry no
+ * userinfo and pass through unchanged.
+ */
+export function redactRemote(remote: string): string {
+  try {
+    const url = new URL(remote)
+    if (url.username === '' && url.password === '') return remote
+    url.username = '***'
+    url.password = ''
+    return url.toString()
+  } catch {
+    return remote
+  }
+}
+
 /** Everything the handler needs beyond the notes domain. */
 export interface NotesApiDeps {
   /** Resolve the notes dir for a workspace; undefined when no workspace applies. */
@@ -80,8 +99,13 @@ export interface NotesApiDeps {
   suggest(): Record<string, unknown>
   /** Whether the workspace registry has at least one real workspace. */
   hasWorkspaces(): boolean
-  /** Whether the workspace registry has at least one real workspace. */
-  hasWorkspaces(): boolean
+  /**
+   * Trust fence for the route: the connection service's request gate (the
+   * same one the official /api channel applies). Returns 401/403 to reject
+   * the request before dispatch, undefined to allow. Absent when the
+   * connection service is unavailable (non-web profiles).
+   */
+  authorize?: (req: IncomingMessage) => 401 | 403 | undefined
   /** npm update check: latest published version vs the installed one (cached). */
   checkUpdate(): Promise<{ ok: true; current: string; latest: string; hasUpdate: boolean } | { ok: false }>
   /** Bound git operations. */
@@ -185,7 +209,8 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       const notesDir = deps.resolveDir(workspaceId)
       if (notesDir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
       const view = await deps.git.status(repo, notesDir)
-      return { ok: true, status: view }
+      // Display-only copy: never leak credentials embedded in the remote URL.
+      return { ok: true, status: view.remote === undefined ? view : { ...view, remote: redactRemote(view.remote) } }
     }
     case 'gitInit': {
       const repo = deps.resolveRepo(workspaceId)
@@ -270,6 +295,17 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
 export function notesApiHandler(deps: NotesApiDeps): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   return async (req, res) => {
     try {
+      // The trust fence runs before anything else so an unauthenticated caller
+      // learns nothing about the API surface (not even the allowed methods).
+      const rejection = deps.authorize?.(req)
+      if (rejection !== undefined) {
+        sendJson(res, rejection, {
+          ok: false,
+          code: rejection === 401 ? 'unauthorized' : 'forbidden',
+          error: rejection === 401 ? 'unauthorized' : 'forbidden',
+        })
+        return
+      }
       if (req.method !== 'POST') {
         sendJson(res, 405, { ok: false, error: 'method not allowed' })
         return
@@ -291,12 +327,21 @@ export function notesApiHandler(deps: NotesApiDeps): (req: IncomingMessage, res:
  * `<img src="/plugins/md-notes/icon.svg">` — a single source of truth: editing
  * `assets/dsh-md-notes.svg` takes effect without regenerating any component.
  * @param svgPath - absolute path to the icon file inside the package.
+ * @param authorize - optional trust fence (same gate as the API route; the
+ * browser sends its auth cookie with same-origin `<img>` requests, so a
+ * logged-in UI is unaffected while unauthenticated callers get 401/403).
  * @returns an async request handler.
  */
 export function iconHandler(
   svgPath: string,
+  authorize?: (req: IncomingMessage) => 401 | 403 | undefined,
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   return async (req, res) => {
+    const rejection = authorize?.(req)
+    if (rejection !== undefined) {
+      sendJson(res, rejection, { ok: false, error: rejection === 401 ? 'unauthorized' : 'forbidden' })
+      return
+    }
     if (req.method !== 'GET') {
       sendJson(res, 405, { ok: false, error: 'method not allowed' })
       return

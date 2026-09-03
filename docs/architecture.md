@@ -123,6 +123,14 @@ dsh-md-notes/
 - **错误码协议**：git 操作失败返回 `{ ok: false, code, error }`（如 `no-repo`、`sync-branch`、
   `git-failed`、`identity`、`remote-changed`、`non-fast-forward`），`error` 为英文 detail；
   client 用 `gitErrorText` 按 `code` 渲染本地化文案。
+- **HTTP 鉴权（信任栅栏）**：两条路由的 handler 开头先过 `connection.requestRejection`
+  （deepseek-harness `packages/client/connection` 的官方路由信任门，官方 `/api` 通道同款：
+  未认证浏览器会话 → 401，不可信 Host/Origin → 403），拒绝时不再泄露任何 API 信息。
+  connection 服务按请求动态解析（`ctx.get('connection')`）——web profile 存在时全程有栅栏；
+  无该服务的 profile（如 Electron IPC 载体）退回无栅栏路由（其载体本就不是共享 HTTP socket）。
+- **remote 凭据脱敏**：`gitStatus` 返回的 `remote` 是展示用副本，经 `redactRemote` 抹去
+  URL 内嵌 userinfo（`https://user:token@…` → `https://***@…`）；设置表单读写仍用原始值
+  （用户编辑需回填）。
 - HTTP 路由（`ctx.webServer.register`）：
   - `{ kind: 'prefix', path: route }`：仅接受 `POST`；body 为 `{ method, ...args }`。
   - `{ kind: 'exact', path: `${route}/icon.svg` }`：GET 返回 `assets/dsh-md-notes.svg`（`image/svg+xml`）。
@@ -138,7 +146,7 @@ dsh-md-notes/
 | `create` | `{ workspaceId?, title }` | `{ ok, name }`（空标题自动用 Untitled note） |
 | `delete` | `{ workspaceId?, name }` | `{ ok, name }` |
 | `appendConversation` | `{ noteName, questionText, answerText, sessionTitle? }` | `{ ok, name }`（文本由 client 从会话快照提取，host 只写文件） |
-| `gitStatus` | `{ workspaceId? }` | `{ ok, status: { repoDir, subdir, branch, uncommitted, unpushed, lastCommit?, remote } }`（`unpushed` 0.7.0 新增，本地与仓库差异数） |
+| `gitStatus` | `{ workspaceId? }` | `{ ok, status: { repoDir, subdir, branch, uncommitted, unpushed, lastCommit?, remote } }`（`unpushed` 0.7.0 新增，本地与仓库差异数；`remote` 为脱敏展示副本，不含 userinfo 凭据） |
 | `gitInit` | `{ workspaceId? }` | `{ ok }`（按 URL clone） |
 | `gitPush` | `{ workspaceId?, message, overwrite? }` | `{ ok }` 或 `{ ok:false, code, changed? }` |
 | `gitPull` | `{ workspaceId?, force?, manual? }` | `{ ok, skipped?, changed? }`（manual=手动更新始终同步；自动拉取按远端提交领先短路，见 git.md §5.2） |

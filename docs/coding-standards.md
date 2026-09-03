@@ -311,14 +311,14 @@
 |---|---|---|---|---|
 | 1 | ✅ `host/http.ts` + `host/notes.ts` | `appendConversation` 的 `noteName` 未消毒，可被 `../` 穿越出 `.dsh-notes` | 已修 | 双层 `sanitizeName`（commit `577912f`） |
 | 2 | ✅ `host/keyed-lock.ts` + `index.ts` | 同一 clone 无并发互斥，并发 push/pull 会 race；shared 模式多工作区共享 clone 尤其危险 | 已修 | 新增 `KeyedMutex`，GitApi 边界按 `repo/<repoDir>` 串行化（commit `dc293c1`） |
-| 3 | `host/http.ts` | HTTP API 无鉴权，任意 client 可传任意 `workspaceId` 读写任意工作区；`gitStatus` 返回含凭据的 `remote` URL | 中（信任边界） | 文档化信任边界；评估 `remote` 是否脱敏/不下发 |
+| 3 | ✅ `host/http.ts` + `index.ts` | HTTP API 无鉴权，任意 client 可传任意 `workspaceId` 读写任意工作区；`gitStatus` 返回含凭据的 `remote` URL | 已修 | 两条路由接入 `connection.requestRejection` 官方信任栅栏（401/403，见 architecture.md §3）；`gitStatus` 的 `remote` 经 `redactRemote` 脱敏（设置表单仍回填原值） |
 | 4 | ✅ `host/git.ts` | shared 子目录原用 `sanitizeFolder(ws.title)`，工作区改名孤儿化旧目录 | 已修 | 仓库内 `.dsh-notes-workspaces.json` 以 `ws.id` 固定目录名（commit `e59f300`） |
 | 5 | ✅ `client/NotesManager/` | 三处「刷新+重读」已去重；左栏拆 `NoteItem`/`WorkspaceList`；state 收敛并按 list/editor/git 拆成三个 hook；子组件与 css 迁入 `components/`、hook 迁入 `hooks/`，主文件瘦身至 ~220 行 | 已修 | commit `f1b5d98`/`8eda8ed`/`2fed9a7`/`44cf8c5` + `a26a9e4`/`f25093f`/`909225f` |
 | 6 | host/client 双份类型 | `NoteSummary`/`GitStatusData`/`GitSettingsData` 等两边各一份，易漂移 | 中 | 收敛为一份（§3），至少交叉注释 |
 | 7 | `client/api.ts` `ApiResult` | `ok:true` 分支 10+ optional 字段的大杂烩，调用方靠猜 | 中 | 改按 method 的 discriminated union |
 | 8 | `NotePicker`/`NotesManager` | 「按工作区分组列表」JSX 重复 | 低 | 抽共享列表组件 |
 | 9 | `NotesManager.openDshSettings`（现居 `hooks/useNotesManager.ts`） | `querySelector` 模拟两次点击跳设置，耦合 dsh DOM | 中 | 找平台扩展点；找不到则留 TODO |
-| 10 | `http.ts` 重复声明 | `hasWorkspaces` 接口重复声明（`http.ts` 第 82/84 行） | 低 | 顺手清理（原 NotesManager 中文注释已随拆分迁出，代码注释均为英文） |
+| 10 | ✅ `http.ts` 重复声明 | `hasWorkspaces` 接口重复声明（原第 82/84 行） | 已修 | 随鉴权栅栏改造顺手清理 |
 | 11 | `api.ts` `gitErrorText` | `push-failed`/`merge-unrelated` 死 code（host 从不返回） | 低 | 删除 |
 | 12 | `git.ts` `fetchCache` | 模块级 Map 只增不清理，跨 repo 累积 | 低 | 移入 apply 闭包或加 TTL 清理 |
 | 13 | `notes.ts` `listNotes` | 首读无 meta.json 时全量读文件重建，笔记量大时慢 | 低 | 可接受（一次性），量大再评估索引 |

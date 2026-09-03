@@ -92,6 +92,18 @@ interface WorkspaceRegistryLike {
   get(id: string): WorkspaceInfo | undefined
 }
 
+/**
+ * Minimal connection-service face: the Host/Origin + browser-auth trust fence
+ * the official /api channel applies to its own routes
+ * (`HostConnectionHandle.requestRejection`, packages/client/connection in
+ * deepseek-harness — its doc comment explicitly invites applying it to other
+ * web routes). Structural on purpose: no type import from the connection
+ * package, matching the other `*Like` faces here.
+ */
+interface ConnectionLike {
+  requestRejection(request: { headers: IncomingMessage['headers'] }): 401 | 403 | undefined
+}
+
 /** Plugin body. */
 export function apply(ctx: Context, config: Config): void {
   const web = ctx.get('webServer') as WebServerLike | undefined
@@ -232,6 +244,16 @@ export function apply(ctx: Context, config: Config): void {
     return 0
   }
 
+  // Trust fence for both routes: when the connection service is present (the
+  // web profile), requestRejection is exactly the gate the official /api route
+  // runs — 401 (no browser session) / 403 (untrusted Host/Origin) before any
+  // dispatch. Resolved PER REQUEST so a connection service that activates
+  // after this plugin is still picked up; profiles without the service
+  // (e.g. Electron file:// + IPC) degrade to the unfenced route they always
+  // were, since their carrier is not a shared HTTP socket.
+  const authorize = (req: IncomingMessage): 401 | 403 | undefined =>
+    (ctx.get('connection') as ConnectionLike | undefined)?.requestRejection({ headers: req.headers })
+
   const deps: NotesApiDeps = {
     resolveDir,
     resolveRepo,
@@ -247,6 +269,7 @@ export function apply(ctx: Context, config: Config): void {
     checkUpdate,
     git,
     lock: createKeyedLock(),
+    authorize,
   }
   const handler = notesApiHandler(deps)
   // lib/../assets/dsh-md-notes.svg — the packaged icon, served as-is.
@@ -264,7 +287,7 @@ export function apply(ctx: Context, config: Config): void {
   ctx.effect(() => web.register({
     kind: 'exact',
     path: `${prefix}/icon.svg`,
-    handler: iconHandler(iconPath),
+    handler: iconHandler(iconPath, authorize),
   }), 'dsh-md-notes: icon route')
   // Note-content injection: fold referenced notes into the model request at
   // every agent pre-step (reliable references without relying on `read`).

@@ -31,6 +31,20 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## NEXT_VERSION
+
+### Fixed
+
+- Security: the plugin's HTTP API and icon routes now run behind the same
+  trust fence as dsh's official `/api` channel (`connection.requestRejection`):
+  requests without an authenticated browser session are rejected with 401 and
+  untrusted Host/Origin with 403, before any note/git operation or settings
+  write is dispatched (see [architecture §3](docs/architecture.md#3-host-半src)).
+  Profiles without the connection service (e.g. Electron IPC) are unchanged.
+- Security: `gitStatus` no longer returns the raw git remote URL; embedded
+  credentials (`https://user:token@…`) are redacted to `https://***@…` in the
+  display copy (the settings form still edits the raw value).
+
 ## [0.10.1] - 2026-09-03
 
 ### Fixed

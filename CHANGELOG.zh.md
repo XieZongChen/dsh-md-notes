@@ -24,6 +24,18 @@
   **不新增** `NEXT_VERSION`（开发空窗期不留空块）。写入改动时先检查是否存在 `NEXT_VERSION`
   块——没有就先添加一个，再在块下记录新改动。
 
+## NEXT_VERSION
+
+### Fixed
+
+- 安全：插件 HTTP API 与图标路由接入与 dsh 官方 `/api` 通道相同的信任栅栏
+  （`connection.requestRejection`）——无已认证浏览器会话的请求返回 401、不可信
+  Host/Origin 返回 403，在任何笔记/Git 操作或设置写入分发之前拒绝（见
+  [architecture §3](docs/architecture.md#3-host-半src)）。无 connection 服务的
+  profile（如 Electron IPC）行为不变。
+- 安全：`gitStatus` 不再返回原始 git remote URL——展示副本中内嵌凭据
+  （`https://user:token@…`）脱敏为 `https://***@…`（设置表单仍编辑原始值）。
+
 ## [0.10.1] - 2026-09-03
 
 ### Fixed
