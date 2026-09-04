@@ -98,7 +98,7 @@ function makeDeps(overrides: Partial<NotesApiDeps> = {}): NotesApiDeps {
     checkUpdate: vi.fn(async () => ({ ok: false as const, error: 'x' })),
     git: {
       status: vi.fn(async () => ({ ok: true, remote: 'https://example.com/r.git' })),
-      init: vi.fn(async () => {}),
+      init: vi.fn(async () => false),
       push: vi.fn(async () => ({ ok: true })),
       pull: vi.fn(async () => ({ ok: true })),
       sync: vi.fn(async () => ({ ok: true })),

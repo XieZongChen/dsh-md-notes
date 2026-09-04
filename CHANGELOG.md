@@ -51,6 +51,15 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Fixed
 
+- Fixed two Git first-sync defects on a fresh device (fresh clone + empty
+  notes dir): ① pulling did nothing — an absent local file read as a local
+  edit (skipped), and the auto-pull short-circuited on "no new remote
+  commits", so remote notes never came down; ② pushing from that state
+  mirror-deleted the ENTIRE remote without confirmation. The last-synced
+  baseline is now empty until the first completed sync (a marker persisted
+  inside the clone's `.git/`, never committed): the first pull brings all
+  remote notes down, and the first push blocks with remote-changed asking
+  for confirmation.
 - Fixed the sidebar footer entries squeezing/overflowing each other ([#2]):
   dsh's `.footerActions` lays its `width:100%` children (the default-bundled
   cordis entry and the notes entry) out in one non-wrapping row. The plugin

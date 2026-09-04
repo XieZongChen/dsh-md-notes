@@ -49,7 +49,8 @@ export function sendJson(res: ServerResponse, status: number, value: unknown): v
 /** Git operations bound to the plugin context (see `src/index.ts`). */
 export interface GitApi {
   status(repo: ResolvedRepo, notesDir: string): Promise<GitStatusView>
-  init(repo: ResolvedRepo): Promise<void>
+  /** @returns true when this call performed a fresh clone. */
+  init(repo: ResolvedRepo): Promise<boolean>
   push(repo: ResolvedRepo, notesDir: string, message: string, overwrite: boolean): Promise<{ ok: boolean; error?: string; code?: string; changed?: string[] }>
   pull(repo: ResolvedRepo, notesDir: string, force: boolean, manual: boolean): Promise<{ ok: boolean; error?: string; skipped?: number; changed?: string[] }>
   sync(repo: ResolvedRepo): Promise<{ ok: boolean; error?: string }>

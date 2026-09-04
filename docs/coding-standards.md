@@ -269,8 +269,9 @@
   `api.test.ts`（stubGlobal fetch：非 2xx 结构化错误体/HTML 回退/网络异常）、
   `busy.test.ts`（引用计数，手写 fake store）、`ContextSource/paths|resolve.test.ts`
   （纯路径函数与三分支 ref 解析）。
-- 文件操作用 `fs.mkdtemp` 跑真实读写；git 逻辑后续可用临时仓库（`git init` + 本地 remote）
-  做集成测试。
+- 文件操作用 `fs.mkdtemp` 跑真实读写；git 集成已落地（`git.integration.test.ts`：真实 git
+  二进制 + mkdtemp 裸仓库当远端 + 按 `DSH_HOME` 切换模拟多机，覆盖 push/pull/冲突/新设备/
+  共享改名全流程）。
 
 ---
 

@@ -16,7 +16,7 @@
 
 import { join, resolve, sep } from 'node:path'
 import { createHash } from 'node:crypto'
-import { mkdirSync, writeFileSync, existsSync, realpathSync } from 'node:fs'
+import { mkdirSync, writeFileSync, existsSync, realpathSync, readFileSync } from 'node:fs'
 import { mkdir, readdir, readFile, copyFile, stat, rm, writeFile } from 'node:fs/promises'
 import type { Context } from '@deepseek-ai/cordis'
 import type { GitStatusData } from '../contract.ts'
@@ -55,6 +55,44 @@ const GIT_TIMEOUT_MS = 60_000
 const COLLECT_MAX = 512 * 1024
 /** Shared-mode folder mapping committed at the repo root (see docs/git.md). */
 const MAPPING_NAME = '.dsh-notes-workspaces.json'
+
+/**
+ * Per-clone "has this notes dir ever completed a sync" state, kept INSIDE
+ * `.git/` so it is never committed (a fresh clone loses it — correctly: a
+ * fresh clone has never synced with any notes dir). This is the first-sync
+ * baseline signal for `gitPush`/`gitPull`: before the FIRST successful sync
+ * the last-synced baseline is EMPTY, so every remote note counts as
+ * "remote changed" — a fresh device's pull actually brings notes down (an
+ * absent local file must not read as a local edit) and a fresh device's
+ * push blocks with remote-changed instead of mirror-deleting the remote.
+ */
+const SYNC_STATE_PATH = ['dsh-md-notes-synced.json']
+
+function hasSyncedNotes(repoDir: string, notesDir: string): boolean {
+  try {
+    const parsed = JSON.parse(readFileSync(join(repoDir, '.git', ...SYNC_STATE_PATH), 'utf8')) as { synced?: string[] }
+    return (parsed.synced ?? []).includes(notesDir)
+  } catch {
+    return false
+  }
+}
+
+function markSyncedNotes(repoDir: string, notesDir: string): void {
+  try {
+    let synced: string[] = []
+    try {
+      synced = (JSON.parse(readFileSync(join(repoDir, '.git', ...SYNC_STATE_PATH), 'utf8')) as { synced?: string[] }).synced ?? []
+    } catch {
+      /* first mark */
+    }
+    if (!synced.includes(notesDir)) {
+      synced.push(notesDir)
+      writeFileSync(join(repoDir, '.git', ...SYNC_STATE_PATH), JSON.stringify({ synced }, null, 2))
+    }
+  } catch {
+    // best effort — a lost mark only re-asks the first-sync confirmation
+  }
+}
 
 /** Minimal subprocess-service face used here (raw spawn; no sandbox). */
 interface SubprocessLike {
@@ -302,9 +340,12 @@ export class GitError extends Error {
 /**
  * Ensure the clone exists: `git clone` the remote URL into the
  * plugin-managed directory when absent. Idempotent.
+ * @returns true when this call performed a FRESH clone (the caller must
+ * treat the last-synced baseline as EMPTY — this notes dir has never synced
+ * anything; see `gitPush`/`gitPull`).
  */
-export async function gitInit(ctx: Context, repo: ResolvedRepo, _branch: string): Promise<void> {
-  if (existsSync(join(repo.repoDir, '.git'))) return
+export async function gitInit(ctx: Context, repo: ResolvedRepo, _branch: string): Promise<boolean> {
+  if (existsSync(join(repo.repoDir, '.git'))) return false
   mkdirSync(join(repo.repoDir, '..'), { recursive: true })
   const clone = await runGit(ctx, join(repo.repoDir, '..'), ['clone', repo.remote, repo.repoDir])
   if (clone.code !== 0) throw new GitError('clone-failed', `git clone failed: ${clone.stderr || clone.stdout}`)
@@ -316,6 +357,7 @@ export async function gitInit(ctx: Context, repo: ResolvedRepo, _branch: string)
       // best effort
     }
   }
+  return true
 }
 
 /** Status of one repo: the wire view plus the host-only `ok` flag (field docs in `contract.ts`). */
@@ -646,7 +688,12 @@ export async function gitPush(
   // the baseline uses the pinned folder even when it differs from the title.
   repo = await resolveEffectiveRepo(repo, false)
   // Last-synced baseline — read BEFORE ensureBranch resets the clone to origin.
-  const base = await readNoteMap(repoTargetDir(repo))
+  // Before the FIRST completed sync (see hasSyncedNotes) the baseline is empty:
+  // every remote note counts as "remote changed", so a push from a fresh device
+  // (empty local) blocks with remote-changed instead of mirror-deleting the
+  // whole remote without confirmation.
+  const syncedBefore = hasSyncedNotes(repo.repoDir, notesDir)
+  const base = syncedBefore ? await readNoteMap(repoTargetDir(repo)) : new Map<string, string>()
   const branch = await ensureBranch(ctx, repo)
   if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
   // Now create/pin the folder mapping entry. The write happens AFTER the
@@ -711,6 +758,8 @@ export async function gitPush(
     }
     return { ok: false, code: 'git-failed', error: `git push failed: ${push.stderr || push.stdout}` }
   }
+  // The mirror succeeded: this notes dir now has a real last-synced baseline.
+  markSyncedNotes(repo.repoDir, notesDir)
   return { ok: true }
 }
 
@@ -742,10 +791,15 @@ export async function gitPull(
   // pull does not create/commit the mapping; push does).
   repo = await resolveEffectiveRepo(repo, false)
   // Last-synced baseline — read BEFORE checkout resets the clone to origin.
-  const base = await readNoteMap(repoTargetDir(repo))
+  // Before the FIRST completed sync (see hasSyncedNotes) the baseline is empty,
+  // so every remote note counts as "remote changed" and lands on first pull —
+  // without this, an absent local file reads as a local edit and the pull
+  // copies NOTHING down to a new device.
+  const syncedBefore = hasSyncedNotes(repo.repoDir, notesDir)
+  const base = syncedBefore ? await readNoteMap(repoTargetDir(repo)) : new Map<string, string>()
   const fetch = await fetchOrigin(ctx, repo)
   if (fetch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${fetch.stderr || fetch.stdout}` }
-  if (!manual) {
+  if (!manual && syncedBefore) {
     // Auto-pull only: does the remote actually have new commits? Judged by git
     // refs (fetch has moved origin/<branch> to the remote tip), NOT by content
     // diff — a local edit that was never pushed differs from the clone without
@@ -753,7 +807,9 @@ export async function gitPull(
     //
     // MUST run before checkoutBranch: `checkout -B branch origin/branch` resets
     // the local branch onto the remote tip, which would make this count always
-    // zero and silently skip every pull.
+    // zero and silently skip every pull. A never-synced pairing skips the
+    // short-circuit too: ahead is 0 on a fresh clone by definition, but nothing
+    // has ever been copied down.
     const ahead = await runGit(ctx, repo.repoDir, ['rev-list', '--count', `${repo.branch}..origin/${repo.branch}`])
     const remoteAhead = ahead.code === 0 && Number(ahead.stdout.trim()) > 0
     if (!remoteAhead) {
@@ -766,6 +822,7 @@ export async function gitPull(
   if (force) {
     // Manual confirmed overwrite: the remote/clone version wins outright.
     const { skipped } = await syncNotes(target, notesDir, true)
+    markSyncedNotes(repo.repoDir, notesDir)
     return { ok: true, skipped, changed: undefined }
   }
   // Conservative three-way: overwrite only "remote changed, local unchanged";
@@ -775,6 +832,7 @@ export async function gitPull(
     readNoteMap(target),
   ])
   const { conflicts } = await threeWaySync(target, notesDir, base, local, remote)
+  markSyncedNotes(repo.repoDir, notesDir)
   return { ok: true, skipped: conflicts.length, changed: conflicts }
 }
 

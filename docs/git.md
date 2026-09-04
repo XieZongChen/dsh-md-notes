@@ -31,6 +31,12 @@
 - ✅ **推送冲突检测（三向判定）**：推送前用 **base（上次同步态）/ local（工作区）/ remote（仓库）**
   三方比较——只有「远端相对 base 变了且本地也相对 base 变了（或本地仍与远端不同）」才判
   冲突返回 `remote-changed` + 名单弹 Modal 确认；**本地单方面改动（远端没动）不算冲突**，直接推送
+- ✅ **首次同步基线为空**：base 取「上次完成同步时」的仓库状态，但**首次同步前基线 = 空**——
+  同步标记持久化在 clone 的 `.git/dsh-md-notes-synced.json`（永不入库；重新 clone 自然回到
+  未同步）。否则新设备（新 clone + 空笔记目录）会把「本地缺失」误判为「本地已改」：拉取
+  什么都拉不下来（自动拉取还被 ahead=0 短路），更危险的是此时推送会**无确认地镜像清空
+  远端全部笔记**。基线为空后：首次拉取把远端笔记全部带下来，首次推送以 `remote-changed`
+  拦截并要求确认。回归由 `git.integration.test.ts`（真实 git + 裸仓库远端）钉死
 - ✅ 提交身份解析：仓库自身 git 配置优先 → 插件 `gitAuthorName/Email` 兜底 → 都没有时明确报错（错误码 `identity`）
 - ✅ non-fast-forward 冲突：`gitPush` 返回错误码 + client「合并远端并重试」（`gitSync`，用户触发）
 - ✅ **i18n 错误码**：host 错误返回 `{ code, detail }`（`no-repo` / `sync-branch` / `git-failed` /
