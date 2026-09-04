@@ -6,27 +6,6 @@
 > **完全完结**的条目：实现后移入 [CHANGELOG.md](../CHANGELOG.md)（只记用户可见的功能性改动），
 > 并从本文删除；**部分落地**的条目保留，标注已完成部分与剩余工作。
 
-## dsh 兼容性（0.1.2-alpha.5 → 0.1.3-alpha.1，2026-09-04）
-
-> **判定：无影响（适配已通过，待发版入表）**。区间 330 提交（跨 0.1.2-rc.1 与 0.1.3-alpha.1
-> 两个版本），逐契约面核对 + 插件对新 harness 全量验证通过（typecheck 0 错误 / 161 测试 /
-> 构建正常）。因 CHANGELOG 存在 `NEXT_VERSION`（0.10.1 之后有未发版改动），本次结果**不入**
-> 对照表——待下一插件版本发版后重跑 `dsh-compat-check` 完成入表（skill §5.0）。
-
-- 核对过的契约面与结论：
-  - **bundle 协议 4 耦合点**（`tsdown.client.ts`、`modules` system+manifest）：零变化；
-  - **`[data-slot]` 锚点契约**（`scoped-slots.tsx`）与 **ui-sidebar**（`.footerActions` / slot
-    props）：零变化——issue #2 兜底规则与 tsdown 复刻协议均不受影响；
-  - **`agent/pre-step`**：签名未动（新增 `agent/assistant-stream` 为纯增量，未用）；
-  - **`connection.requestRejection`**：未动（新增 POST/流式 Fetch 路由属插件未使用的 API）；
-  - **vendor/schemastery**：区间零提交；
-  - **UI 导出面**：删除的 `MessageText`、改名的 `SubmitImageAttachment` 均非插件所用；
-    `ConversationNode` / `AssistantBlock` / `UseChat` / `legacy.nodes`（v2 会话格式的兼容投影）均在；
-  - **webServer / settings / workspace / subprocess**：无契约级变更（session v2 迁移为内部
-    格式重排，对外留兼容投影）。
-- 待办：下一版本发版后重跑兼容性检查，把「新插件版本 ↔ 0.1.3-alpha.1」写入
-  `docs/compatibility.zh.md` 主表 + 反查表，并同步 README×2 与英文版。
-
 ## 0. dsh 开放能力盘点（历史快照：2026-08-27，迁移 0.1.2-alpha.1 时）
 
 > 迁移时顺带盘点当时对外放出、可优化插件体验的能力。此后 dsh 迭代到 alpha.5，本节仅作

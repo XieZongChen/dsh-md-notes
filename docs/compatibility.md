@@ -17,7 +17,10 @@ in the tables below.
 
 | Plugin version | dsh version | Verified on | Notes |
 |---|---|---|---|
-| `0.10.1` | `0.1.2-alpha.5` | 2026-09-03 | Current latest (verified) |
+| `0.11.0` | `0.1.3-alpha.1` | 2026-09-04 | Current latest (verified) |
+| `0.10.1` | `0.1.3-alpha.1` | 2026-09-04 | Chained inference: 0.10.1↔alpha.5 verified + alpha.5→0.1.3-alpha.1 zero contract change |
+| `0.10.0` | `0.1.3-alpha.1` | 2026-09-04 | Chained inference: 0.10.0↔alpha.3 verified + alpha.3→0.1.3-alpha.1 zero contract change |
+| `0.10.1` | `0.1.2-alpha.5` | 2026-09-03 | Verified |
 | `0.10.0` | `0.1.2-alpha.5` | 2026-09-02 | Chained inference: 0.10.0↔alpha.3 verified + alpha.3→alpha.5 zero contract change |
 | `0.10.0` | `0.1.2-alpha.4` | 2026-09-02 | Chained inference: 0.10.0↔alpha.3 verified + alpha.3→alpha.4 zero contract change |
 | `0.10.0` | `0.1.2-alpha.3` | 2026-09-01 | Verified |
@@ -42,6 +45,7 @@ in the tables below.
 
 | dsh version | Verified plugin versions (newest → oldest) | Last verified |
 |---|---|---|
+| `0.1.3-alpha.1` | `0.11.0`, `0.10.1`, `0.10.0` | 2026-09-04 |
 | `0.1.2-alpha.5` | `0.10.1`, `0.10.0` | 2026-09-03 |
 | `0.1.2-alpha.4` | `0.10.0` | 2026-09-02 |
 | `0.1.2-alpha.3` | `0.10.0` | 2026-09-01 |
