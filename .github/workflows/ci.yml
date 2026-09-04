@@ -1,0 +1,20 @@
+# CI: run the vitest suite on every push/PR. The tests are hermetic — they
+# either exercise pure domain modules or stub the dsh runtime (context-inject
+# mocks dsh-llm), so NO harness checkout / link-deps is needed. Typecheck and
+# build DO need the local harness link and stay local (`npm run verify`).
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm install --legacy-peer-deps
+      - run: npm test

@@ -1,13 +1,38 @@
 # dsh-md-notes 冒烟测试清单
 
-> 每次改动后、发布前，按本清单逐项对照验证。约定：✅ = 符合预期；❌ = 异常（记录现象/报错）。
+> **不是每次全量**：先跑自动护栏，再按下面的「验证范围速查」只人工验本次改动面的对应节；
+> **发布前**才全量走一遍。约定：✅ = 符合预期；❌ = 异常（记录现象/报错）。
 > 依赖 [使用文档](usage.zh.md) 理解每项的含义，本文只给「怎么做 + 看什么」。
+
+## 自动护栏（人工验证前必须全绿）
+
+```sh
+npm run verify   # = typecheck（4 program）+ vitest 全量 + build，一条命令
+```
+
+机器能验的都在这里（领域逻辑 / HTTP 分发 / 注入 / 合并 / 路径解析等 161 例 + 类型 + 构建）；
+CI（GitHub Actions）在每次 push 时跑同一套测试。**护栏不绿不进冒烟**。
+
+## 验证范围速查（按改动面裁剪）
+
+| 本次改动面 | 前置动作 | 人工验证的节 |
+|---|---|---|
+| 前端 UI（`src/client/**`，非 @ 引用） | 硬刷新页面 | 所改功能对应节 + §1（入口不回归） |
+| 前端 @ 引用（`ContextSource/`） | 硬刷新页面 | §4 + §5（互链同源解析） |
+| 后端笔记域（`host/notes.ts`、`http.ts`） | 重启 dsh web | §2 + §3 |
+| 后端注入（`host/context-inject.ts`） | 重启 dsh web | §4（重点 4.3 注入行为） |
+| 后端 Git 域（`host/git.ts`、GitApi 装配） | 重启 dsh web | §6（git 集成测试已覆盖逻辑，人验仅界面项） |
+| 设置（`host/settings.ts`、`Settings/`） | 重启 + 硬刷新 | §8 |
+| 契约 / 构建 / 清单（`contract.ts`、tsdown、tsconfig、`dsh.client`、exports） | 重启 + 硬刷新 | **全量**（协议面无单测覆盖） |
+| 发布前 | 重启 + 硬刷新 | **全量**（唯一必全量的场景），含 §9/§10 |
+
+> 判断不了归哪行时，取更宽的一行；两行都沾时取并集。
 
 ## 0. 前置准备
 
 - [ ] 插件已从本地源码 link 进 profile（`dsh plugin --profile web add ./dsh-md-notes`）
-- [ ] 已 `npm run build`（host + client 都重新构建）
-- [ ] 已**重启 dsh web**（host 侧改动必须重启）
+- [ ] 已 `npm run verify` 全绿（host + client 都重新构建）
+- [ ] 已**重启 dsh web**（host 侧改动必须重启；纯前端改动可跳过）
 - [ ] 浏览器**强制刷新**页面（client 侧改动）
 - [ ] dsh 侧边栏已存在至少一个工作区
 

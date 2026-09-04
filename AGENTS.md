@@ -54,14 +54,23 @@ npm 包 dsh-md-notes
 ## 验证命令（每个 commit 前跑）
 
 ```sh
+npm run verify      # 一条命令全护栏 = typecheck（4 program）+ vitest 全量 + build
+# 等价拆开：
 npm run typecheck   # 4 个 tsc program：后端 build / 前端 build / 两个 noEmit 测试 program
-npm test            # vitest，扫 src/**/*.test.ts（Node 环境，无需浏览器）
+npm test            # vitest，扫 src/**/*.test.ts（Node 环境，无需浏览器；CI 跑同一套）
 npm run build       # tsc×2 + tsdown（改了前端才需要）
 ```
 
 - Node ≥ 22.19（与 harness 支持矩阵一致；老 Node 会以 ESM/语法错误崩）。
 - 首次开发：`npm install --legacy-peer-deps && npm run link-deps`（链接 harness checkout 类型，
   `DSH_CHECKOUT` 可覆盖路径）。
+
+## 改动后的人工验证路由（AI 必须输出）
+
+`npm run verify` 只覆盖机器能验的。**每次改动提交后，按 `docs/smoke-test.md` 顶部
+「验证范围速查」矩阵，明确告诉用户：本次改动落在哪一行、需要人工验哪几节、要不要重启
+dsh web / 硬刷新**（例如「只改了 src/client/features/NotesManager → 硬刷新 + 验 §2.2 三项，
+无需重启」）。不要让用户自己判断验什么，也不要笼统说「建议全面冒烟」。发布前才全量。
 
 ## 按场景的修改清单
 

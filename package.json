@@ -52,6 +52,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.client.json && tsdown",
+    "verify": "npm run typecheck && npm test && npm run build",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.test.json && tsc -p tsconfig.client-test.json",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -169,6 +170,7 @@
     }
   },
   "devDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.2",
     "@types/node": "^24.0.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
