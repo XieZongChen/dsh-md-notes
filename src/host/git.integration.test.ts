@@ -16,7 +16,8 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
 import {
-  createFetchDedup, gitInit, gitPull, gitPush, gitStatus, resolveWorkspaceRepo,
+  clearConflictSidecars, createFetchDedup, gitInit, gitPull, gitPush, gitStatus, gitSync,
+  resolveWorkspaceRepo,
   type ResolvedRepo, type WorkspaceInfo,
 } from './git.ts'
 import type { MdNotesSettings } from './settings.ts'
@@ -297,5 +298,106 @@ describe('git integration (real binary, bare-remote)', () => {
     const listing = await run(['ls-tree', '--name-only', 'main'], url)
     expect(listing.stdout).not.toContain('Beta') // no orphaned title-named folder
     expect(listing.stdout).toContain('.dsh-notes-workspaces.json') // the pin mapping is committed
+  }, 30_000)
+})
+
+describe('conflict sidecars + gitSync merge recovery (ai-conflict, docs/ai-conflict.md)', () => {
+  it('a blocked push writes base/remote sidecars under .dsh-notes/.conflicts/', async () => {
+    const url = await remoteRepo()
+    const a = await machine()
+    await writeFile(join(a.notesDir, 'a.md'), 'v1', 'utf8')
+    const repoA = repoOf(ownSettings(url), a.ws)
+    expect((await gitPush(CTX, repoA, a.notesDir, 'v1', AUTHOR, false)).ok).toBe(true)
+
+    const b = await machine()
+    const repoB = repoOf(ownSettings(url), b.ws)
+    await gitInit(CTX, repoB, repoB.branch)
+    await gitPull(CTX, repoB, b.notesDir, false, true)
+    await writeFile(join(b.notesDir, 'a.md'), 'b-local', 'utf8')
+    await writeFile(join(a.notesDir, 'a.md'), 'v2-remote', 'utf8')
+    expect((await gitPush(CTX, repoA, a.notesDir, 'v2', AUTHOR, false)).ok).toBe(true)
+
+    const blocked = await gitPush(CTX, repoB, b.notesDir, 'b push', AUTHOR, false)
+    expect(blocked.code).toBe('remote-changed')
+    const conflictsDir = join(b.notesDir, '.conflicts')
+    const { readFile } = await import('node:fs/promises')
+    expect(await readFile(join(conflictsDir, 'a.base.md'), 'utf8')).toBe('v1')
+    expect(await readFile(join(conflictsDir, 'a.remote.md'), 'utf8')).toBe('v2-remote')
+    // No .md at top level of .conflicts leaks into the note list/sync (only top-level is scanned,
+    // but assert the naming convention anyway: sidecars are <stem>.base.md/<stem>.remote.md).
+    expect(await readFile(join(conflictsDir, 'a.remote.md'), 'utf8')).not.toBe('b-local')
+  }, 30_000)
+
+  it('a three-way pull conflict writes sidecars; a later successful push clears the dir', async () => {
+    const url = await remoteRepo()
+    const a = await machine()
+    await writeFile(join(a.notesDir, 'a.md'), 'v1', 'utf8')
+    const repoA = repoOf(ownSettings(url), a.ws)
+    expect((await gitPush(CTX, repoA, a.notesDir, 'v1', AUTHOR, false)).ok).toBe(true)
+
+    const b = await machine()
+    const repoB = repoOf(ownSettings(url), b.ws)
+    await gitInit(CTX, repoB, repoB.branch)
+    await gitPull(CTX, repoB, b.notesDir, false, true)
+    await writeFile(join(b.notesDir, 'a.md'), 'b-local', 'utf8')
+    await writeFile(join(a.notesDir, 'a.md'), 'a2-remote', 'utf8')
+    expect((await gitPush(CTX, repoA, a.notesDir, 'remote move', AUTHOR, false)).ok).toBe(true)
+
+    const pull = await gitPull(CTX, repoB, b.notesDir, false, true)
+    expect(pull.changed).toEqual(['a.md'])
+    const { readFile } = await import('node:fs/promises')
+    expect(await readFile(join(b.notesDir, '.conflicts', 'a.base.md'), 'utf8')).toBe('v1')
+    expect(await readFile(join(b.notesDir, '.conflicts', 'a.remote.md'), 'utf8')).toBe('a2-remote')
+
+    // Simulate the AI flow: resolution written back locally, then pushed — the
+    // successful push must clear the sidecar dir.
+    await writeFile(join(b.notesDir, 'a.md'), 'merged', 'utf8')
+    expect((await gitPush(CTX, repoB, b.notesDir, 'merged', AUTHOR, true)).ok).toBe(true)
+    await clearConflictSidecars(b.notesDir)
+    const { stat } = await import('node:fs/promises')
+    await expect(stat(join(b.notesDir, '.conflicts'))).rejects.toThrow()
+    expect(await remoteFile(url, 'a.md')).toBe('merged')
+  }, 30_000)
+
+  it('gitSync merge conflict aborts cleanly — the clone stays usable afterwards', async () => {
+    const url = await remoteRepo()
+    const a = await machine()
+    await writeFile(join(a.notesDir, 'a.md'), 'v1', 'utf8')
+    const repoA = repoOf(ownSettings(url), a.ws)
+    expect((await gitPush(CTX, repoA, a.notesDir, 'v1', AUTHOR, false)).ok).toBe(true)
+
+    // Two machines each land their OWN commit on the same file (divergent history):
+    // B force-pushes b-line (commit2, parent v1); A force-pushes a-line (commit3, parent v1).
+    const b = await machine()
+    const repoB = repoOf(ownSettings(url), b.ws)
+    await gitInit(CTX, repoB, repoB.branch)
+    await gitPull(CTX, repoB, b.notesDir, false, true)
+    await writeFile(join(b.notesDir, 'a.md'), 'b-line\n', 'utf8')
+    expect((await gitPush(CTX, repoB, b.notesDir, 'b push', AUTHOR, true)).ok).toBe(true)
+    await writeFile(join(a.notesDir, 'a.md'), 'a-line\n', 'utf8')
+    expect((await gitPush(CTX, repoA, a.notesDir, 'a push', AUTHOR, true)).ok).toBe(true)
+
+    // B's clone diverges (main=commit2, origin=commit3). The plugin's own ops
+    // keep clone history linear (ensureBranch resets to origin first), so a
+    // MERGE_HEAD wedge can only come from manual git in the clone — construct
+    // exactly that: detach one commit back, hand-commit a conflicting edit,
+    // then merge main → conflicted merge → MERGE_HEAD + unmerged index. In
+    // this state ensureBranch's `checkout -B` fails and EVERY git call breaks.
+    await run(['checkout', '--detach', 'HEAD~1'], repoB.repoDir)
+    await writeFile(join(repoB.repoDir, 'a.md'), 'manual-edit\n', 'utf8')
+    expect((await run(['add', 'a.md'], repoB.repoDir)).code).toBe(0)
+    expect((await run(['commit', '-m', 'manual divergent edit'], repoB.repoDir)).code).toBe(0)
+    const head = await run(['rev-parse', 'main'], repoB.repoDir)
+    const wedge = await run(['merge', '--no-commit', '--no-ff', head.stdout.trim()], repoB.repoDir)
+    expect(wedge.code).not.toBe(0) // both sides rewrote a.md → conflicted merge
+    expect((await run(['rev-parse', '--verify', 'MERGE_HEAD'], repoB.repoDir)).code).toBe(0)
+
+    // gitSync pre-cleans the wedge; the clone becomes fully usable again.
+    await gitSync(CTX, repoB)
+    expect((await run(['rev-parse', '--verify', 'MERGE_HEAD'], repoB.repoDir)).code).not.toBe(0)
+    const status = await gitStatus(CTX, repoB, repoB.branch, b.notesDir, createFetchDedup())
+    expect(status.ok).toBe(true)
+    expect((await gitPush(CTX, repoB, b.notesDir, 'b overwrite', AUTHOR, true)).ok).toBe(true)
+    expect(await remoteFile(url, 'a.md')).toBe('b-line\n')
   }, 30_000)
 })

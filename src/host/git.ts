@@ -56,6 +56,59 @@ const COLLECT_MAX = 512 * 1024
 /** Shared-mode folder mapping committed at the repo root (see docs/git.md). */
 const MAPPING_NAME = '.dsh-notes-workspaces.json'
 
+/** Per-workspace sidecar dir holding AI-conflict three-way copies (docs/ai-conflict.md). */
+const CONFLICTS_DIR = '.conflicts'
+
+/**
+ * Write the three-way sidecars for one conflict batch into
+ * `<notesDir>/.conflicts/`: `<name>.base.md` (last-synced version) and
+ * `<name>.remote.md` (remote version). The LOCAL side is the note file
+ * itself; a locally-DELETED conflict writes an empty `<name>.local-deleted`
+ * marker instead. The dir is wiped first so a previous batch never leaks.
+ * Sidecars live in a SUBDIR: sync/list only scan top-level `.md`, so they
+ * never enter Git or the note list, while the AI session's sandbox (scoped
+ * to the workspace) can read them (docs/ai-conflict.md).
+ */
+async function writeConflictSidecars(
+  notesDir: string,
+  base: Map<string, string>,
+  remote: Map<string, string>,
+  conflicts: readonly string[],
+): Promise<void> {
+  if (conflicts.length === 0) return
+  const dir = join(notesDir, CONFLICTS_DIR)
+  await rm(dir, { recursive: true, force: true })
+  await mkdir(dir, { recursive: true })
+  for (const name of conflicts) {
+    const stem = name.replace(/\.md$/i, '')
+    const baseContent = base.get(name)
+    const remoteContent = remote.get(name)
+    try {
+      if (baseContent !== undefined) await writeFile(join(dir, `${stem}.base.md`), baseContent, 'utf8')
+      if (remoteContent !== undefined) await writeFile(join(dir, `${stem}.remote.md`), remoteContent, 'utf8')
+      if (baseContent === undefined && remoteContent === undefined) {
+        // Locally deleted AND absent on both sides is not a conflict; reaching
+        // here with no content at all means local deletion against a remote
+        // change — the marker tells the AI the local side is a deletion.
+        await writeFile(join(dir, `${stem}.local-deleted`), '', 'utf8')
+      } else if (!existsSync(join(notesDir, name))) {
+        await writeFile(join(dir, `${stem}.local-deleted`), '', 'utf8')
+      }
+    } catch {
+      // best effort — the AI flow degrades to manual resolution without sidecars
+    }
+  }
+}
+
+/** Remove the conflicts sidecar dir for one workspace (after a successful push). */
+export async function clearConflictSidecars(notesDir: string): Promise<void> {
+  try {
+    await rm(join(notesDir, CONFLICTS_DIR), { recursive: true, force: true })
+  } catch {
+    // best effort
+  }
+}
+
 /**
  * Per-clone "has this notes dir ever completed a sync" state, kept INSIDE
  * `.git/` so it is never committed (a fresh clone loses it — correctly: a
@@ -710,6 +763,9 @@ export async function gitPush(
     ])
     const conflicts = pushConflicts(base, local, remote)
     if (conflicts.length > 0) {
+      // Sidecars for the AI conflict-resolution flow (docs/ai-conflict.md):
+      // base is still the pre-reset snapshot in memory — write it now.
+      await writeConflictSidecars(notesDir, base, remote, conflicts)
       return {
         ok: false,
         code: 'remote-changed',
@@ -832,8 +888,29 @@ export async function gitPull(
     readNoteMap(target),
   ])
   const { conflicts } = await threeWaySync(target, notesDir, base, local, remote)
+  if (conflicts.length > 0) {
+    // Sidecars for the AI conflict-resolution flow (docs/ai-conflict.md):
+    // remote here is the freshly-checked-out repo content; base is the
+    // pre-checkout snapshot still in memory.
+    await writeConflictSidecars(notesDir, base, remote, conflicts)
+  }
   markSyncedNotes(repo.repoDir, notesDir)
   return { ok: true, skipped: conflicts.length, changed: conflicts }
+}
+
+/**
+ * Abort an in-progress merge in the clone, if any. `gitSync` runs a real
+ * `git pull --no-rebase`; when that merge hits conflicts, the clone stays in
+ * MERGING state (MERGE_HEAD + unmerged index) and EVERY later checkout fails
+ * with "you need to resolve your current index first" — the workspace's Git
+ * card would be broken forever. The plugin's model is mirror-copy + in-memory
+ * three-way, it never resolves inside the clone, so the only sane recovery is
+ * to abort and surface the conflict through the normal remote-changed flow.
+ */
+async function abortMergeIfMerging(ctx: Context, repoDir: string): Promise<void> {
+  // MERGE_HEAD lives inside the .git dir, not the working tree.
+  if (!existsSync(join(repoDir, '.git', 'MERGE_HEAD'))) return
+  await runGit(ctx, repoDir, ['merge', '--abort'])
 }
 
 /**
@@ -841,8 +918,14 @@ export async function gitPull(
  * branch (`git pull --no-rebase`), falling back to `--allow-unrelated-histories`
  * for a first push against a non-empty remote. Never runs automatically — the
  * caller (the client's "merge remote & retry" button) is the user's decision.
+ * A merge that itself conflicts is aborted (see {@link abortMergeIfMerging});
+ * the user resolves via the overwrite/update flow instead.
  */
 export async function gitSync(ctx: Context, repo: ResolvedRepo): Promise<{ ok: boolean; code?: string; error?: string }> {
+  // Pre-clean any wedge left by an older run or a manual git merge: with an
+  // unmerged index, ensureBranch's `checkout -B` fails with "you need to
+  // resolve your current index first" and every later git call is broken.
+  await abortMergeIfMerging(ctx, repo.repoDir)
   await gitInit(ctx, repo, repo.branch)
   const branch = await ensureBranch(ctx, repo)
   if (branch.code !== 0) return { ok: false, code: 'sync-branch', error: `Sync branch failed: ${branch.stderr || branch.stdout}` }
@@ -852,7 +935,10 @@ export async function gitSync(ctx: Context, repo: ResolvedRepo): Promise<{ ok: b
   if (/unrelated histories/i.test(out)) {
     const merge2 = await runGit(ctx, repo.repoDir, ['pull', '--allow-unrelated-histories', '--no-rebase', '--no-edit'])
     if (merge2.code === 0) return { ok: true }
+    await abortMergeIfMerging(ctx, repo.repoDir)
     return { ok: false, code: 'git-failed', error: merge2.stderr || merge2.stdout || 'git pull failed (unrelated histories)' }
   }
+  // A conflicted merge leaves MERGE_HEAD behind — abort it or the clone wedges.
+  await abortMergeIfMerging(ctx, repo.repoDir)
   return { ok: false, code: 'git-failed', error: merge.stderr || merge.stdout || 'git pull failed' }
 }
