@@ -11,7 +11,7 @@
 <p align="center">
   DSH 第三方插件（bundle）：<b>MD 笔记管理</b>
   <br />
-  <a href="docs/usage.zh.md">使用文档</a> · <a href="docs/features.md">功能设计</a> · <a href="docs/architecture.md">架构设计</a> · <a href="docs/context.md">上下文引用</a> · <a href="docs/TODO.md">路线规划</a> · <a href="CHANGELOG.zh.md">变更记录</a>
+  <a href="docs/usage.zh.md">使用文档</a> · <a href="docs/features.md">功能设计</a> · <a href="docs/architecture.md">架构设计</a> · <a href="docs/context.md">上下文引用</a> · <a href="docs/ai-conflict.md">AI 解决冲突</a> · <a href="docs/TODO.md">路线规划</a> · <a href="CHANGELOG.zh.md">变更记录</a>
 </p>
 
 ---
@@ -141,7 +141,7 @@ HTTP API 前缀固定为 `/plugins/md-notes`（前端硬编码同值，故刻意
 | `src/client/` | 浏览器前端：入口（`index.ts`）+ `features/` 下的功能模块（每个功能一个目录；内部再长胖时拆出该功能私有的 `components/` 子组件与 `hooks/` 状态逻辑，`NotesManager/` 已示范，见 `docs/architecture.md`） |
 | `src/client/features/locales/` | 中/英 UI 字典（dsh locale 命名空间 `md-notes`） |
 | `assets/` | 插件图标（SVG 源文件 + PNG） |
-| `docs/` | 文档：`usage.md`/`usage.zh.md`（使用）、`features.md`（功能）、`architecture.md`（架构）、`context.md`（@ 引用）、`git.md`（Git 同步）、`state.md` / `write-lock.md`（状态与写锁设计）、`manager-redesign.md`（面板改版）、`compatibility.md` / `compatibility.zh.md`（dsh↔插件版本适配对照表，中英各一版）、`TODO.md` |
+| `docs/` | 文档：`usage.md`/`usage.zh.md`（使用）、`features.md`（功能）、`architecture.md`（架构）、`context.md`（@ 引用）、`git.md`（Git 同步）、`ai-conflict.md`（AI 解决冲突）、`state.md` / `write-lock.md`（状态与写锁设计）、`manager-redesign.md`（面板改版）、`compatibility.md` / `compatibility.zh.md`（dsh↔插件版本适配对照表，中英各一版）、`TODO.md` |
 | `scripts/` | 开发工具（如 `link-deps.mjs`） |
 | `lib/` | 构建产物（gitignored；npm 发布内容） |
 
