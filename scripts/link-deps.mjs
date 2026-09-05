@@ -33,11 +33,14 @@ const targets = [
   'packages/workspace/workspace',
   'packages/core/session',
   'packages/core/agent',
+  'packages/core/tools',
   'packages/llm/llm',
   'packages/session-query/session-query',
   'packages/sandbox/sandbox-policy',
   'packages/host/webserver',
   'packages/api/remotes',
+  'packages/api/session-controller',
+  'packages/interaction/user-approval',
 ]
 
 const scopeDir = join(root, 'node_modules', '@deepseek-ai')

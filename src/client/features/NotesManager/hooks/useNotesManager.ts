@@ -7,12 +7,16 @@
 import * as React from 'react'
 import type { GitStatusData } from '../../api.ts'
 import { noteKey } from '../../busy.ts'
+import { resolveConflictsWithAi, watchSessionCompletion, type SessionsLike } from '../../ai-conflict.ts'
 import { useNotesList } from './useNotesList.ts'
 import { useNotesEditor } from './useNotesEditor.ts'
 import { useGitSync } from './useGitSync.ts'
 import type { ConfirmState, NotesManagerProps } from './types.ts'
 
-export function useNotesManager({ store, tracker, t }: NotesManagerProps) {
+/** Minimal ISessions projection (ctx.get('sessions') in the client entry). */
+export type { SessionsLike } from '../../ai-conflict.ts'
+
+export function useNotesManager({ store, tracker, t, sessions }: NotesManagerProps & { sessions?: SessionsLike }) {
   const [gitMsg, setGitMsg] = React.useState('')
   const [remoteChanged, setRemoteChanged] = React.useState<string[] | null>(null)
   const [confirmState, setConfirmState] = React.useState<ConfirmState | null>(null)
@@ -30,6 +34,31 @@ export function useNotesManager({ store, tracker, t }: NotesManagerProps) {
     tracker,
     t,
   })
+
+  /**
+   * AI conflict resolution (docs/ai-conflict.md): close the manager so the
+   * new session is visible, create + prompt + open it, and watch for
+   * completion (running→false) to refresh the list with a hint.
+   */
+  const startAiResolve = (workspaceId: string, names: readonly string[], _deleted: readonly string[]): void => {
+    if (sessions === undefined) {
+      setGitMsg(t('conflict.aiFailed').replace('{error}', 'sessions service unavailable'))
+      return
+    }
+    close()
+    resolveConflictsWithAi(sessions, t, workspaceId, names).then((sessionId) => {
+      watchSessionCompletion(sessions, sessionId, () => {
+        store.update((d) => { d.managerOpen = true })
+        list.refresh()
+        editor.setFlash('conflict.aiDone')
+        window.setTimeout(() => editor.setFlash(''), 4000)
+      })
+    }).catch((error: unknown) => {
+      store.update((d) => { d.managerOpen = true })
+      setGitMsg(t('conflict.aiFailed').replace('{error}', error instanceof Error ? error.message : String(error)))
+    })
+  }
+
   const git = useGitSync({
     refreshStatus: list.refreshStatus,
     refreshAndRereadSelected: editor.refreshAndRereadSelected,
@@ -37,6 +66,7 @@ export function useNotesManager({ store, tracker, t }: NotesManagerProps) {
     setRemoteChanged,
     setGitMsg,
     setConfirmState,
+    aiConflict: { startAiResolve },
     t,
   })
 

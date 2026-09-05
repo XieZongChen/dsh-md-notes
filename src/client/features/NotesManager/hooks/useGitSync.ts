@@ -9,6 +9,12 @@ import { gitErrorText, gitPullApi, gitPushApi, gitSyncApi } from '../../api.ts'
 import type { MdNotesKey } from '../../locales/index.ts'
 import type { ConfirmState } from './types.ts'
 
+/** Session services the AI conflict flow needs (structural; ctx.get-provided). */
+export interface AiConflictDeps {
+  /** Launch the flow; on failure shows the localized error via setGitMsg. */
+  startAiResolve: (workspaceId: string, names: readonly string[], deleted: readonly string[]) => void
+}
+
 export function useGitSync(deps: {
   refreshStatus: (wsId: string | null) => void
   refreshAndRereadSelected: (wsId: string) => void
@@ -16,9 +22,10 @@ export function useGitSync(deps: {
   setRemoteChanged: (names: string[] | null) => void
   setGitMsg: (msg: string) => void
   setConfirmState: React.Dispatch<React.SetStateAction<ConfirmState | null>>
+  aiConflict: AiConflictDeps
   t: TranslateNS<'md-notes'>
 }) {
-  const { refreshStatus, refreshAndRereadSelected, setFlash, setRemoteChanged, setGitMsg, setConfirmState, t } = deps
+  const { refreshStatus, refreshAndRereadSelected, setFlash, setRemoteChanged, setGitMsg, setConfirmState, aiConflict, t } = deps
   /** Workspace whose commit popover is open (null = none). */
   const [pushTargetWsId, setPushTargetWsId] = React.useState<string | null>(null)
   const [pushMsg, setPushMsg] = React.useState('')
@@ -71,6 +78,16 @@ export function useGitSync(deps: {
         description: t('git.updateConfirm', { count: skipped }),
         confirmLabel: t('git.overwriteLocal'),
         cancelLabel: t('git.cancel'),
+        ai: {
+          label: t('conflict.aiButton'),
+          hint: t('conflict.aiHint'),
+          run: () => {
+            setConfirmState(null)
+            // The conservative pull already reported both-changed files as
+            // `skipped`; their names arrive in `changed` (host sidecars written).
+            aiConflict.startAiResolve(wsId, res.changed ?? [], [])
+          },
+        },
         onConfirm: () => { setConfirmState(null); doUpdate(wsId, true) },
       })
     }).finally(() => setUpdatingWsId(null))
@@ -87,13 +104,22 @@ export function useGitSync(deps: {
         refreshStatus(wsId)
       } else if (res.code === 'remote-changed') {
         // The remote has notes newer/different from the local ones — ask the
-        // user whether to overwrite them with the local version before pushing.
-        const names = (res.changed ?? []).join(t('manager.listSep'))
+        // user whether to overwrite them with the local version before pushing,
+        // or let the AI merge both sides (docs/ai-conflict.md).
+        const names = res.changed ?? []
         setConfirmState({
           title: t('git.pushRemoteChangedTitle'),
-          description: t('git.pushRemoteChanged', { names }),
+          description: t('git.pushRemoteChanged', { names: names.join(t('manager.listSep')) }),
           confirmLabel: t('git.overwriteRemote'),
           cancelLabel: t('git.cancel'),
+          ai: {
+            label: t('conflict.aiButton'),
+            hint: t('conflict.aiHint'),
+            run: () => {
+              setConfirmState(null)
+              aiConflict.startAiResolve(wsId, names, [])
+            },
+          },
           onConfirm: () => { setConfirmState(null); runPush(wsId, message, true) },
         })
       } else if (res.code === 'non-fast-forward') {

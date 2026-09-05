@@ -6,6 +6,7 @@
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { NotesUiStore } from '../../store.ts'
 import type { BusyTracker } from '../../busy.ts'
+import type { SessionsLike } from '../../ai-conflict.ts'
 
 /** In-page confirmation dialog state (replaces window.confirm, reliable in overlay). */
 export interface ConfirmState {
@@ -15,6 +16,17 @@ export interface ConfirmState {
   cancelLabel: string
   danger?: boolean
   onConfirm: () => void
+  /**
+   * Optional tertiary "AI resolve" action (the AI conflict-resolution flow,
+   * docs/ai-conflict.md): `hint` backs the trailing question-mark icon's
+   * hover tooltip, `run` launches the flow (closing this dialog is the
+   * caller's job — it should also close the manager and jump to the session).
+   */
+  ai?: {
+    label: string
+    hint: string
+    run: () => void
+  }
 }
 
 export interface NotesManagerProps {
@@ -24,4 +36,6 @@ export interface NotesManagerProps {
   tracker: BusyTracker
   /** Framework-injected locale seat (`md-notes` namespace). */
   t: TranslateNS<'md-notes'>
+  /** Session services for the AI conflict flow (optional — flow degrades to manual). */
+  sessions?: SessionsLike
 }

@@ -33,6 +33,7 @@ import { NotePicker } from './features/NotePicker/NotePicker.tsx'
 import { NotesManager } from './features/NotesManager/NotesManager.tsx'
 import { SettingsSection } from './features/Settings/SettingsSection.tsx'
 import { createNotesSource } from './features/ContextSource/ContextSource.ts'
+import type { SessionsLike } from './features/ai-conflict.ts'
 import { ICON_URL } from './features/api.ts'
 
 /** Minimal projection of the per-session input state the re-track hook reads. */
@@ -68,9 +69,11 @@ function NotesOverlay(props: {
   store: NotesUiStore
   tracker: BusyTracker
   t: TranslateNS<'md-notes'>
+  /** Session services for the AI conflict flow (ctx.get('sessions')). */
+  sessions?: SessionsLike
 }): React.ReactElement | null {
   const s = useStore(props.store)
-  if (s.managerOpen) return React.createElement(NotesManager, { store: props.store, tracker: props.tracker, t: props.t })
+  if (s.managerOpen) return React.createElement(NotesManager, { store: props.store, tracker: props.tracker, t: props.t, sessions: props.sessions })
   if (s.picker) {
     return React.createElement(NotePicker, {
       questionText: s.picker.questionText,
@@ -232,7 +235,7 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register(
     { name: 'shell.overlay', id: 'dsh-notes-overlay', order: 100, label: t('sidebar.entry'), locale: 'md-notes' },
     (props: { t: TranslateNS<'md-notes'> }) =>
-      React.createElement(NotesOverlay, { store, tracker, t: props.t }),
+      React.createElement(NotesOverlay, { store, tracker, t: props.t, sessions: ctx.get('sessions') as SessionsLike | undefined }),
   )), 'dsh-md-notes: overlay')
 
   ctx.effect(() => ctx.slots.inject('settings.section', () => ctx.slots.register(

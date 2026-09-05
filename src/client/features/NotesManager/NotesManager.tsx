@@ -11,7 +11,7 @@
  */
 
 import * as React from 'react'
-import { IconCloseOutline16, IconSettingsOutline16, MarkdownText, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutline16, IconSettingsOutline16, MarkdownText, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
@@ -29,7 +29,7 @@ import type { NotesManagerProps } from './hooks/types.ts'
  * `useNotesManager`; `updateInfo` is the only component-local state.
  */
 export function NotesManager(props: NotesManagerProps): React.ReactElement {
-  const { store, tracker, t } = props
+  const { store, tracker, t, sessions } = props
   const updateInfo = useUpdateAvailable()
   const {
     workspaces, noWorkspaces, loading, contentLoading, selectedWsId, selected, content,
@@ -39,7 +39,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     currentWsId, toggleWorkspace, toggleGit, open, save, createIn, submitCreate, cancelCreate, remove,
     updateClick, pushForWs, doPush, resolveAndRetry, setPushMsg, setPushTargetWsId, setMode,
     setContent, setConfirmState, close, openDshSettings, createWsId, createBusy,
-  } = useNotesManager({ store, tracker, t })
+  } = useNotesManager({ store, tracker, t, sessions })
 
   // Localized Markdown chrome (code-fence copy + footnotes), memoized per
   // locale revision so the preview does not rebuild MarkdownText's cached
@@ -194,6 +194,23 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
               <button type="button" className={shared.btn} onClick={() => setConfirmState(null)}>
                 {confirmState.cancelLabel}
               </button>
+              {confirmState.ai !== undefined && (
+                <span className={styles.aiCell}>
+                  <button
+                    type="button"
+                    className={styles.aiBtn}
+                    onClick={confirmState.ai.run}
+                  >{confirmState.ai.label}</button>
+                  <Tooltip label={confirmState.ai.hint} side="top">
+                    <span
+                      className={styles.aiHint}
+                      role="note"
+                      aria-label={confirmState.ai.hint}
+                      tabIndex={0}
+                    >?</span>
+                  </Tooltip>
+                </span>
+              )}
               <button
                 type="button"
                 className={confirmState.danger === true ? styles.confirmBtnDanger : styles.confirmBtn}

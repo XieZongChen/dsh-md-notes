@@ -15,15 +15,18 @@ import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
+import { defineTool } from '@deepseek-ai/dsh-tools'
 // Declaration-merge triggers so ctx.webServer / ctx.sessions / ctx.settings /
-// ctx.workspaceRegistry types are visible.
+// ctx.workspaceRegistry / ctx.tools / ctx.approval types are visible.
 import type {} from '@deepseek-ai/dsh-host-webserver'
 import type {} from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-settings'
+import type {} from '@deepseek-ai/dsh-tools'
+import type {} from '@deepseek-ai/dsh-user-approval'
 import type {} from '@deepseek-ai/dsh-workspace'
 import {
-  createFetchDedup, gitInit, gitPull, gitPush, gitStatus, gitSync, normPath, resolveNotesDir,
-  resolveSharedRepo, resolveWorkspaceRepo,
+  clearConflictSidecars, createFetchDedup, gitInit, gitPull, gitPush, gitStatus, gitSync, normPath,
+  resolveNotesDir, resolveSharedRepo, resolveWorkspaceRepo,
   type ResolvedRepo, type WorkspaceInfo,
 } from './host/git.ts'
 import { iconHandler, notesApiHandler, type GitApi, type NotesApiDeps, type WorkspaceEntry } from './host/http.ts'
@@ -62,7 +65,9 @@ export interface Config {
 }
 
 export const name = 'md-notes'
-export const inject = ['webServer', 'settings']
+// 'tools' backs the push_notes agent tool (AI conflict resolution,
+// docs/ai-conflict.md); 'approval' powers its two-level native approval gate.
+export const inject = ['webServer', 'settings', 'tools', 'approval']
 export const Config: s<Config> = s.object({
   gitMode: s.union([s.const('off'), s.const('on'), s.const('shared'), s.const('own')]).default('off'),
   gitCentralRemote: s.string().default(''),
@@ -204,6 +209,84 @@ export function apply(ctx: Context, config: Config): void {
     pull: (repo, notesDir, force, manual) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitPull(ctx, repo, notesDir, force, manual)),
     sync: (repo) => gitMutex.runExclusive(`repo/${repo.repoDir}`, () => gitSync(ctx, repo)),
   }
+
+  // --- push_notes agent tool (AI conflict resolution, docs/ai-conflict.md) ---
+  // Registered for every agent session; the description scopes its use to the
+  // AI-conflict flow and EVERY call goes through dsh's native approval panel
+  // (ctx.approval) — pushing is a remote mutation the user must confirm. When
+  // the first push is rejected with remote-changed (normal after an AI merge:
+  // base is unchanged), a SECOND approval asks to overwrite the remote.
+  ctx.effect(() => ctx.tools.register(defineTool({
+    name: 'push_notes',
+    description: 'Push the notes of one dsh-md-notes workspace to its configured git remote. '
+      + 'Use this after resolving note conflicts (or after editing notes) when the user asks to sync. '
+      + 'The user must approve each push in the approval panel.',
+    parameters: {
+      workspaceId: { type: 'string', description: 'The workspace whose notes to push.', required: true },
+      message: { type: 'string', description: 'Optional commit message. Defaults to a timestamped message.' },
+    },
+    output: {
+      schema: {
+        type: 'object',
+        properties: {
+          ok: { type: 'boolean' },
+          code: { type: 'string' },
+          error: { type: 'string' },
+        },
+        required: ['ok'],
+        additionalProperties: false,
+      },
+      render: (_args, value) => [{
+        type: 'text',
+        text: value.ok
+          ? 'Notes pushed to the remote successfully.'
+          : `Push failed${value.code ? ` (${value.code})` : ''}: ${value.error ?? 'unknown error'}`,
+      }],
+    },
+    async execute(args, exec) {
+      if (exec.agent === undefined) throw new Error('push_notes requires an agent session')
+      const approval = ctx.get('approval')
+      // inject guarantees the service; this guard is for hand-built contexts.
+      if (approval === undefined) throw new Error('push_notes requires the approval service')
+      const notesDir = resolveDir(args.workspaceId)
+      const repo = resolveRepo(args.workspaceId)
+      if (notesDir === undefined || repo === undefined) {
+        return { ok: false, code: 'no-repo', error: 'No git repo is configured for this workspace.' }
+      }
+      const requestApproval = (reason: string): Promise<boolean> =>
+        approval.request({
+          agent: exec.agent!,
+          toolName: 'push_notes',
+          callId: exec.callId,
+          reason,
+          signal: exec.signal,
+        }).then((outcome) => outcome === 'allowed-once')
+      if (!await requestApproval('推送笔记到远端仓库 / Push notes to the remote repository')) {
+        throw new Error('push_notes was rejected by the user — report this and stop; do not retry the push.')
+      }
+      const commitMessage = args.message !== undefined && args.message.trim() !== ''
+        ? args.message.trim()
+        : `Notes update ${new Date().toLocaleString()}`
+      let result = await git.push(repo, notesDir, commitMessage, false)
+      if (result.ok !== true && result.code === 'remote-changed') {
+        // Normal after an AI merge (base unchanged): the remote still differs
+        // from what this device last synced. Ask to overwrite explicitly.
+        const approved = await requestApproval('远端笔记与本地不同，确认用本地版本覆盖远端？ / The remote notes differ — overwrite the remote with your local (merged) version?')
+        if (!approved) {
+          throw new Error('push_notes overwrite was rejected by the user — keep the local merge and stop; do not retry the push.')
+        }
+        result = await git.push(repo, notesDir, commitMessage, true)
+      }
+      if (result.ok === true) {
+        // The AI conflict flow is finished: drop its three-way sidecar files.
+        void clearConflictSidecars(notesDir)
+      }
+      return result.ok === true
+        ? { ok: true }
+        : { ok: false, code: result.code, error: result.error }
+    },
+    presentCall: (args) => ({ card: 'generic', title: `Push notes (${args.workspaceId})`, kind: 'other' as const, rawInput: args }),
+  })), 'dsh-md-notes: push_notes tool')
 
   // --- update check: latest npm version vs the installed one (cached 10 min;
   // checkUpdate:false keeps it fully offline — host/update.ts owns the logic) ---
