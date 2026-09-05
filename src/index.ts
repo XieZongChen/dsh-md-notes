@@ -229,11 +229,10 @@ export function apply(ctx: Context, config: Config): void {
       schema: {
         type: 'object',
         properties: {
-          ok: { type: 'boolean' },
+          ok: { type: 'boolean', required: true },
           code: { type: 'string' },
           error: { type: 'string' },
         },
-        required: ['ok'],
         additionalProperties: false,
       },
       render: (_args, value) => [{
