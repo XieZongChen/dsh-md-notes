@@ -196,12 +196,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
               </button>
               {confirmState.ai !== undefined && (
                 <span className={styles.aiCell}>
-                  <button
-                    type="button"
-                    className={styles.aiBtn}
-                    onClick={confirmState.ai.run}
-                  >{confirmState.ai.label}</button>
-                  <Tooltip label={confirmState.ai.hint} side="top">
+                  <Tooltip label={confirmState.ai.hint} side="top" maxWidth={280}>
                     <span
                       className={styles.aiHint}
                       role="note"
@@ -209,6 +204,11 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                       tabIndex={0}
                     >?</span>
                   </Tooltip>
+                  <button
+                    type="button"
+                    className={shared.btn}
+                    onClick={confirmState.ai.run}
+                  >{confirmState.ai.label}</button>
                 </span>
               )}
               <button

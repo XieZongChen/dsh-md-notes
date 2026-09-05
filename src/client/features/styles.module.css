@@ -51,12 +51,17 @@
 }
 
 .btn {
+  /* Same metrics as the confirm dialogs' primary buttons (30px tall, 13px,
+     radius 8) so secondary/cancel/tertiary buttons in one footer never end
+     up three different sizes. */
+  box-sizing: border-box;
+  height: 30px;
+  padding: 0 16px;
   border: 1px solid var(--dsw-alias-border-l1, #ddd);
   background: var(--dsw-alias-bg-layer-1, #fafafa);
   color: var(--dsw-alias-label-primary, #222);
-  font-size: 12px;
-  padding: 5px 12px;
-  border-radius: 7px;
+  font-size: 13px;
+  border-radius: 8px;
   cursor: pointer;
 }
 .btn:hover {

@@ -771,30 +771,13 @@
   margin-left: auto;
 }
 
-.aiBtn {
-  border: 1px solid var(--dsw-alias-border-card, rgba(127, 127, 127, 0.35));
-  background: transparent;
-  color: var(--dsw-alias-label-primary-foreground, inherit);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.aiBtn:hover {
-  background: var(--dsw-alias-bg-hover, rgba(127, 127, 127, 0.12));
-}
-
+/* Icon-only "?" before the AI button: no frame, no hover treatment — the
+   Tooltip on hover/focus is the only affordance. */
 .aiHint {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1px solid var(--dsw-alias-border-card, rgba(127, 127, 127, 0.35));
-  font-size: 11px;
+  font-size: 13px;
+  line-height: 1;
   color: var(--dsw-alias-label-secondary-foreground, inherit);
-  cursor: help;
   user-select: none;
 }
