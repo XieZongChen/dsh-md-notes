@@ -45,12 +45,21 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Added
 
+- **AI conflict resolution**: the push-blocked and update-conflict dialogs gain an
+  "AI resolve" action — a conversation is created in the conflicting workspace and
+  the local/base/remote versions of each conflicting note are handed to the model
+  for a semantic merge (undecidable points are asked back via ask_user); when
+  done the AI requests the push through dsh's native approval panel, and the
+  remote is only touched after you confirm. See [docs/ai-conflict.md](docs/ai-conflict.md).
 - New `checkUpdate` config (default `true`): set it to `false` and the host
   never contacts registry.npmjs.org — for offline or managed deployments the
   update check used to be an unconditional outbound call.
 
 ### Fixed
 
+- Fixed the git clone being permanently wedged after "merge remote & retry" hit a
+  merge conflict (an uncleaned MERGE_HEAD broke every later sync); the leftover
+  merge is now aborted automatically and the clone recovers.
 - Fixed two Git first-sync defects on a fresh device (fresh clone + empty
   notes dir): ① pulling did nothing — an absent local file read as a local
   edit (skipped), and the auto-pull short-circuited on "no new remote
