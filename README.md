@@ -128,6 +128,7 @@ There are **no environment variables and no secrets** in this plugin's configura
 | Plugin doesn't load | Verify the layer: `dsh --profile web --dump-config` and look for the `md-notes` row. |
 | Installed from git and `add` failed | pnpm ≥10 blocks build scripts by default; add the printed package key under `allowBuilds` in the profile's `pnpm-workspace.yaml`, then re-run `add`. |
 | Notes can't be created/saved | Make sure the workspace's `.dsh-notes` points to an existing writable directory (create a workspace in the dsh sidebar first). |
+| Something feels slow | Grab request timings with the browser probe in [docs/debug.md](docs/debug.md) — tells queueing vs server time in seconds. |
 
 Rollback: `dsh plugin --profile web remove dsh-md-notes` restores the previous state (notes files are untouched).
 

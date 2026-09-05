@@ -43,6 +43,7 @@ dsh-md-notes/
 │   ├── architecture.md    # 本文档（架构设计）
 │   ├── git.md             # Git 同步设计（v4 模型）
 │   ├── ai-conflict.md     # AI 解决冲突设计（三方 sidecar + 会话合并 + push_notes 审批）
+│   ├── debug.md           # 性能排查手册（探针/基准/已排除项）
 │   ├── context.md         # 笔记引用进对话上下文设计（已实现）
 │   ├── state.md           # 状态管理总纲（分层/选型/异步跟踪）
 │   ├── write-lock.md      # 笔记写入互斥（写锁）方案（已实现）

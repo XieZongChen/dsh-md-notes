@@ -102,6 +102,7 @@ dsh web / 硬刷新**（例如「只改了 src/client/features/NotesManager → 
 | [context.md](docs/context.md) | `@` 引用与注入链路设计（含 pre-step vs agent.inject 选型依据） |
 | [git.md](docs/git.md) | Git 同步模型（v4：URL 驱动 clone、镜像同步、三路合并） |
 | [ai-conflict.md](docs/ai-conflict.md) | AI 解决冲突（三方 sidecar、会话合并方法论、push_notes 审批工具） |
+| [debug.md](docs/debug.md) | 性能排查手册（浏览器探针、服务端基准、已排除项记录） |
 | [state.md](docs/state.md) / [write-lock.md](docs/write-lock.md) | 状态分层与写锁协议 |
 | [coding-standards.md](docs/coding-standards.md) | 分层/命名/类型/错误码/锁/测试规范 + §12 隐患清单 |
 | [compatibility(.zh).md](docs/compatibility.zh.md) | 插件版本 ↔ dsh 版本对照表 |
