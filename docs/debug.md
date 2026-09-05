@@ -61,4 +61,14 @@ time curl -s -o /dev/null https://registry.npmjs.org/dsh-md-notes/latest
 一次真实 pull 补上标记。**遗留 TODO**：插件 apply 时对「clone 早于进程存在且无标记」的
 存量 clone 播种标记（coding-standards §12 #19）。
 
-根因最终未定（复现窗口消失）：下次复现时先跑 §1 探针，按解读表走。
+**根因（2026-09-05 当晚用户确认定案）**：网慢时打开管理器的 git 请求风暴占满浏览器同源
+连接池。机制：manager 打开并发发出 `gitSettings + list + 3×gitStatus`（共享仓库模式下三个
+status 在服务端本就串行等同一把 repo 互斥锁，连接全部空挂）+ 打开笔记的自动拉取（又一次
+网络 fetch）；网慢时各挂 10 秒+，同源 HTTP/1.1 只有 6 条连接——保存 POST 在浏览器排队，
+等某个 git 请求完成才发出（探针实锤：write 发出延迟 ~10s、发出后仅 15ms）。「启动后/清缓存
+后慢、过阵子好」= 冷页面触发完整请求风暴 + fetch 去重 TTL 过后重新拉取。
+
+**修复**：status 扫描改为严格串行（`useNotesList.refresh` 逐个 await；服务端共享仓库本就
+串行，并发发出只是空占 N-1 条连接），最坏并发从 ~6 降到 3（单 status + 自动拉取 +
+checkUpdate），保存恒有连接可用。冷启动/网慢场景若仍出现排队，先用 §1 探针看同期挂着的
+请求是谁。

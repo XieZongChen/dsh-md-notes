@@ -57,6 +57,12 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Fixed
 
+- Fixed saves stalling 10+ seconds on slow networks: the per-workspace git
+  status requests fired when the manager opens were parallel (on shared-repo
+  mode the server serializes them anyway, so the extra connections just sat
+  parked); together with the auto-pull they could occupy every same-origin
+  browser connection, queueing the save POST behind git fetches. Statuses are
+  now fetched strictly one at a time.
 - Fixed the git clone being permanently wedged after "merge remote & retry" hit a
   merge conflict (an uncleaned MERGE_HEAD broke every later sync); the leftover
   merge is now aborted automatically and the clone recovers.

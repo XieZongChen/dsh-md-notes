@@ -14,9 +14,10 @@ export function useNotesList() {
   const [statusByWs, setStatusByWs] = React.useState<Record<string, GitStatusData | null>>({})
   const [autoPull, setAutoPull] = React.useState(true)
 
-  const refreshStatus = (wsId: string | null): void => {
-    if (wsId === null) return
-    void gitStatusApi(wsId).then((res) => {
+  /** Fetch one workspace's git status; resolves when its response lands. */
+  const refreshStatus = (wsId: string | null): Promise<void> => {
+    if (wsId === null) return Promise.resolve()
+    return gitStatusApi(wsId).then((res) => {
       // Per-workspace storage: each workspace keeps its own status, so a
       // stale response can never clobber the current workspace's buttons.
       setStatusByWs((prev) => ({ ...prev, [wsId]: res.ok && res.status ? res.status : null }))
@@ -43,14 +44,23 @@ export function useNotesList() {
     void gitSettingsApi().then((res) => {
       if (res.ok && res.settings) setAutoPull(res.settings.gitAutoPull !== false)
     })
-    void api('list').then((res) => {
+    void api('list').then(async (res) => {
       setLoading(false)
       setNoWorkspaces(res.ok === true && res.noWorkspaces === true)
       if (res.ok && res.workspaces) {
         setWorkspaces(res.workspaces)
         // Every workspace's Git card needs its own status, not just the current
-        // one (each card renders its own branch/uncommitted/update/push).
-        for (const ws of res.workspaces) refreshStatus(ws.workspaceId)
+        // one (each card renders its own branch/uncommitted/update/push) — but
+        // STRICTLY ONE AT A TIME. Each status POST holds an HTTP connection
+        // for its entire (network-bound) duration; on shared mode the server
+        // serializes them on one repo mutex anyway, so a parallel fan-out just
+        // parks N-1 connections doing nothing. On a slow link that fan-out
+        // occupied every same-origin connection the browser allows and the
+        // user's SAVE post queued behind git fetches for seconds
+        // (docs/debug.md §3). Sequential = worst case 1 hanging status.
+        for (const ws of res.workspaces) {
+          await refreshStatus(ws.workspaceId)
+        }
       }
     })
   }
