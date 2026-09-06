@@ -1,22 +1,26 @@
-/* dsh-styled text input — tokens match @deepseek-ai/dsh-client-ui-primitives
-   Input.module.css so colors adapt to light/dark themes. */
+/* dsh-styled text input — copied rule-for-rule from the harness settings
+   section input (`ui-settings-models` ModelsSection.module.css `.input`) so
+   colors adapt to light/dark themes. Pure tokens, no fallback literals:
+   a literal fallback would render its light-mode value under the dark theme
+   whenever a token is missing, which is exactly what the harness comment at
+   the top of ModelsSection.module.css warns against. */
 
 .input {
   box-sizing: border-box;
   width: 100%;
   height: 32px;
   padding: 0 10px;
-  border: 1px solid var(--dsw-alias-border-l2);
+  border: 0.5px solid var(--dsw-alias-border-l4);
   border-radius: 8px;
   font: inherit;
   font-size: 14px;
   line-height: 22px;
   background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-primary);
-  outline: none;
 }
 
 .input:focus {
+  outline: none;
   border-color: var(--dsw-alias-brand-primary);
 }
 

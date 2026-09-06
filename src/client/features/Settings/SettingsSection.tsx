@@ -145,17 +145,19 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
         </div>
       </div>
       <div className={styles.row}>
-        <label className={styles.field}>
+        <div className={styles.field}>
           <span className={styles.label}>{t('git.mode')}</span>
           <DshSelect
+            ariaLabel={t('git.mode')}
             value={mode}
-            onChange={(e) => set({ gitMode: e.target.value as 'off' | 'shared' | 'own' })}
-          >
-            <option value="off">{t('git.modeOff')}</option>
-            <option value="shared">{t('git.modeShared')}</option>
-            <option value="own">{t('git.modeOwn')}</option>
-          </DshSelect>
-        </label>
+            options={[
+              { value: 'off', label: t('git.modeOff') },
+              { value: 'shared', label: t('git.modeShared') },
+              { value: 'own', label: t('git.modeOwn') },
+            ]}
+            onChange={(value) => set({ gitMode: value as 'off' | 'shared' | 'own' })}
+          />
+        </div>
       </div>
       <div className={styles.hint}>{mode === 'off' ? t('git.modeOffHint') : mode === 'shared' ? t('git.modeSharedHint') : t('git.modeOwnHint')}</div>
 

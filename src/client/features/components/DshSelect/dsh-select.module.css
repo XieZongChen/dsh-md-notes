@@ -1,36 +1,104 @@
-/* dsh-styled select — tokens match ui-settings-models ModelsSection so the
-   dropdown adapts to light/dark themes, with the shared 12px chevron. */
+/* dsh-styled dropdown — trigger and popup copied rule-for-rule from the
+   harness General-panel selector (`ui-theme` LanguageRow.module.css
+   `.selector`/`.chevron`) and the Menu primitive's card
+   (`ui-primitives` Menu.module.css `.list`/`.item`/`.check`). The popup is a
+   custom portaled card because the OS-native <select> popup cannot take the
+   page's tokens at all. Pure tokens, no fallback literals — a literal would
+   render its light-mode value under the dark theme. */
 
-.select {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 240px;
-  height: 32px;
-  padding: 0 10px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
+.root {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Selector pill (figma 'Selector': h36 r18, module-platform fill, pad 0/14,
+ * gap 12). */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 18px;
+  background: var(--dsw-alias-bg-module-platform);
   font: inherit;
   font-size: 14px;
   line-height: 22px;
-  background: var(--dsw-alias-bg-layer-1);
   color: var(--dsw-alias-label-primary);
   cursor: pointer;
-  outline: none;
-  appearance: none;
-  /* Data-URI SVGs cannot resolve CSS variables; #81858C is the caption gray
-     shared by both themes (same as dsh's ModelsSection). */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%2381858C' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 12px 12px;
-  padding-right: 32px;
 }
 
-.select:focus {
-  border-color: var(--dsw-alias-brand-primary);
+.trigger:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
 }
 
-.select:disabled {
-  opacity: 0.6;
-  cursor: default;
+.trigger:focus-visible {
+  outline: 2px solid var(--dsw-alias-brand-primary);
+  outline-offset: 2px;
+}
+
+.chevron {
+  flex: none;
+}
+
+/* Dropdown card (Menu.module.css `.list` + `.portal`): fixed in the viewport
+ * from the trigger rect, r20, menu fill, elevation-prominent with the l1
+ * hairline stroke in the shadow, 4px inset padding. z 1100 so it layers above
+ * the settings panel's own overlay (z 1000). Elevated surface: the scrollbar
+ * thumb takes the l2 elevation tokens (see ui-theme styles/scrollbar.css for
+ * the rebinding contract). */
+.list {
+  box-sizing: border-box;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  border: 0;
+  border-radius: 20px;
+  background: var(--dsw-specific-menu);
+  --dsw-elevation-stroke-color: var(--dsw-alias-border-l1);
+  box-shadow: var(--dsw-elevation-prominent);
+  --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
+  --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+  position: fixed;
+  z-index: 1100;
+  min-width: 218px;
+  max-width: 360px;
+}
+
+/* Menu cell (Menu.module.css `.item`): min-h 40, r10, pad 8/10, 14/22, gap 8
+ * between label and the trailing check that marks the selected row. */
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--dsw-alias-label-primary);
+  text-align: left;
+}
+
+.item:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.itemLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check {
+  flex: none;
+  color: var(--dsw-alias-label-primary);
 }

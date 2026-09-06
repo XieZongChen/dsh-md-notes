@@ -1,47 +1,59 @@
-/* dsh settings panel section: git configuration form. */
+/* dsh settings panel section: git configuration form.
+ *
+ * Every surface and control is the harness settings vocabulary, taken from
+ * `ui-settings-models` ModelsSection.module.css: filled module panels
+ * (`.editor`/`.setupCard`), outlined nested entries (`.modelEntry`), the
+ * 12/18 caption scale, and the pill primary button. Pure tokens, no fallback
+ * literals — a literal would render its light-mode value under the dark theme
+ * whenever a token is missing, which is what the harness's own CSS warns
+ * against. */
 
 .section {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 640px;
+  max-width: 720px;
+  color: var(--dsw-alias-label-primary);
 }
 
-/* Prominent storage tip above the git config. */
+/* Storage tip: a filled module surface, like the harness editor/setup cards. */
 .tipPanel {
-  padding: 10px 12px;
-  border: 1px solid var(--dsw-alias-border-l2, #ddd);
-  border-left: 3px solid var(--dsw-alias-brand-primary, #4a7bff);
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-layer-1, #fafafa);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-module-platform);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .tipTitle {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--dsw-alias-label-primary, #222);
-  margin-bottom: 4px;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
 }
 
 .tipBody {
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--dsw-alias-label-secondary, #888);
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
 }
 
 .tipCode {
-  font-family: var(--dsw-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-family: var(--ds-font-family-code);
   font-size: 11px;
   padding: 1px 5px;
   border-radius: 4px;
-  background: var(--dsw-alias-bg-layer-2, rgba(128, 128, 128, 0.12));
-  color: var(--dsw-alias-label-primary, #222);
+  background: var(--dsw-alias-bg-layer-2);
+  color: var(--dsw-alias-label-primary);
 }
 
 .loading {
   padding: 12px 0;
-  color: var(--dsw-alias-label-secondary, #888);
   font-size: 13px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
 }
 
 .row {
@@ -53,14 +65,19 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
   min-width: 160px;
 }
 
+/* Caption scale of the harness field label (ModelsSection .fieldLabel). */
 .label {
+  display: inline-flex;
+  align-items: center;
   font-size: 12px;
-  color: var(--dsw-alias-label-secondary, #888);
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-secondary);
 }
 
 /* Inputs/selects use the dsh-styled DshInput/DshSelect components; only
@@ -70,34 +87,38 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: var(--dsw-alias-label-primary, #222);
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--dsw-alias-label-primary);
 }
 
+/* Grouped config: the harness editing surface — a filled module on the panel
+   rather than another outline inside the section. */
 .group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--dsw-alias-border-l1, #eee);
-  border-radius: 10px;
-  background: var(--dsw-alias-bg-layer-1, #fafafa);
+  gap: 14px;
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-module-platform);
+  padding: 14px 16px;
 }
 
 .groupTitle {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--dsw-alias-label-primary, #222);
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
 }
 
+/* Workspace entry: an outlined row on the editor fill (ModelsSection
+   .modelEntry). */
 .wsBlock {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--dsw-alias-border-l1, #eee);
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-base, #fff);
+  border: 0.5px solid var(--dsw-alias-border-l4);
+  border-radius: 10px;
+  padding: 6px 10px;
 }
 
 .wsRow {
@@ -114,8 +135,9 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 13px;
-  font-weight: 600;
-  color: var(--dsw-alias-label-primary, #222);
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--dsw-alias-label-primary);
 }
 
 .wsRow input {
@@ -123,69 +145,55 @@
   min-width: 120px;
 }
 
-.authBtn {
-  flex: none;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--dsw-alias-border-l2, #ddd);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--dsw-alias-label-primary, #222);
-  font-size: 12px;
-  cursor: pointer;
-}
-.authBtn:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-.authBtn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.suggestBtn {
-  flex: none;
-  height: 28px;
-  padding: 0 10px;
-  border: 1px dashed var(--dsw-alias-border-l2, #bbb);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--dsw-alias-label-secondary, #888);
-  font-size: 12px;
-  cursor: pointer;
-}
-.suggestBtn:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-primary, #222);
-}
-
 .hint {
+  margin: 0;
   font-size: 12px;
-  color: var(--dsw-alias-label-tertiary, #aaa);
+  line-height: 18px;
+  color: var(--dsw-alias-label-tertiary);
 }
 
 .foot {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 
 .msg {
   font-size: 12px;
-  color: var(--dsw-alias-label-secondary, #888);
+  line-height: 18px;
+  color: var(--dsw-alias-label-secondary);
 }
 
+/* Save: the harness settings primary action (ModelsSection .primaryButton) —
+   a 36px pill on the button fill tokens, not a small rounded rect. */
 .saveBtn {
-  height: 30px;
-  padding: 0 16px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 14px;
   border: none;
-  border-radius: 8px;
-  background: var(--dsw-alias-interactive-bg-primary, #4a7bff);
-  color: var(--dsw-alias-label-inverse, #fff);
-  font-size: 13px;
+  border-radius: 18px;
+  background: var(--dsw-alias-button-primary-fill);
+  color: var(--dsw-alias-label-primary-foreground);
+  font: inherit;
+  font-size: 14px;
+  line-height: 22px;
   cursor: pointer;
 }
+
+.saveBtn:hover:not(:disabled) {
+  background: var(--dsw-alias-button-primary-hover);
+}
+
+.saveBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--dsw-alias-border-l3);
+}
+
 .saveBtn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: default;
 }

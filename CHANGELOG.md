@@ -41,6 +41,11 @@ Only user-visible functional changes are recorded (no documentation, code refact
   grouped by workspace with matched-line snippets and keyword highlighting;
   clicking a hit opens the note in the editor on that line with the keyword
   selected. See [docs/usage.md §2 "Searching notes"](docs/usage.md#searching-notes).
+- The settings panel's Git-mode dropdown now opens the harness-style custom
+  menu (portaled card, check-marked rows, outside-click/Escape dismissal)
+  instead of the OS-native select popup, and text-input borders/focus follow
+  the harness settings form. See
+  [docs/usage.md §6](docs/usage.md#6-the-settings-panel).
 
 ## [0.11.0] - 2026-09-04
 
