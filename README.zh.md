@@ -25,6 +25,7 @@
 **当前功能**：
 
 - **侧边栏笔记入口** → 全屏笔记管理器：按工作区分组的笔记列表（可折叠）、markdown 编辑/预览、保存、删除（页面内确认）、一键新建。
+- **笔记搜索**：管理器顶部搜索框，跨全部工作区搜标题 + 正文（多关键词 AND、大小写不敏感）；结果按工作区分组、命中行高亮，点命中行在编辑器中定位到该行并选中关键词。
 - **回答操作栏**（复制按钮旁）→ 选择或新建一篇笔记，把该段对话（用户提问 + 回答）**即时**追加进去——文本直接取自对话本身，无需等待；分段标签跟随界面语言（思考内容不记入，只保留最终回答）。
 - **对话引用笔记（`@`）**：输入 `@` 选择笔记（支持跨工作区），发送时插件后端把笔记内容注入模型上下文——模型直接引用，无需提示它读取文件。
 - **Git 同步**（可选，URL 驱动）：**共享仓库**模式（一个仓库管所有工作区，按工作区分子目录）或**独立仓库**模式（每工作区：URL + 分支 + 子路径）。推送 = 镜像同步（含删除）；更新 = 拉取 + 三向冲突确认；打开笔记自动拉取；推送被拒可「合并远端并重试」。管理器内每个工作区有 **Git 同步卡片**：显示「已同步 / 未推送 N 处」状态、远端有新提交时提示更新。
@@ -33,7 +34,7 @@
 - **主题与国际化**：token 化配色适配明暗主题；UI 文案跟随 dsh 语言（中 / 英）；错误信息本地化。
 - **版本更新提示**：npm 有新版时显示黄色「有新版本需要更新」tag。
 
-**规划中**（见 [docs/TODO.md](docs/TODO.md)）：Git 冲突渲染与可视化解决、笔记能力增强（搜索 / 标题目录 / 互链反链等）、交互体验优化（编辑器脏状态提醒、保存快捷键等）。
+**规划中**（见 [docs/TODO.md](docs/TODO.md)）：Git 冲突渲染与可视化解决、笔记能力增强（标题目录 / 互链反链等）、交互体验优化（编辑器脏状态提醒、保存快捷键等）。
 
 ## 兼容性（Compatibility）
 
@@ -141,7 +142,7 @@ HTTP API 前缀固定为 `/plugins/md-notes`（前端硬编码同值，故刻意
 | `src/client/` | 浏览器前端：入口（`index.ts`）+ `features/` 下的功能模块（每个功能一个目录；内部再长胖时拆出该功能私有的 `components/` 子组件与 `hooks/` 状态逻辑，`NotesManager/` 已示范，见 `docs/architecture.md`） |
 | `src/client/features/locales/` | 中/英 UI 字典（dsh locale 命名空间 `md-notes`） |
 | `assets/` | 插件图标（SVG 源文件 + PNG） |
-| `docs/` | 文档：`usage.md`/`usage.zh.md`（使用）、`features.md`（功能）、`architecture.md`（架构）、`context.md`（@ 引用）、`git.md`（Git 同步）、`ai-conflict.md`（AI 解决冲突）、`state.md` / `write-lock.md`（状态与写锁设计）、`manager-redesign.md`（面板改版）、`compatibility.md` / `compatibility.zh.md`（dsh↔插件版本适配对照表，中英各一版）、`TODO.md` |
+| `docs/` | 文档：`usage.md`/`usage.zh.md`（使用）、`features.md`（功能）、`architecture.md`（架构）、`context.md`（@ 引用）、`git.md`（Git 同步）、`ai-conflict.md`（AI 解决冲突）、`state.md` / `write-lock.md`（状态与写锁设计）、`manager-redesign.md`（面板改版）、`search.md`（笔记搜索设计）、`debug.md`（性能排查）、`compatibility.md` / `compatibility.zh.md`（dsh↔插件版本适配对照表，中英各一版）、`TODO.md` |
 | `scripts/` | 开发工具（如 `link-deps.mjs`） |
 | `lib/` | 构建产物（gitignored；npm 发布内容） |
 

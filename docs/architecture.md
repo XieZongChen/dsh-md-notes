@@ -79,7 +79,7 @@ dsh-md-notes/
             ├── components/
             │   ├── LoadingIndicator/ # StateDot loading 封装
             │   ├── DshInput/         # dsh 风格文本输入（token 化，抄 ui-primitives Input）
-            │   └── DshSelect/        # dsh 风格下拉（token 化，抄 ui-settings-models select）
+            │   └── DshSelect/        # dsh 风格下拉（自定义 portal 菜单，抄 ui-theme LanguageRow + ui-primitives Menu）
             ├── NotesEntry/       # 侧边栏入口
             ├── NoteAction/       # 记入笔记图标
             ├── NotePicker/       # 记入笔记弹窗
@@ -90,11 +90,15 @@ dsh-md-notes/
             │   │   ├── GitSyncCard.tsx     # 每工作区 Git 同步卡片（状态行 + update/push）
             │   │   ├── GitStatusIcon.tsx   # 工作区行 git 开关（图标 + 活动点 + tooltip）
             │   │   ├── NoteItem.tsx        # 单篇笔记行
-            │   │   └── notes-manager.module.css  # 面板共享样式（components 内部 + NotesManager.tsx 共用）
+            │   │   ├── SearchResults.tsx    # 搜索结果列表（工作区分组 + 命中行高亮，docs/search.md）
+            │   │   ├── notes-manager.module.css  # 面板共享样式（components 内部 + NotesManager.tsx 共用）
+            │   │   └── search.module.css    # 搜索框 + 搜索结果样式
+            │   ├── search.ts        # 搜索纯函数（高亮分段 + 命中定位数学，单测 search.test.ts）
             │   └── hooks/             # 面板私有 hook（按关注点拆分，见 coding-standards §1.3）
             │       ├── useNotesList.ts     # 列表加载 + 每工作区 git 状态
             │       ├── useNotesEditor.ts   # 选中/内容/保存/删除/新建（依赖列表 hook）
             │       ├── useGitSync.ts       # update/push/冲突流程（依赖前两者）
+            │       ├── useNoteSearch.ts    # 搜索防抖 + abort（渲染器直接调用，不经 useNotesManager 编排）
             │       ├── useNotesManager.ts  # 编排三 hook，持有跨切面状态（gitMsg/remoteChanged/confirm）
             │       └── types.ts            # ConfirmState / NotesManagerProps（hooks 与渲染器共用）
             ├── ContextSource/    # @ 引用 source（ui-input-trigger：candidates/onPick/codec）
@@ -210,7 +214,8 @@ client 的 `api<M>()` 按其推导精确返回类型；下表为可读摘要）�
 - 样式用 **CSS Modules**（tsdown 的 `dsh-md-notes-css-modules` 插件注入
   `<style data-plugin-css="dsh-md-notes/<file>">`）。
 - **表单控件**：设置面板用 `DshInput` / `DshSelect`（`components/` 内本地副本，照抄 dsh
-  ui-primitives Input 与 ui-settings-models select 的 token 化样式），暗黑模式与 dsh 原生表单一致。
+  ui-primitives Input 与 ui-theme LanguageRow / ui-primitives Menu 的 token 化样式（DshSelect
+  为自定义 portal 菜单，非原生 select 弹层）），暗黑模式与 dsh 原生表单一致。
 - **确认弹窗**：删除/推送覆盖/更新覆盖统一用页面内 `Modal`（ui-primitives），不依赖
   原生 `window.confirm`（在 `shell.overlay` 下更可靠）；**记入笔记弹窗**（NotePicker）同样
   用 `Modal`（headless 模式）+ `DshInput`，深色模式与 dsh 弹窗一致。
