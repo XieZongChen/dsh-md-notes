@@ -31,10 +31,17 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
-## NEXT_VERSION
+## [0.12.0] - 2026-09-06
 
 ### Added
 
+- **AI conflict resolution**: the push-blocked and update-conflict dialogs gain
+  an "AI resolve" action — a conversation is created in the conflicting workspace
+  and the local/base/remote versions of each conflicting note are handed to the
+  model for a semantic merge (undecidable points are asked back via ask_user);
+  when done the AI requests the push through dsh's native approval panel, and
+  the remote is only touched after you confirm. See
+  [docs/ai-conflict.md](docs/ai-conflict.md).
 - **Note search**: the notes manager gains a search box in its top bar —
   full-text search across every workspace's notes (titles and bodies,
   case-insensitive; space-separated keywords combine with AND). Results are
@@ -47,41 +54,8 @@ Only user-visible functional changes are recorded (no documentation, code refact
   the harness settings form. See
   [docs/usage.md §6](docs/usage.md#6-the-settings-panel).
 
-## [0.11.0] - 2026-09-04
-
-### Breaking
-
-- Removed the unused `gitSuggest` API method (and its client wrapper): nothing
-  in the plugin ever called it, and it exposed workspace paths to any caller.
-- Removed the `route` config option. The HTTP API prefix is now the fixed
-  constant `/plugins/md-notes` on both sides: the browser frontend always
-  hardcoded it, so overriding the backend prefix only severed the frontend↔backend
-  link. Existing configs carrying a `route` key keep loading (schemastery
-  passes unknown keys through; the value is ignored).
-
-### Added
-
-- **AI conflict resolution**: the push-blocked and update-conflict dialogs gain an
-  "AI resolve" action — a conversation is created in the conflicting workspace and
-  the local/base/remote versions of each conflicting note are handed to the model
-  for a semantic merge (undecidable points are asked back via ask_user); when
-  done the AI requests the push through dsh's native approval panel, and the
-  remote is only touched after you confirm. See [docs/ai-conflict.md](docs/ai-conflict.md).
-- New `checkUpdate` config (default `true`): set it to `false` and the host
-  never contacts registry.npmjs.org — for offline or managed deployments the
-  update check used to be an unconditional outbound call.
-
 ### Fixed
 
-- Fixed saves stalling 10+ seconds on slow networks: the per-workspace git
-  status requests fired when the manager opens were parallel (on shared-repo
-  mode the server serializes them anyway, so the extra connections just sat
-  parked); together with the auto-pull they could occupy every same-origin
-  browser connection, queueing the save POST behind git fetches. Statuses are
-  now fetched strictly one at a time.
-- Fixed the git clone being permanently wedged after "merge remote & retry" hit a
-  merge conflict (an uncleaned MERGE_HEAD broke every later sync); the leftover
-  merge is now aborted automatically and the clone recovers.
 - Fixed two Git first-sync defects on a fresh device (fresh clone + empty
   notes dir): ① pulling did nothing — an absent local file read as a local
   edit (skipped), and the auto-pull short-circuited on "no new remote
