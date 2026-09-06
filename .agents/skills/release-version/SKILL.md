@@ -1,21 +1,22 @@
 ---
 name: release-version
-description: 发版。用户说"发版"、"发布新版本"、"要发版"时触发——执行 changelog 检查补足（需用户确认）、版本号替换（package.json 与 CHANGELOG）、build 检验、提交并 push、打 tag（详情含双语变动，先英文再中文）并推送，最后让用户手动执行 npm publish。版本号缺失时先询问用户。
+description: 发版。用户说"发版"、"发布新版本"、"要发版"时触发——执行 changelog 检查补足（需用户确认）、版本号替换（package.json 与 CHANGELOG）、兼容性文档与 README 兼容章节更新、build 检验、提交并 push、打 tag（详情含双语变动，先英文再中文）并推送，最后让用户手动执行 npm publish。版本号缺失时先询问用户。
 ---
 
 # 发版（Release）
 
-dsh-md-notes 的发版流程。**最后一步（npm publish）由用户手动执行**，本 skill 负责发布前的一切：changelog 检查、版本号替换、构建校验、提交与推送。
+dsh-md-notes 的发版流程。**最后一步（npm publish）由用户手动执行**，本 skill 负责发布前的一切：changelog 检查、版本号替换、兼容性文档更新、构建校验、提交与推送。
 
 ## 流程总览
 
 1. 确认版本号（缺失则询问用户）
 2. 检查 CHANGELOG 是否有 `## NEXT_VERSION` 块并补足（补足后需用户确认）
 3. 替换版本号（package.json + CHANGELOG 的 NEXT_VERSION）
-4. build 检验
-5. 提交 + push
-6. 打 tag（annotated tag，详情 = 该版本双语变动，先英文再中文）+ push tag
-7. 让用户手动执行 `npm publish`
+4. 更新兼容性文档与 README 兼容章节（版本定版后，见 §4）
+5. build 检验
+6. 提交 + push
+7. 打 tag（annotated tag，详情 = 该版本双语变动，先英文再中文）+ push tag
+8. 让用户手动执行 `npm publish`
 
 ## 1. 确认版本号
 
@@ -119,7 +120,26 @@ EOF
 
 验证：`grep '"version"' package.json`
 
-## 4. build 检验
+## 4. 更新兼容性文档与 README 兼容章节（版本定版后）
+
+版本号确定后、提交前，把新版本写进兼容性记录（规则见
+[compatibility.md §4](../../docs/compatibility.md)，双语文档同步改）：
+
+1. **确定 dsh 版本**：取当前 harness checkout 的版本
+   （`git -C ../deepseek-harness describe --tags --always`），用户另有指定则用指定值。
+2. **`docs/compatibility.md` + `docs/compatibility.zh.md`**：
+   - 主表顶部加一行 `<插件版本> | <dsh 版本> | <日期> | <备注>`。备注按实际情况：
+     本次发版前跑过 dsh-compat-check 冒烟 → 「实测 / Verified」；
+     否则 → 「链式推断：上个版本↔该 dsh 实测 + dsh 契约零变更」并注明本次
+     dsh 面改动的性质（如「仅新增插件内部 API / 纯客户端改动」）。
+   - 反向表对应 dsh 版本的行：插件版本列表头部加新版本、更新「最后验证」日期。
+3. **`README.md` + `README.zh.md` 兼容性章节**：表格只保留**最新三个插件版本**行
+   （旧行移除，全量历史在 compatibility 文档）；固定版本安装示例的
+   `dsh-md-notes@<版本>` 更新为新版本。
+
+这些文件随发版 commit 一起提交（见 §6 的 git add 清单）。
+
+## 5. build 检验
 
 ```sh
 npm run build
@@ -127,15 +147,15 @@ npm run build
 
 必须成功（exit 0）。若有类型错误或构建失败，修复后再继续。
 
-## 5. 提交 + push
+## 6. 提交 + push
 
 ```sh
-git add package.json CHANGELOG.md CHANGELOG.zh.md
+git add package.json CHANGELOG.md CHANGELOG.zh.md docs/compatibility.md docs/compatibility.zh.md README.md README.zh.md
 git commit -m "chore: 发布 v<版本号> — CHANGELOG 定版、package.json 版本号更新"
 git push
 ```
 
-## 6. 打 tag（含双语变动详情）
+## 7. 打 tag（含双语变动详情）
 
 提交 + push 之后，**打 annotated tag 并推送**。tag 详情写入本次版本的变动摘要，
 **格式为：先英文、再中文**（内容来自刚定版的 CHANGELOG）。
@@ -170,7 +190,7 @@ git push
    git ls-remote --tags origin | grep "v<版本号>"
    ```
 
-## 7. 交给用户手动发布
+## 8. 交给用户手动发布
 
 推送到 main 并打好 tag 后，**告知用户手动执行发布**（本 skill 不代替执行）：
 
@@ -186,6 +206,8 @@ npm publish
 ## 注意事项
 
 - **版本号一致性**：package.json 与 CHANGELOG 必须一致（脚本 + 手动两步都改）。
+- **兼容性更新必做**：版本定版后按 §4 更新 compatibility 双语文档与 README 兼容章节，
+  随发版 commit 一起提交——不发「带版本号但兼容表没滚」的版。
 - **NEXT_VERSION 不新增**：发版只把 NEXT_VERSION 改名；新的 NEXT_VERSION 等下次有改动时按需创建。
 - **确认前置**：changelog 的补足/修改内容**先以中文版草稿交用户确认，确认后才写入文件**（写入时中英两份都要写，英文按中文合理化翻译）。
 - **CHANGELOG 不写操作介绍**：功能条目 = 功能名/一句话 + 使用文档锚点链接（精确到标题）；
