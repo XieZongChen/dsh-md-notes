@@ -7,9 +7,9 @@
 
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { NoteSummary } from '../contract.ts'
+import type { NoteHits, NoteSummary, SearchHit } from '../contract.ts'
 
-export type { NoteSummary }
+export type { NoteHits, NoteSummary, SearchHit }
 
 const META_NAME = 'meta.json'
 
@@ -209,5 +209,151 @@ export async function appendConversation(
   const meta = await readMeta(dir)
   meta[name] = { title: titleOf(content + section, name.replace(/\.md$/i, '')), updatedAt: Date.now() }
   await writeMeta(dir, meta)
-  return { ok: true, name }
+  return { ok: true, name: name }
+}
+
+// ---- full-text search (manager search box, docs/search.md §3–§4) ----
+
+/** Query cap: the manager box is short; the cap bounds the scan, not the user. */
+const SEARCH_QUERY_MAX = 100
+/** Matched lines returned per note; `totalHits` keeps the uncapped count. */
+const SEARCH_HITS_PER_NOTE = 5
+/** Per-line display cap; occurrences past the cut are dropped (not visible). */
+const SEARCH_LINE_MAX = 160
+/** Max notes in one response; further matches fold into `truncated`. */
+const SEARCH_NOTES_MAX = 50
+
+/** One workspace to scan (assembled by the HTTP layer from `listWorkspaces()`). */
+export interface SearchScope {
+  workspaceId: string
+  workspaceName: string
+  dir: string
+}
+
+/**
+ * Split a query into deduped lowercase tokens (AND semantics). Whitespace-only
+ * or empty queries yield no tokens → the search returns no results.
+ */
+export function searchTokens(rawQuery: string): string[] {
+  const query = String(rawQuery ?? '').slice(0, SEARCH_QUERY_MAX)
+  return [...new Set(query.split(/\s+/).map((token) => token.toLowerCase()).filter((token) => token !== ''))]
+}
+
+/** Token occurrence ranges inside one line, sorted, non-overlapping, cut to `limit`. */
+function lineRanges(lowerLine: string, tokens: readonly string[], limit: number): Array<{ start: number; end: number }> {
+  const found: Array<{ start: number; end: number }> = []
+  for (const token of tokens) {
+    let from = 0
+    for (;;) {
+      const at = lowerLine.indexOf(token, from)
+      if (at === -1 || at >= limit) break
+      found.push({ start: at, end: Math.min(at + token.length, limit) })
+      from = at + token.length
+    }
+  }
+  found.sort((a, b) => a.start - b.start || a.end - b.end)
+  // Drop overlaps (different tokens can overlap): keep the earlier range.
+  const kept: Array<{ start: number; end: number }> = []
+  for (const range of found) {
+    const last = kept[kept.length - 1]
+    if (last !== undefined && range.start < last.end) continue
+    kept.push(range)
+  }
+  return kept
+}
+
+/** Match one note's content against the tokens (title AND-body over title+body). */
+function matchNote(
+  scope: SearchScope,
+  name: string,
+  content: string,
+  tokens: readonly string[],
+): NoteHits | undefined {
+  // EOL-normalize BEFORE splitting so hit line numbers match what the client
+  // computes when it re-splits the loaded content (browsers normalize the
+  // textarea value to \n the same way).
+  const normalized = content.replace(/\r\n?/g, '\n')
+  const title = titleOf(normalized, name.replace(/\.md$/i, ''))
+  const hay = `${title}\n${normalized}`.toLowerCase()
+  if (!tokens.every((token) => hay.includes(token))) return undefined
+  const hits: SearchHit[] = []
+  let totalHits = 0
+  const lines = normalized.split('\n')
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (line === undefined) continue
+    const lower = line.toLowerCase()
+    if (!tokens.some((token) => lower.includes(token))) continue
+    totalHits += 1
+    if (hits.length >= SEARCH_HITS_PER_NOTE) continue
+    const cut = line.length > SEARCH_LINE_MAX ? SEARCH_LINE_MAX : line.length
+    hits.push({
+      line: i + 1,
+      text: line.slice(0, cut) + (cut < line.length ? '…' : ''),
+      ranges: lineRanges(lower, tokens, cut),
+    })
+  }
+  return {
+    workspaceId: scope.workspaceId,
+    workspaceName: scope.workspaceName,
+    name,
+    title,
+    titleMatch: tokens.every((token) => title.toLowerCase().includes(token)),
+    totalHits,
+    hits,
+  }
+}
+
+/**
+ * Full-text search over every scope's notes: title + body, tokens AND,
+ * case-insensitive substring (no regex — nothing to inject or blow up).
+ * Read-only: meta.json is neither read nor written here (content is the source
+ * of truth for search); notes are visited newest-first via file mtime.
+ * Workspaces are scanned serially — parallel reads buy nothing on one disk and
+ * can starve the browser's same-origin connection pool (same reasoning as the
+ * git-status serialization).
+ */
+export async function searchNotes(
+  scopes: readonly SearchScope[],
+  rawQuery: string,
+): Promise<{ ok: true; results: NoteHits[]; truncated: boolean }> {
+  const tokens = searchTokens(rawQuery)
+  if (tokens.length === 0) return { ok: true, results: [], truncated: false }
+  const results: NoteHits[] = []
+  let truncated = false
+  for (const scope of scopes) {
+    let entries: string[] = []
+    try {
+      entries = await readdir(scope.dir)
+    } catch {
+      continue // no notes dir yet → nothing to scan
+    }
+    const notes: Array<{ name: string; updatedAt: number }> = []
+    for (const entry of entries) {
+      if (!entry.endsWith('.md')) continue // meta.json and assets never match anyway
+      try {
+        const st = await stat(join(scope.dir, entry))
+        notes.push({ name: entry, updatedAt: st.mtimeMs })
+      } catch {
+        /* vanished between readdir and stat → skip */
+      }
+    }
+    notes.sort((a, b) => b.updatedAt - a.updatedAt)
+    for (const { name } of notes) {
+      let content = ''
+      try {
+        content = await readFile(join(scope.dir, name), 'utf8')
+      } catch {
+        continue
+      }
+      const hit = matchNote(scope, name, content, tokens)
+      if (hit === undefined) continue
+      if (results.length >= SEARCH_NOTES_MAX) {
+        truncated = true
+        return { ok: true, results, truncated }
+      }
+      results.push(hit)
+    }
+  }
+  return { ok: true, results, truncated }
 }

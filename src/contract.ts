@@ -29,6 +29,30 @@ export interface WorkspaceNotes {
   notes: NoteSummary[]
 }
 
+/** One matched source line in a `search` result (offsets are line-relative, 0-based). */
+export interface SearchHit {
+  /** 1-based source line number (over the EOL-normalized content). */
+  line: number
+  /** The EOL-normalized line text, prefix-truncated for display (≤160 chars + '…'). */
+  text: string
+  /** Token occurrence ranges within `text` (client-side `<mark>` highlight). */
+  ranges: Array<{ start: number; end: number }>
+}
+
+/** One note's `search` result. */
+export interface NoteHits {
+  workspaceId: string
+  workspaceName: string
+  name: string
+  title: string
+  /** Every token matched the title (the note surfaces even with no body hits). */
+  titleMatch: boolean
+  /** Total matched lines in the body (uncapped; `hits` is capped per note). */
+  totalHits: number
+  /** The first matched lines, in source order. */
+  hits: SearchHit[]
+}
+
 /** One repo's git status view (display copy; `remote` is credential-redacted). */
 export interface GitStatusData {
   repoDir?: string
@@ -144,6 +168,15 @@ export interface ApiContract {
       workspaceId?: string
     }
     res: ApiResult<{ name: string }>
+  }
+  /**
+   * Full-text search across every workspace's notes (the manager search box).
+   * Matching: whitespace-split tokens, AND semantics, case-insensitive
+   * substring over title + body; see `host/notes.ts` `searchNotes` for the caps.
+   */
+  search: {
+    req: { query: string }
+    res: ApiResult<{ results: NoteHits[]; truncated: boolean }>
   }
 
   /** Git domain. */
