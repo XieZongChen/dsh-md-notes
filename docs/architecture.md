@@ -10,7 +10,7 @@ DSH 第三方插件（bundle）"MD 笔记管理"的架构设计：架构、目�
 - **后端**（`src/`，构建产物 `lib/index.js`）：跑在 dsh 的 Node 进程里。函数插件
   （`name` / `inject` / `Config` / `apply`），
   通过 `ctx.webServer` 暴露一个 JSON API 路由 `POST /plugins/md-notes`（body 携带 `method`：
-  `list` / `read` / `write` / `create` / `delete` / `appendConversation` + `git*` 系列）。
+  `list` / `read` / `write` / `create` / `delete` / `appendConversation` / `search` + `git*` 系列）。
   笔记以 `.md` 文件存储（**深度绑定工作区**：各工作区 `<工作区>/.dsh-notes`，无工作区时无法读写），
   `meta.json` 记录每篇笔记的标题与更新时间；Git 仓库由 URL 驱动，插件在
   `$DSH_HOME/md-notes-repos/<url-hash>/` 维护本地 clone。
@@ -110,9 +110,10 @@ dsh-md-notes/
   `Config`（schemastery schema：`route`、`gitMode`、`gitCentralRemote/Branch`、
   `gitRepos`、`gitAutoPull`、`gitAuthorName/Email`）、`apply(ctx, config)`；
   `apply` 只做装配——解析目录、构建 handler、注册路由、注册 L3 settings 命名空间。
-- 领域逻辑 `host/notes.ts`：`sanitizeName` / `titleOf` + 六个操作方法
-  （`listNotes` / `readNote` / `writeNote` / `createNote` / `deleteNote` / `appendConversation`），
-  全部为纯函数（目录参数注入，无 ctx 依赖），可独立测试。
+- 领域逻辑 `host/notes.ts`：`sanitizeName` / `titleOf` + 七个操作方法
+  （`listNotes` / `readNote` / `writeNote` / `createNote` / `deleteNote` / `appendConversation` /
+  `searchNotes` 全文搜索——token AND、大小写不敏感子串、只读现扫、逐工作区串行，
+  见 [search.md](search.md)），全部为纯函数（目录参数注入，无 ctx 依赖），可独立测试。
 - Git 领域 `host/git.ts`：`runGit`（subprocess 收集输出）、`cloneDirFor`（URL→本地 clone 目录）、
   `resolveWorkspaceRepo` / `resolveSharedRepo`（互斥双模式解析）、`resolveNotesDir`（恒为工作区
   `.dsh-notes`）、共享模式子目录映射（`.dsh-notes-workspaces.json`，`resolveEffectiveRepo` /

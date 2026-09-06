@@ -351,3 +351,42 @@ describe('notesApiHandler — dispatch details', () => {
     await held
   })
 })
+
+describe('notesApiHandler — search dispatch', () => {
+  it('scans every listWorkspaces() entry and returns grouped hits', async () => {
+    const a = join(scratchDir(), '.dsh-notes')
+    const b = join(scratchDir(), '.dsh-notes')
+    const { mkdirSync, writeFileSync } = await import('node:fs')
+    mkdirSync(a, { recursive: true })
+    mkdirSync(b, { recursive: true })
+    writeFileSync(join(a, 'one.md'), '# One\nneedle here\n', 'utf8')
+    writeFileSync(join(b, 'two.md'), '# Two\nnothing\n', 'utf8')
+    const deps = makeDeps({
+      listWorkspaces: () => [
+        { workspaceId: 'wa', name: 'A', notesDir: a },
+        { workspaceId: 'wb', name: 'B', notesDir: b },
+      ],
+    })
+    const { status, json } = await call(notesApiHandler(deps), 'POST', { method: 'search', query: 'needle' })
+    expect(status).toBe(200)
+    expect(json.ok).toBe(true)
+    const results = json.results as Array<{ workspaceId: string; name: string }>
+    expect(results).toHaveLength(1)
+    expect(results[0]).toMatchObject({ workspaceId: 'wa', name: 'one.md' })
+  })
+
+  it('an empty query returns an empty result without touching the fs', async () => {
+    const deps = makeDeps({ listWorkspaces: () => [] })
+    const { json } = await call(notesApiHandler(deps), 'POST', { method: 'search', query: '   ' })
+    expect(json.ok).toBe(true)
+    expect(json.results).toEqual([])
+    expect(json.truncated).toBe(false)
+  })
+
+  it('a missing query field degrades to the empty query, not an error', async () => {
+    const deps = makeDeps()
+    const { status, json } = await call(notesApiHandler(deps), 'POST', { method: 'search' })
+    expect(status).toBe(200)
+    expect(json.ok).toBe(true)
+  })
+})

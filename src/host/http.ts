@@ -10,7 +10,7 @@ import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { ApiResult, UpdateInfo, WorkspaceNotes } from '../contract.ts'
 import {
-  appendConversation, createNote, deleteNote, listNotes, readNote, sanitizeName, writeNote,
+  appendConversation, createNote, deleteNote, listNotes, readNote, sanitizeName, searchNotes, writeNote,
 } from './notes.ts'
 import {
   GitError, type GitStatusView, type ResolvedRepo,
@@ -195,6 +195,19 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       return lock.acquired
         ? lock.value
         : { ok: false, code: 'note-writing', error: 'The note is being written, try again later' }
+    }
+
+    case 'search': {
+      // All-workspace full-text scan for the manager search box. No workspace
+      // scoping by design (docs/search.md §0); the scan itself is serial per
+      // workspace inside searchNotes. A workspace-less deployment simply has
+      // no scopes to scan.
+      const scopes = deps.listWorkspaces().map((ws) => ({
+        workspaceId: ws.workspaceId,
+        workspaceName: ws.name,
+        dir: ws.notesDir,
+      }))
+      return searchNotes(scopes, String(req.query ?? ''))
     }
 
     // ---- git domain ----
