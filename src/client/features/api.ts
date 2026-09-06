@@ -15,7 +15,7 @@ export type {
   ApiContract, ApiError, ApiResult,
   NoteSummary, WorkspaceNotes, GitStatusData, GitMode,
   RepoSettings, CentralSettings, MdNotesSettings, GitSettingsData,
-  UpdateInfo, AppendLabels,
+  UpdateInfo, AppendLabels, SearchHit, NoteHits,
 } from '../../contract.ts'
 
 /** Host API route prefix; mirrors the host plugin's default. */

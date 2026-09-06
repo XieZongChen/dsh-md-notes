@@ -11,7 +11,7 @@
  */
 
 import * as React from 'react'
-import { IconCloseOutline16, IconSettingsOutline16, MarkdownText, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutline16, IconSearchOutline16, IconSettingsOutline16, MarkdownText, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
@@ -20,8 +20,11 @@ import { preprocessWikiLinks, resolveNoteLink, titleMatchCount } from '../note-l
 import { useUpdateAvailable } from '../update.ts'
 import shared from '../styles.module.css'
 import styles from './components/notes-manager.module.css'
+import searchStyles from './components/search.module.css'
 import { WorkspaceList } from './components/WorkspaceList.tsx'
+import { SearchResults } from './components/SearchResults.tsx'
 import { useNotesManager } from './hooks/useNotesManager.ts'
+import { useNoteSearch } from './hooks/useNoteSearch.ts'
 import type { NotesManagerProps } from './hooks/types.ts'
 
 /**
@@ -79,6 +82,22 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     [content, workspaces, selectedWsId],
   )
 
+  // Search box (docs/search.md §2): a non-empty query swaps the left pane for
+  // the grouped hit list; the editor and the git surfaces are untouched.
+  const [query, setQuery] = React.useState('')
+  const search = useNoteSearch(query)
+  const searching = query.trim() !== ''
+
+  /**
+   * Open a note from a search hit. The `hit` row's line + first token range
+   * become the locate target; a title-only note (no locatable hit) opens
+   * plain. (Locate lands with the next commit — the argument is already in
+   * place so this handler's shape does not churn.)
+   */
+  const openSearchNote = (wsId: string, name: string, _hit: { line: number; ranges: Array<{ start: number; end: number }> } | undefined): void => {
+    open(name, wsId)
+  }
+
   return (
     <div className={shared.mask} onClick={(e) => { if (e.target === e.currentTarget) close() }}>
       <div className={styles.manager}>
@@ -89,18 +108,48 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
             <button type="button" className={shared.iconBtn} onClick={openDshSettings} title={t('manager.settings')}>
               <IconSettingsOutline16 />
             </button>
-            {updateInfo !== null && (
-              <span className={styles.updateTag} title={t('sidebar.updateTitle', { latest: updateInfo.latest })}>
-                {t('sidebar.updateTag')}
-              </span>
-            )}
+          {updateInfo !== null && (
+            <span className={styles.updateTag} title={t('sidebar.updateTitle', { latest: updateInfo.latest })}>
+              {t('sidebar.updateTag')}
+            </span>
+          )}
           </span>
+          <div className={searchStyles.searchBox}>
+            <IconSearchOutline16 />
+            <input
+              className={searchStyles.searchInput}
+              value={query}
+              placeholder={t('search.placeholder')}
+              spellCheck={false}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Escape') setQuery('') }}
+            />
+            {query !== '' && (
+              <button
+                type="button"
+                className={searchStyles.searchClear}
+                aria-label={t('search.clear')}
+                title={t('search.clear')}
+                onClick={() => setQuery('')}
+              >
+                <IconCloseOutline16 size={12} />
+              </button>
+            )}
+          </div>
           <button type="button" className={shared.closeBtn} aria-label={t('manager.close')} onClick={close}>
             <IconCloseOutline16 size={14} />
           </button>
         </div>
         <div className={styles.managerBody}>
-          <WorkspaceList
+          {searching
+            ? <SearchResults
+              phase={search.phase}
+              results={search.results}
+              truncated={search.truncated}
+              t={t}
+              onOpenNote={openSearchNote}
+            />
+            : <WorkspaceList
             workspaces={workspaces}
             loading={loading}
             noWorkspaces={noWorkspaces}
@@ -128,7 +177,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
             onPushMsgChange={setPushMsg}
             onConfirmPush={doPush}
             onCancelPush={() => setPushTargetWsId(null)}
-          />
+          />}
           <div className={styles.editor}>
             {!selected
               ? <div className={`${shared.empty} ${styles.editorEmpty}`}>{t('manager.editorEmpty')}</div>
