@@ -31,6 +31,17 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## NEXT_VERSION
+
+### Added
+
+- **Note search**: the notes manager gains a search box in its top bar —
+  full-text search across every workspace's notes (titles and bodies,
+  case-insensitive; space-separated keywords combine with AND). Results are
+  grouped by workspace with matched-line snippets and keyword highlighting;
+  clicking a hit opens the note in the editor on that line with the keyword
+  selected. See [docs/usage.md §2 "Searching notes"](docs/usage.md#searching-notes).
+
 ## [0.11.0] - 2026-09-04
 
 ### Breaking

@@ -64,6 +64,21 @@ On create the note **opens directly in Edit mode**.
 - **Edit** tab: write markdown source.
 - **Save**: writes to the local `.md` file and refreshes the list.
 
+### Searching notes
+
+The search box in the manager's top bar searches **every workspace** — titles
+and bodies, case-insensitive; separate keywords with spaces (all of them must
+match).
+
+- While you type, the left pane switches to the grouped results (workspace →
+  note → matched lines, keywords highlighted); the editor and git areas are
+  untouched. Clear the box (or press `Esc`) to return to the list.
+- Each note row shows the total match count; a "Title match" badge means the
+  keywords matched the title.
+- Click a **matched line**: the note opens in the editor on that line — the
+  line centered in view, the keyword selected. Click the note row to jump to
+  its first match. Notes under a write lock open in preview instead.
+
 ### Linking notes
 
 Write `[[Note name]]` (or a backtick `` `Note name` ``) in a note's body to reference another note;
