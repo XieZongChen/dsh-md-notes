@@ -149,11 +149,11 @@
 - **Git 卡片远端更新检测**：`gitStatus` 拉取远端并返回 `remoteAhead`，远端有新提交时
   Git 卡片提示「远端有更新，需手动更新」。见
   [使用文档 §5 — Git 同步](docs/usage.zh.md#5-git-同步可选)。
+- **覆盖弹窗改为三向冲突判定**（base / local / remote）：内容不同不再一律弹窗，仅真正的
+  三方冲突才询问。见 [使用文档 §5 — Git 同步](docs/usage.zh.md#5-git-同步可选)。
 
 ### Fixed
 
-- **覆盖弹窗改为三向冲突判定**（base / local / remote）：内容不同不再一律弹窗，仅真正的
-  三方冲突才询问。见 [使用文档 §5 — Git 同步](docs/usage.zh.md#5-git-同步可选)。
 - **修复侧边栏笔记入口样式**：不再依赖 footer 的 flex-wrap / flex-basis，改为普通全宽行，
   `.notesRow` 对齐 ui-cordis（不被 footer 其他入口压缩）。见
   [使用文档 §2 — 打开笔记管理器](docs/usage.zh.md#2-打开笔记管理器)。
@@ -183,7 +183,6 @@
 
 - **共享仓库 Git 状态与提交按工作区子目录隔离**：修复共享仓库模式下跨工作区状态 / 提交
   串扰。见 [使用文档 §5 — Git 同步](docs/usage.zh.md#5-git-同步可选)。
-- **Git 卡片未推送计数修正**：按本地与仓库差异（`unpushed`）计算，不再误报。
 - **@ 引用路径 fallback 用标题生成**：工作区改名后引用不再指向不存在位置。见
   [使用文档 §4.2 — 引用其他工作区的笔记](docs/usage.zh.md#42-引用其他工作区的笔记)。
 

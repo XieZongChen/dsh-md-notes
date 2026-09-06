@@ -191,12 +191,12 @@ Only user-visible functional changes are recorded (no documentation, code refact
   returns `remoteAhead`; when the remote has new commits, the Git card shows
   "Remote has updates — update manually". See
   [User guide §5 — Git sync](docs/usage.md#5-git-sync-optional).
-
-### Fixed
-
 - **Overwrite dialog uses three-way conflict detection** (base / local / remote):
   differing content no longer always prompts — only a true three-way conflict
   asks. See [User guide §5 — Git sync](docs/usage.md#5-git-sync-optional).
+
+### Fixed
+
 - **Sidebar note-entry styles fixed**: it no longer depends on the footer's
   flex-wrap / flex-basis — a plain full-width row with `.notesRow` aligned to
   ui-cordis (not compressed by other footer entries). See
@@ -233,8 +233,6 @@ Only user-visible functional changes are recorded (no documentation, code refact
 - **Shared-repo Git status and commits are isolated per workspace subdirectory**:
   cross-workspace status/commit bleed in shared-repo mode is fixed. See
   [User guide §5 — Git sync](docs/usage.md#5-git-sync-optional).
-- **Unpushed count on the Git card is now correct**: it is computed from the
-  local-vs-repo difference (`unpushed`), no longer misreported.
 - **`@` reference path falls back to the title**: references no longer point at
   a missing location after a workspace rename. See
   [User guide §4.2 — Referencing notes from other workspaces](docs/usage.md#42-referencing-notes-from-other-workspaces).
