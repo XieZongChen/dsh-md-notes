@@ -41,7 +41,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     writingThis, dirty, busy, repoStatuses, unpushedTotal, pendingWsCount,
     currentWsId, toggleWorkspace, toggleGit, open, save, createIn, submitCreate, cancelCreate, remove,
     updateClick, pushForWs, doPush, resolveAndRetry, setPushMsg, setPushTargetWsId, setMode,
-    setContent, setConfirmState, close, openDshSettings, createWsId, createBusy,
+    setContent, setConfirmState, close, openDshSettings, createWsId, createBusy, editorRef,
   } = useNotesManager({ store, tracker, t, sessions })
 
   // Localized Markdown chrome (code-fence copy + footnotes), memoized per
@@ -89,13 +89,19 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const searching = query.trim() !== ''
 
   /**
-   * Open a note from a search hit. The `hit` row's line + first token range
-   * become the locate target; a title-only note (no locatable hit) opens
-   * plain. (Locate lands with the next commit — the argument is already in
-   * place so this handler's shape does not churn.)
+   * Open a note from a search hit: the hit row's line + first token range
+   * become the locate target (edit view, token selected, line centered —
+   * docs/search.md §6); a note with no locatable hit (title-only match
+   * against the file name fallback) opens plain.
    */
-  const openSearchNote = (wsId: string, name: string, _hit: { line: number; ranges: Array<{ start: number; end: number }> } | undefined): void => {
-    open(name, wsId)
+  const openSearchNote = (wsId: string, name: string, hit: { line: number; ranges: Array<{ start: number; end: number }> } | undefined): void => {
+    const first = hit?.ranges[0]
+    const loc = hit === undefined
+      ? undefined
+      : first !== undefined
+        ? { line: hit.line, start: first.start, end: first.end }
+        : { line: hit.line }
+    open(name, wsId, loc)
   }
 
   return (
@@ -208,7 +214,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                   {contentLoading
                     ? <div className={styles.editorLoading}><LoadingIndicator label={t('git.loading')} /></div>
                     : mode === 'edit'
-                      ? <textarea className={styles.textarea} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
+                      ? <textarea ref={editorRef} className={styles.textarea} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
                       : <div className={`${styles.preview} ${shared.scrollWide}`}><MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} /></div>}
                 </>
               )}

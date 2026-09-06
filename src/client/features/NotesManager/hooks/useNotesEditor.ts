@@ -9,7 +9,14 @@ import type { WorkspaceNotes } from '../../api.ts'
 import { api, gitPullApi } from '../../api.ts'
 import { noteKey, type BusyTracker } from '../../busy.ts'
 import type { MdNotesKey } from '../../locales/index.ts'
+import { locateOffsets, locateScrollTop, type LocateTarget } from '../search.ts'
 import type { ConfirmState } from './types.ts'
+
+/**
+ * A located open: which source line to reveal, optionally selecting a
+ * line-relative token range (a search hit — docs/search.md §6).
+ */
+export type OpenLoc = LocateTarget
 
 export function useNotesEditor(deps: {
   workspaces: WorkspaceNotes[]
@@ -47,6 +54,14 @@ export function useNotesEditor(deps: {
    * `savedContent` to it, so a subsequent save would overwrite the pull).
    */
   const selectionRef = React.useRef<{ wsId: string; name: string; reads: number } | null>(null)
+  /** The edit textarea (attached by NotesManager; drives the locate below). */
+  const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
+  /**
+   * Pending locate for the current selection (set by a located `open`). It
+   * survives until the next `open` — so the auto-pull re-read re-locates too
+   * (a pull may shift the content the hit offsets were computed against).
+   */
+  const pendingLocRef = React.useRef<OpenLoc | null>(null)
 
   // Default the selected workspace to the first one once the list arrives
   // (moved out of `refresh` so the list hook stays independent of selection).
@@ -58,7 +73,7 @@ export function useNotesEditor(deps: {
     selectionRef.current !== null && selectionRef.current.wsId === wsId && selectionRef.current.name === name
 
   /** Re-read one note's content into the editor; superseded responses never land. */
-  const readInto = (wsId: string, name: string, onDone?: () => void): void => {
+  const readInto = (wsId: string, name: string, onDone?: (content: string) => void): void => {
     const sel = selectionRef.current
     const ticket = sel === null ? -1 : (sel.reads += 1)
     void api('read', { name, workspaceId: wsId }).then((res) => {
@@ -67,7 +82,35 @@ export function useNotesEditor(deps: {
       // The loading state belongs to the newest read: a superseded read must
       // not clear it early. A selection that moved on already started its own
       // open() cycle (which re-arms the loading flag), so its onDone is moot.
-      if (sel === null || sel.reads === ticket) onDone?.()
+      if (sel === null || sel.reads === ticket) onDone?.(res.ok ? res.content ?? '' : '')
+    })
+  }
+
+  /**
+   * Reveal the pending locate target in the edit textarea: select the token
+   * (native selection is the highlight) and scroll the line to mid-viewport
+   * (docs/search.md §6.2). Runs inside rAF so the textarea has rendered after
+   * the contentLoading/mode state updates of the read that armed it.
+   */
+  const applyLoc = (wsId: string, name: string, content: string): void => {
+    const loc = pendingLocRef.current
+    if (loc === null) return
+    window.requestAnimationFrame(() => {
+      if (pendingLocRef.current === null || !isCurrent(wsId, name)) return
+      const el = textareaRef.current
+      if (el === null) return
+      const offsets = locateOffsets(content, loc)
+      el.focus()
+      el.setSelectionRange(offsets.start, offsets.end)
+      const style = window.getComputedStyle(el)
+      const lineHeight = Number.parseFloat(style.lineHeight) // 13px/1.6 → fixed px
+      const paddingTop = Number.parseFloat(style.paddingTop)
+      el.scrollTop = locateScrollTop(
+        loc.line,
+        Number.isNaN(lineHeight) ? 20.8 : lineHeight,
+        el.clientHeight,
+        Number.isNaN(paddingTop) ? 0 : paddingTop,
+      )
     })
   }
 
@@ -103,18 +146,30 @@ export function useNotesEditor(deps: {
 
   const currentWsId = (): string | null => selectedWsId ?? workspaces[0]?.workspaceId ?? null
 
-  const open = (name: string, wsId: string): void => {
+  /**
+   * Open a note. A `loc` (search hit) lands in the EDIT view with the line
+   * selected + scrolled into view — line-precise positioning only exists in
+   * the source view (docs/search.md §6); without it the note opens in
+   * preview as before. A note under the write lock stays in preview (the
+   * edit tab is disabled for the user too, docs/write-lock.md §7.3).
+   */
+  const open = (name: string, wsId: string, loc?: OpenLoc): void => {
+    pendingLocRef.current = loc ?? null
+    const writing = tracker.isBusy(noteKey(wsId, name))
     selectionRef.current = { wsId, name, reads: 0 }
     setSelectedWsId(wsId)
     setSelected(name)
-    setMode('preview')
+    setMode(loc !== undefined && !writing ? 'edit' : 'preview')
     setContent('') // clear the previous note's content so switching never flashes it
     setSavedContent('')
     setGitMsg('')
     setRemoteChanged(null)
     setContentLoading(true)
     refreshStatus(wsId)
-    readInto(wsId, name, () => setContentLoading(false))
+    readInto(wsId, name, (content) => {
+      setContentLoading(false)
+      applyLoc(wsId, name, content)
+    })
     // Auto-pull on open (honors gitAutoPull, best effort): refresh, then re-read.
     if (!autoPull) return
     void gitPullApi(wsId).then((res) => {
@@ -133,7 +188,12 @@ export function useNotesEditor(deps: {
         // per-workspace status sweep — the opened workspace's status was just
         // refreshed above) so the left panel shows them without reopening.
         refreshList()
-        readInto(wsId, name, () => setContentLoading(false))
+        // Re-locates too when a pending hit exists: the pull may have shifted
+        // the content the hit line was computed against.
+        readInto(wsId, name, (content) => {
+          setContentLoading(false)
+          applyLoc(wsId, name, content)
+        })
       }
     })
   }
@@ -208,6 +268,6 @@ export function useNotesEditor(deps: {
     selectedWsId, selected, content, mode, saving, flash, contentLoading, collapsed, gitOpen, dirty,
     createWsId, createBusy, currentWsId, toggleWorkspace, toggleGit, open, save, createIn, submitCreate, cancelCreate,
     remove, setMode, setContent,
-    refreshAndRereadSelected, setFlash,
+    refreshAndRereadSelected, setFlash, textareaRef,
   }
 }

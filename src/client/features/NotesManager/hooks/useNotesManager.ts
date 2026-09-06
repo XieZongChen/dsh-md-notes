@@ -129,6 +129,7 @@ export function useNotesManager({ store, tracker, t, sessions }: NotesManagerPro
     toggleWorkspace: editor.toggleWorkspace,
     toggleGit: editor.toggleGit,
     open: editor.open,
+    editorRef: editor.textareaRef,
     save: editor.save,
     createIn: editor.createIn,
     submitCreate: editor.submitCreate,
