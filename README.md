@@ -44,9 +44,9 @@ history in [docs/compatibility.md](docs/compatibility.md)):
 
 | Plugin version | dsh version | Verified on |
 |---|---|---|
-| 0.12.0 | `0.1.3-alpha.1` | 2026-09-06 |
-| 0.11.0 | `0.1.3-alpha.1` | 2026-09-04 |
-| 0.10.1 | `0.1.3-alpha.1` | 2026-09-04 |
+| 0.12.0 | `0.1.3-alpha.2` | 2026-09-07 |
+| 0.11.0 | `0.1.3-alpha.2` | 2026-09-07 |
+| 0.10.1 | `0.1.3-alpha.2` | 2026-09-07 |
 
 The plugin is not pinned to a specific mainline commit; pin the plugin version at install
 time if you need a fixed combination (e.g. `dsh plugin --profile web add dsh-md-notes@0.12.0`).
