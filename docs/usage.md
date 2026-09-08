@@ -310,3 +310,17 @@ Upgrade with `dsh plugin --profile web update dsh-md-notes`, then restart dsh we
 - **Only `.md` files sync.** Non-markdown files you place in a remote
   repository are not pulled into your notes.
 - **Language**: all UI copy follows dsh's language setting (Chinese / English).
+
+## 9. Quick note viewing in the right sidebar (dsh 0.1.5+)
+
+In dsh's right dockable sidebar, note files open in the plugin's **note viewer**
+(rendered markdown, replacing the built-in plain-text preview):
+
+- Note-file links in conversations and `.dsh-notes` entries in the file tree open
+  rendered in the sidebar; the same note reuses its tab.
+- Note interlinks in the body (`` `note name` `` and `[[note name]]`) are
+  clickable and open the target note as another sidebar tab.
+- The header shows the note title, its workspace, and a manual reload; the viewer
+  is read-only — edit in the notes manager.
+- Requires dsh ≥ 0.1.5 (a build with the right sidebar); on older builds the
+  feature disables itself and everything else keeps working.

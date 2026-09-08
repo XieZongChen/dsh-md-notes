@@ -197,6 +197,13 @@ client 的 `api<M>()` 按其推导精确返回类型；下表为可读摘要）�
   链接** `[标题](路径)`，失效则抛本地化错误阻断发送；
   `warm`/`lexicon`/`subscribeLexicon` 提供纯文本装饰热快照。无 `inputTriggers` 时特性静默
   禁用（console.warn）。序列化格式与交互细节见 [context.md](context.md)。
+- **右侧 Sidebar 笔记查看器**（`features/NoteViewer/`，dsh 0.1.5+）：`apply` 里经可选服务
+  `ctx.get('sidebarRightTabs')` / `ctx.get('sidebarRight')` 注册 `md-notes` tab 类型
+  （`extension` 优先级认领 `/.dsh-notes/<名>.md` 文件地址）与 keyed seat
+  `sidebar.right.pane.tab` 的 body；地址 →（工作区, 笔记名）映射是纯逻辑
+  （`NoteViewer/address.ts`，`parseFileAddress` 来自 `@deepseek-ai/dsh-util-workspace-path`，
+  经 `dsh.client.external` 声明进模块表）；正文走插件自身 `list`/`read` API。服务缺失
+  （旧 dsh）时整体静默禁用（同 inputTriggers 模式）。
 - **i18n**：所有 UI 文案在 `features/locales/`（`zh.ts` 源字典、`en.ts` 映射类型强制同键，
   `LocaleNamespaceMap` 合并 `md-notes` 命名空间）；组件用 `t(key, params)` 读取，随 dsh 语言
   自动重渲染；host 错误经 `gitErrorText(t, code, detail)` 本地化。占位符用 `{name}` 模板。

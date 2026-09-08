@@ -51,6 +51,14 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Added
 
+- **Right-sidebar note viewer**: on dsh 0.1.5+'s right dockable sidebar, note files
+  (`/.dsh-notes/…/*.md` addresses) open rendered as markdown (taking over the
+  built-in plain-text preview at `extension` priority) — reachable from
+  conversation file links and the file tree; interlinks in the body
+  (`` `name` `` / `[[name]]`) open the target note as another sidebar tab; the
+  header carries the title, its workspace, and a manual reload; read-only
+  (editing stays in the manager). Disables itself on older dsh. See
+  [docs/usage.md §9](docs/usage.md#9-quick-note-viewing-in-the-right-sidebar-dsh-015).
 - **Adapt to deepseek-harness `0.1.5-alpha.1`**: the injected-context source migrates to the
   official `plugin` variant (`{ kind: 'plugin', plugin: 'md-notes', path }`), satisfying the
   V2→V3 log migration's source whitelist — `@` reference injection, injected-context row

@@ -40,6 +40,11 @@
 
 ### Added
 
+- **右侧 Sidebar 笔记查看器**：dsh 0.1.5+ 的右侧停靠面板里，笔记文件（`/.dsh-notes/…/*.md`
+  地址）以 markdown 渲染打开（`extension` 优先级接管内置纯文本预览）——对话文件链接、
+  文件树点选即达；正文互链（`` `名` `` / `[[名]]`）点击在侧栏开新 tab；头部含标题、
+  工作区与手动刷新；只读（编辑仍在管理器）。旧版 dsh 上自动停用。见
+  [docs/usage.zh.md §9](docs/usage.zh.md#9-在右侧栏快速查看笔记dsh-015)。
 - **适配 deepseek-harness `0.1.5-alpha.1`**：注入上下文的 source 迁移到官方 `plugin`
   变体（`{ kind: 'plugin', plugin: 'md-notes', path }`），满足 V2→V3 日志迁移的 source
   白名单——`@` 引用注入、注入上下文行渲染（标签仍显示 `md-notes`）与跨步去重行为
