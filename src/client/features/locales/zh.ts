@@ -150,5 +150,10 @@ export const zh = {
   'markdown.copied': '已复制',
   'markdown.footnotes': '脚注',
   'link.duplicateHint': '{count} 篇同名标题，建议用文件名区分',
+  'viewer.loading': '读取笔记…',
+  'viewer.notNote': '此文件不是插件管理的笔记',
+  'viewer.failed': '读取失败',
+  'viewer.retry': '重试',
+  'viewer.reload': '刷新',
 
 } as const

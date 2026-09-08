@@ -22,6 +22,9 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings-general/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: pulls the SlotRegistry service merge (ctx.slots), now provided by ui-renderer.
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+// Type-only: the right-Sidebar services (ctx.sidebarRightTabs / ctx.sidebarRight)
+// and the `sidebar.right.pane.tab` keyed seat, for the note-viewer tab below.
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
 import type { InputTriggerServiceContract } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { createNotesUiStore, type NotesUiState, type NotesUiStore } from './features/store.ts'
@@ -33,6 +36,8 @@ import { NotePicker } from './features/NotePicker/NotePicker.tsx'
 import { NotesManager } from './features/NotesManager/NotesManager.tsx'
 import { SettingsSection } from './features/Settings/SettingsSection.tsx'
 import { createNotesSource } from './features/ContextSource/ContextSource.ts'
+import { NoteViewer } from './features/NoteViewer/NoteViewer.tsx'
+import { canOpenNoteAddress, noteTitleOf } from './features/NoteViewer/address.ts'
 import type { SessionsLike } from './features/ai-conflict.ts'
 import { ICON_URL } from './features/api.ts'
 
@@ -242,4 +247,30 @@ export function apply(ctx: ClientContext): void {
     { name: 'settings.section', id: 'md-notes', order: 10, label: () => t('git.settingsNav'), locale: 'md-notes' },
     SettingsSection,
   )), 'dsh-md-notes: settings section')
+
+  // --- right-Sidebar note-viewer tab (dsh 0.1.5+; both services optional) ---
+  // Like inputTriggers above, the Sidebar services are OPTIONAL: without them
+  // (dsh builds predating the right Sidebar) only this viewer stays disabled —
+  // every other registration above already lives.
+  const tabs = ctx.get('sidebarRightTabs')
+  const sidebar = ctx.get('sidebarRight')
+  if (tabs === undefined || sidebar === undefined) {
+    console.warn('[dsh-md-notes] sidebarRight services unavailable — the note-viewer tab stays disabled')
+    return
+  }
+  const openResource = (address: string): void => { sidebar.openResource(address) }
+  ctx.effect(() => tabs.register({
+    id: 'dsh-md-notes/note-viewer',
+    kind: 'md-notes',
+    // Whole-address match (contains `:`): any scope whose path ends in
+    // `/.dsh-notes/<name>.md`; `extension` priority beats the builtin text
+    // viewer for note files.
+    patterns: ['dsh-resource://file/**/.dsh-notes/*.md'],
+    canOpen: canOpenNoteAddress,
+    title: noteTitleOf,
+  }), 'dsh-md-notes: note viewer type')
+  ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
+    { name: 'sidebar.right.pane.tab', key: 'dsh-md-notes/note-viewer', locale: 'md-notes', inject: () => ({ openResource }) },
+    NoteViewer,
+  )), 'dsh-md-notes: note viewer body')
 }

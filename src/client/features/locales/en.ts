@@ -153,5 +153,10 @@ export const en: { [K in keyof typeof zh]: string } = {
   'markdown.copied': 'Copied',
   'markdown.footnotes': 'Footnotes',
   'link.duplicateHint': '{count} notes share this title — use the file name to disambiguate',
+  'viewer.loading': 'Loading note…',
+  'viewer.notNote': 'This file is not a note managed by the plugin',
+  'viewer.failed': 'Read failed',
+  'viewer.retry': 'Retry',
+  'viewer.reload': 'Reload',
 
 }

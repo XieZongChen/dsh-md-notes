@@ -99,6 +99,15 @@ export function noteTargetOf(
 }
 
 /**
+ * The tab type's `canOpen` veto: a well-formed file address (the glob already
+ * pinned the `.dsh-notes/<name>.md` shape; this only refuses what
+ * `parseFileAddress` rejects).
+ */
+export function canOpenNoteAddress(address: string): boolean {
+  return parseFileAddress(address) !== undefined
+}
+
+/**
  * The tab-chip title for one address: its decoded basename without the `.md`
  * suffix. Decode is per segment, matching how the address was built; a
  * malformed escape shows raw rather than throwing.
