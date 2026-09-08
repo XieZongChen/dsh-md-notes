@@ -21,16 +21,27 @@ import { readFile } from 'node:fs/promises'
 import { resolve as resolvePath } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { PreStepDecision } from '@deepseek-ai/dsh-agent'
-import { createUserMessage } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, type MessageSourceMap } from '@deepseek-ai/dsh-llm'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
 
-/** Durable source kind of the injected note context (renders as context row). */
-export const NOTE_CONTEXT_SOURCE = 'md-notes'
+/**
+ * Durable source of the injected note context: the OFFICIAL `plugin` variant —
+ * dsh's V2→V3 session-log migration (0.1.5-alpha.1) whitelists `source.kind`
+ * and refuses whole logs over unclassified kinds, so a custom `'md-notes'` kind
+ * would make every session that used a `@` reference unreadable. ui-chat's
+ * contextProvenance labels `plugin` sources by their `plugin` field, so the
+ * injected-context row keeps its `md-notes` label. `path` rides along as the
+ * cross-step dedupe key (extra keys are valid on the `plugin` variant).
+ */
+export const NOTE_CONTEXT_PLUGIN = 'md-notes'
 
-declare module '@deepseek-ai/dsh-llm' {
-  interface MessageSourceMap {
-    'md-notes': { path?: string }
-  }
+/** What the injection writes: a `plugin` source plus the dedupe key. */
+type NoteContextSource = MessageSourceMap['plugin'] & { readonly path?: string }
+
+/** Whether a message source is one of our injected note-context rows. */
+function isNoteContextSource(source: unknown): source is NoteContextSource {
+  const s = source as { kind?: string; plugin?: string } | undefined
+  return s?.kind === 'plugin' && s.plugin === NOTE_CONTEXT_PLUGIN
 }
 
 /**
@@ -97,8 +108,7 @@ export function registerNoteContextInjection(ctx: Context): () => void {
 
     // Dedupe: a step that already carries our injected context skips re-reading.
     const fresh = notes.filter(note => !messages.some(message =>
-      (message.source as { kind?: string; path?: string } | undefined)?.kind === NOTE_CONTEXT_SOURCE
-      && (message.source as { path?: string } | undefined)?.path === note.path))
+      isNoteContextSource(message.source) && message.source.path === note.path))
     if (fresh.length === 0) return decision
 
     // Injected context carries a one-line citation convention so the model
@@ -106,13 +116,16 @@ export function registerNoteContextInjection(ctx: Context): () => void {
     // syntax the user message uses) instead of free-form prose — structured
     // citations any renderer can recognize. Instructions are best-effort
     // guidance, not a guarantee.
-    const injected = fresh.map(note => createUserMessage({
-      content: [{
-        type: 'text',
-        text: `[笔记内容 / Note content]\n\n引用约定：回答中如需引用本笔记，请用 markdown 链接格式 [标题](路径)，路径沿用你看到的引用路径（如 [<笔记名>](../<工作区>/.dsh-notes/<笔记名>.md)）。\nCitation convention: when citing this note in your answer, use the markdown link form [title](path), reusing the reference path you see (e.g. [<note-name>](../<workspace>/.dsh-notes/<note-name>.md)).\n\n${note.content}`,
-      }],
-      source: { kind: NOTE_CONTEXT_SOURCE, path: note.path },
-    }))
+    const injected = fresh.map(note => {
+      const source: NoteContextSource = { kind: 'plugin', plugin: NOTE_CONTEXT_PLUGIN, path: note.path }
+      return createUserMessage({
+        content: [{
+          type: 'text',
+          text: `[笔记内容 / Note content]\n\n引用约定：回答中如需引用本笔记，请用 markdown 链接格式 [标题](路径)，路径沿用你看到的引用路径（如 [<笔记名>](../<工作区>/.dsh-notes/<笔记名>.md)）。\nCitation convention: when citing this note in your answer, use the markdown link form [title](path), reusing the reference path you see (e.g. [<note-name>](../<workspace>/.dsh-notes/<note-name>.md)).\n\n${note.content}`,
+        }],
+        source,
+      })
+    })
 
     // Fold right after the referencing user message so the direct prompt
     // precedes the injected content.

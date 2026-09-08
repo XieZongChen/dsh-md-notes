@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
 import type { PreStepDecision } from '@deepseek-ai/dsh-agent'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
-import { NOTE_CONTEXT_SOURCE, registerNoteContextInjection } from './context-inject.ts'
+import { NOTE_CONTEXT_PLUGIN, registerNoteContextInjection } from './context-inject.ts'
 
 vi.mock('@deepseek-ai/dsh-llm', () => ({
   createUserMessage: (init: { content: Array<{ type: string; text: string }>; source?: unknown }) =>
@@ -101,7 +101,7 @@ describe('note context injection', () => {
     // since the claimed message is the array's last element at index 1).
     expect(result.messages[1]).toBe(claimed[0])
     expect(injectedText(result.messages[2] as UserMessage)).toContain('Secret details')
-    expect((result.messages[2] as UserMessage).source).toEqual({ kind: NOTE_CONTEXT_SOURCE, path })
+    expect((result.messages[2] as UserMessage).source).toEqual({ kind: 'plugin', plugin: NOTE_CONTEXT_PLUGIN, path })
   })
 
   it('injects AFTER trailing history: content lands behind the last claimed message', async () => {
@@ -172,8 +172,9 @@ describe('note context injection', () => {
   it('does not re-inject a note already injected in this batch (source identity)', async () => {
     const { cwd, path } = await workspaceWithNote('dup.md', 'D')
     const captured = register()
-    // The claimed batch already carries an injected message for this path.
-    const alreadyInjected = msg('injected earlier', { kind: NOTE_CONTEXT_SOURCE, path })
+    // The claimed batch already carries an injected message for this path
+    // (official `plugin` source variant, labeled by the plugin name).
+    const alreadyInjected = msg('injected earlier', { kind: 'plugin', plugin: NOTE_CONTEXT_PLUGIN, path })
     const claimed = [msg('ref .dsh-notes/dup.md'), alreadyInjected]
     const decision = { kind: 'enter', messages: [...claimed] } as unknown as PreStepDecision
 
