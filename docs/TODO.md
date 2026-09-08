@@ -108,12 +108,14 @@
    - 受限点：chip 尺寸 4em 固定、无锚点不可合规注入（见上面平台问题最后一条），曾用
      `DshChipCell` 字体覆盖放大（6em/10em）已按规范移除——更大标签区需平台开放 chip 扩展点。
 2. **注入上下文行**：
-   - 来源标签显示**笔记标题**而非 `md-notes`（受 `contextProvenance` 的 kind 映射约束，
-     需在 source 里携带标题字段或选用 dsh 已有 form/provenance 通道）；
+   - 来源标签显示**笔记标题**而非 `md-notes`（`contextProvenance` 对 `plugin` source 取
+     `plugin` 字段做标签，需在 source 里携带标题字段并期待上游支持，或改用 dsh 已有
+     form/provenance 通道）；
    - 行内摘要（标题 + 前 N 字）与更贴合的图标/配色（当前走通用 `OpaqueBody`）；
    - **手动删除持久化**：注入的笔记内容会一直留在会话历史里（直到 compaction）。在注入
      上下文行上加「删除」按钮：host 新增 API（如 `contextRemove(sessionId, path)`），按
-     `source.kind === 'md-notes'` + `path` 定位该消息，用 surface `{ op: 'replace', start, end }`
+     source 为插件注入（`kind: 'plugin'` + `plugin: 'md-notes'`）+ `path` 定位该消息，用
+     surface `{ op: 'replace', start, end }`
      把它从模型可见历史中移除（compaction 同款机制）；只删注入内容、不动用户自己的消息；
      删除后不会复活（pre-step 只扫描新提交消息找引用）。
 

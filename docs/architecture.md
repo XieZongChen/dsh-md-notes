@@ -130,7 +130,9 @@ dsh-md-notes/
   notes 域 + git 域）、`iconHandler`（GET 返回打包的 SVG 图标）。
 - 上下文注入 `host/context-inject.ts`：监听 `agent/pre-step`，扫描已认领消息中的笔记路径
   （`.dsh-notes/…` 正则提取，相对会话 cwd 解析），读取内容并作为注入上下文消息
-  （`source.kind: 'md-notes'`）折叠进模型请求——引用可靠生效，不依赖模型自觉 `read`。
+  （source 用官方 `plugin` 变体 `{kind: 'plugin', plugin: 'md-notes', path}`，dsh 0.1.5 起
+  V2→V3 日志迁移对 source.kind 白名单校验，自定义 kind 会被拒读）折叠进模型请求——
+  引用可靠生效，不依赖模型自觉 `read`。
 - **写锁（host）**：`host/keyed-lock.ts` 实现通用 `KeyedLock`（键 = `note/<workspaceId>/<name>`），
   `write` / `appendConversation` / `delete` 三操作写入期间跨会话互斥，冲突返回错误码
   `note-writing`；client 端用 `busy.ts` 的 `BusyTracker` 镜像（`store.busy`）联动三处 UI。

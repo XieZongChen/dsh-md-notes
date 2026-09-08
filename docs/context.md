@@ -218,16 +218,25 @@
 
 **方案（已实现，`host/context-inject.ts`）**：监听 dsh 原生 `agent/pre-step` 事件（agent-instructions
 同款机制）——每次模型请求前扫描已认领消息里的笔记路径（正则提取 `.dsh-notes/…` 路径，相对
-会话 cwd 解析），读取笔记内容并作为**注入上下文消息**折叠进模型请求（`source.kind: 'md-notes'`）：
+会话 cwd 解析），读取笔记内容并作为**注入上下文消息**折叠进模型请求
+（source 用官方 **`plugin` 变体**：`{ kind: 'plugin', plugin: 'md-notes', path }`）：
 
 - 模型**直接拿到笔记内容**，无需调用 `read`；路径行仍在用户消息里（可读、可追溯）。
 - 注入内容带**中英双语引用约定**（`[标题](路径)` markdown 链接格式，与用户消息的序列化
   语法一致）——结构化引用便于渲染器识别；这是对模型的尽力引导，非硬性保证。
 - 注入消息随 step 持久化进会话日志（agent-loop 会把 decision.messages 全部 append），
-  界面上渲染为**注入上下文行**（DisclosureRow，来源标 `md-notes`），跨步骤按 source 去重——
+  界面上渲染为**注入上下文行**（DisclosureRow；ui-chat 的 `contextProvenance` 对 `plugin`
+  source 取 `plugin` 字段做标签，来源仍显示 `md-notes`），跨步骤按 source 的 `path` 去重——
   一次引用只注入一次。
 - 引用失效：文件已删除则跳过注入，用户消息里的路径行仍在（模型可尝试 read 或说明缺失）。
 - 内容边界：只读取 `.dsh-notes` 目录内的文件。
+
+**为什么必须是官方 `plugin` 变体而不是自定义 kind（选型依据，勿"优化"掉）**：dsh
+`0.1.5-alpha.1` 把会话日志升到 V3，加载 V2 旧日志时迁移层对 `user/message` 的 `source.kind`
+做白名单校验（`SOURCE_KINDS`，见 `session-format-v2-to-v3` 的 `assertSource`）——自定义
+kind（插件早期版本用过的 `{kind: 'md-notes'}`）会让**整个日志被拒绝读取**。官方 `plugin`
+变体在白名单内且不限制额外键，`path` 字段保留作去重键；V2 时期由新插件版本写入的
+`plugin` source 日志也能平滑过迁移。
 
 **为什么是 `pre-step` 折叠而不是 `agent.inject()`（选型依据，勿"优化"掉）**：dsh 还提供
 `agent.inject(message)`——把注入上下文**排入下一个 pre-step**。它的文档明言「may miss a
