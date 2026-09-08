@@ -31,6 +31,32 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## NEXT_VERSION
+
+### Breaking
+
+- **After upgrading to dsh ≥ `0.1.5-alpha.1`, historical sessions that used `@` note references
+  on older dsh builds cannot be opened**: dsh `0.1.5-alpha.1` upgrades the session-log format
+  to V3, and the V2→V3 migration validates message `source.kind` against a whitelist — the
+  context injected by older plugin versions used the custom kind `'md-notes'`, which is not on
+  it, so any log containing such events is **refused entirely** (`cannot safely transform
+  unclassified message source`). The root cause is dsh's format-migration policy, and **the
+  plugin cannot repair logs already written** (log files belong to dsh; the plugin only
+  produces events and never touches storage). Mitigation: export/archive sessions that used
+  `@` references before upgrading dsh, or wait for dsh upstream to admit `'md-notes'` to the
+  migration whitelist (tracked in the compatibility entry at the top of
+  [docs/TODO.md](docs/TODO.md)). From this version on the injection uses the official source
+  shape, so **new sessions are unaffected** — and sessions written by the new plugin version
+  on older dsh (V2 logs) also migrate smoothly.
+
+### Added
+
+- **Adapt to deepseek-harness `0.1.5-alpha.1`**: the injected-context source migrates to the
+  official `plugin` variant (`{ kind: 'plugin', plugin: 'md-notes', path }`), satisfying the
+  V2→V3 log migration's source whitelist — `@` reference injection, injected-context row
+  rendering (label still `md-notes`), and cross-step dedupe behave unchanged. Rationale in
+  [docs/context.md §3.7](docs/context.md#37-模型可靠性host-端内容注入已实现).
+
 ## [0.12.0] - 2026-09-06
 
 ### Added

@@ -24,6 +24,28 @@
   **不新增** `NEXT_VERSION`（开发空窗期不留空块）。写入改动时先检查是否存在 `NEXT_VERSION`
   块——没有就先添加一个，再在块下记录新改动。
 
+## NEXT_VERSION
+
+### Breaking
+
+- **升级 dsh ≥ `0.1.5-alpha.1` 后，旧 dsh 上用过 `@` 笔记引用的历史会话无法打开**：dsh
+  `0.1.5-alpha.1` 把会话日志格式升到 V3，加载 V2 旧日志时迁移层对消息 `source.kind` 做
+  白名单校验，而旧版插件注入的上下文使用自定义 kind `'md-notes'`（不在白名单内）——
+  含这类事件的日志**整体被拒绝读取**（报 `cannot safely transform unclassified message
+  source`）。根因是 dsh 侧的格式迁移策略，**插件无法修复已写入的历史日志**（日志文件
+  归 dsh 管理，插件只产出事件、不触碰存储）。缓解：升级 dsh 前导出/归档用 `@` 引用过
+  笔记的会话，或等 dsh 上游把 `'md-notes'` 加入迁移白名单（[docs/TODO.md](docs/TODO.md)
+  顶部兼容条目跟进中）。本版本起注入已改用官方 source 形态，**新会话不受影响**，且
+  新版插件在旧 dsh（V2 日志）上写入的会话也能平滑迁移。
+
+### Added
+
+- **适配 deepseek-harness `0.1.5-alpha.1`**：注入上下文的 source 迁移到官方 `plugin`
+  变体（`{ kind: 'plugin', plugin: 'md-notes', path }`），满足 V2→V3 日志迁移的 source
+  白名单——`@` 引用注入、注入上下文行渲染（标签仍显示 `md-notes`）与跨步去重行为
+  不变。背景与选型依据见
+  [docs/context.md §3.7](docs/context.md#37-模型可靠性host-端内容注入已实现)。
+
 ## [0.12.0] - 2026-09-06
 
 ### Added
