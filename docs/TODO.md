@@ -6,6 +6,21 @@
 > **完全完结**的条目：实现后移入 [CHANGELOG.md](../CHANGELOG.md)（只记用户可见的功能性改动），
 > 并从本文删除；**部分落地**的条目保留，标注已完成部分与剩余工作。
 
+## dsh 兼容性（dsh 0.1.3-alpha.2 → 0.1.5-alpha.1，2026-09-09）
+
+**判定：有影响** —— Session 日志格式升 V3，V2→V3 迁移拒绝插件注入上下文的事件，历史会话不可读。适配完成并冒烟通过前，`0.1.5-alpha.1` 不入 [compatibility.zh.md](compatibility.zh.md) 对照表。
+
+- **受影响功能与影响范围**：
+  - dsh `0.1.5-alpha.1` 把会话日志格式升到 V3（`SESSION_FORMAT_VERSION = 3`，`session-format-catalog` 的 `currentVersion: 3`）。加载 V2 旧日志时经 `session-format-v2-to-v3` 迁移，迁移对 `user/message` 事件的 `source.kind` 做白名单校验（`SOURCE_KINDS`，`payload.ts` 的 `assertSource`）——`'md-notes'` 不在名单内，抛 `SessionFormatUnsupportedMigrationError('cannot safely transform unclassified message source')`，jsonl 层转为 `SessionFormatUnsupportedError`，**整个会话日志被拒绝读取**。
+  - 成因链：本插件 `src/host/context-inject.ts` 注入的上下文消息用自定义 `source: { kind: 'md-notes', path }`（声明合并扩展 `MessageSourceMap`）；dsh agent 循环把 pre-step 进入的全部消息持久化为 `user/message` 事件（`agent-loop/src/agent.ts` `session.append('user/message', …)`）。凡在 dsh ≤ `0.1.3-alpha.2` 上用过 `@` 笔记引用的会话，日志里都含这种事件——**升级 dsh 后这些历史会话无法打开/恢复**。
+  - **不受影响**：新会话的 `@` 注入（V3 写入侧 `assertV3Event` 无 source kind 白名单，注入与跨步去重照常）；其余全部契约面（HTTP API、git、@ 触发 UI、四个 slot、`push_notes` 工具、插件安装/加载）在本区间零变化。
+- **需要的动作**：
+  1. 插件侧适配：注入 source 改用白名单内的官方 `'plugin'` 变体——`{ kind: 'plugin', plugin: 'md-notes', path }`（`assertSource` 只对 `'agent-message'` 做精确键校验，`'plugin'` 变体不限制额外键，迁移与 V3 读写均能过；`path` 保留供去重）。同步更新：`MessageSourceMap` 声明合并、读取 `source.kind === 'md-notes'` 的去重/渲染识别（`context-inject.ts`、上下文行渲染相关代码）。
+  2. 历史日志（插件侧无法修复，日志归 dsh 管）：向 dsh 提 issue——请求把 `'md-notes'` 纳入 V2→V3 迁移的 `SOURCE_KINDS`，或确认第三方注入上下文的官方 source 形态；用户侧缓解 = 升级 dsh 前导出/归档受影响会话。
+  3. 适配后冒烟：新会话注入/渲染/去重 + 不含注入事件的旧会话恢复。
+- **阻塞项 / 待验证**：含 `'md-notes'` 事件的 V2 日志在 dsh 侧是否有官方修复路径（提 issue 后跟进）；`'plugin'` source 在会话 UI 的上下文行呈现是否与原 `'md-notes'` 等价（`contextProvenance`/披露行识别）。
+- **验收标准**：dsh `0.1.5-alpha.1` 上 `@` 引用注入、上下文行渲染、跨步去重正常；不含注入事件的旧会话可正常打开；适配后的组合按流程入对照表。
+
 ## 0. dsh 开放能力盘点（历史快照：2026-08-27，迁移 0.1.2-alpha.1 时）
 
 > 迁移时顺带盘点当时对外放出、可优化插件体验的能力。此后 dsh 迭代到 alpha.5，本节仅作
