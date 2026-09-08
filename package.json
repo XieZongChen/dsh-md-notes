@@ -45,7 +45,11 @@
         "@deepseek-ai/dsh-client-locale",
         "@deepseek-ai/dsh-client-ui-conversation",
         "@deepseek-ai/dsh-client-ui-input-trigger",
-        "@deepseek-ai/dsh-client-ui-chat"
+        "@deepseek-ai/dsh-client-ui-chat",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ],
+      "external": [
+        "@deepseek-ai/dsh-util-workspace-path"
       ],
       "platform": "web"
     }
@@ -79,7 +83,9 @@
     "@deepseek-ai/dsh-client-ui-settings": "*",
     "@deepseek-ai/dsh-client-ui-settings-general": "*",
     "@deepseek-ai/dsh-client-ui-sidebar": "*",
+    "@deepseek-ai/dsh-client-ui-sidebar-right": "*",
     "@deepseek-ai/dsh-client-ui-slots": "*",
+    "@deepseek-ai/dsh-util-workspace-path": "*",
     "@deepseek-ai/dsh-api-session-controller": "*",
     "@deepseek-ai/dsh-host-webserver": "*",
     "@deepseek-ai/dsh-llm": "*",
@@ -116,7 +122,13 @@
     "@deepseek-ai/dsh-client-ui-sidebar": {
       "optional": true
     },
-    "@deepseek-ai/dsh-client-ui-layout": {
+    "@deepseek-ai/dsh-client-ui-sidebar-right": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-slots": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-util-workspace-path": {
       "optional": true
     },
     "@deepseek-ai/dsh-client-ui-primitives": {
