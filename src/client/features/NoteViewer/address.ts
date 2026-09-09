@@ -20,7 +20,7 @@
  * @module dsh-md-notes/client/NoteViewer/address
  */
 
-import { parseFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
+import { absoluteFileAddress, parseFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
 import type { WorkspaceNotes } from '../api.ts'
 
 /** A file address resolved to the note it names (undefined = not a note). */
@@ -105,6 +105,21 @@ export function noteTargetOf(
  */
 export function canOpenNoteAddress(address: string): boolean {
   return parseFileAddress(address) !== undefined
+}
+
+/**
+ * The right-Sidebar address of one KNOWN note (a search hit, an interlink
+ * target): the absolute file address of `<notesDir>/<name>`. `undefined` when
+ * the workspace is unknown (the caller stays where it is).
+ */
+export function noteFileAddress(
+  workspaces: readonly WorkspaceNotes[],
+  workspaceId: string,
+  name: string,
+): string | undefined {
+  const ws = workspaces.find((g) => g.workspaceId === workspaceId)
+  if (ws === undefined) return undefined
+  return absoluteFileAddress(`${ws.notesDir}/${name}`)
 }
 
 /**

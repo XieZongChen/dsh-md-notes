@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest'
 import type { WorkspaceNotes } from '../api.ts'
-import { noteTargetOf, noteTitleOf, resolvePosix, sessionRootOf } from './address.ts'
+import { noteFileAddress, noteTargetOf, noteTitleOf, resolvePosix, sessionRootOf } from './address.ts'
 
 const wsA: WorkspaceNotes = {
   workspaceId: 'a',
@@ -92,6 +92,20 @@ describe('noteTargetOf', () => {
     expect(noteTargetOf(`${SESSION}.dsh-notes/a.md`, groups, undefined)).toBeUndefined()
     expect(noteTargetOf('sidebar://guide', groups, '/base/ws-a')).toBeUndefined()
     expect(noteTargetOf('https://example.com/x.md', groups, '/base/ws-a')).toBeUndefined()
+  })
+})
+
+describe('noteFileAddress', () => {
+  it('builds the absolute file address of a known note (round-trips noteTargetOf)', () => {
+    const address = noteFileAddress(groups, 'b', '我的 笔记.md')
+    expect(address).toBe('dsh-resource://file/absolute/base/ws-b/.dsh-notes/%E6%88%91%E7%9A%84%20%E7%AC%94%E8%AE%B0.md')
+    expect(noteTargetOf(address ?? '', groups, undefined)).toEqual({
+      workspaceId: 'b', workspaceName: 'Beta', notesDir: wsB.notesDir, name: '我的 笔记.md',
+    })
+  })
+
+  it('is undefined for an unknown workspace', () => {
+    expect(noteFileAddress(groups, 'zzz', 'a.md')).toBeUndefined()
   })
 })
 

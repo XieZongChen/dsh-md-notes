@@ -185,3 +185,23 @@
   border-radius: 2px;
   padding: 0 1px;
 }
+
+/* "View in sidebar" per-note action on the search hit head row. */
+.sidebarBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--dsw-alias-label-tertiary);
+  cursor: pointer;
+}
+
+.sidebarBtn:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-module-platform);
+}

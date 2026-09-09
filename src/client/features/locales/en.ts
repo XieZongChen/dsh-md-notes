@@ -158,5 +158,6 @@ export const en: { [K in keyof typeof zh]: string } = {
   'viewer.failed': 'Read failed',
   'viewer.retry': 'Retry',
   'viewer.reload': 'Reload',
+  'search.viewInSidebar': 'View in sidebar',
 
 }

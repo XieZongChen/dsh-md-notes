@@ -155,5 +155,6 @@ export const zh = {
   'viewer.failed': '读取失败',
   'viewer.retry': '重试',
   'viewer.reload': '刷新',
+  'search.viewInSidebar': '在侧栏查看',
 
 } as const

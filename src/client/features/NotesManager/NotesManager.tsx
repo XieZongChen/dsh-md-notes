@@ -17,6 +17,7 @@ import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicato
 import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
 import { ICON_URL } from '../api.ts'
 import { preprocessWikiLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
+import { noteFileAddress } from '../NoteViewer/address.ts'
 import { useUpdateAvailable } from '../update.ts'
 import shared from '../styles.module.css'
 import styles from './components/notes-manager.module.css'
@@ -104,6 +105,18 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     open(name, wsId, loc)
   }
 
+  // "View in sidebar" (right-Sidebar note viewer): open the note's address
+  // and close the fullscreen manager so the panel is in view. Rendered only
+  // when the Sidebar services exist (openSidebarResource present).
+  const viewInSidebar = props.openSidebarResource === undefined
+    ? undefined
+    : (wsId: string, name: string): void => {
+      const address = noteFileAddress(workspaces, wsId, name)
+      if (address === undefined) return
+      props.openSidebarResource?.(address)
+      close()
+    }
+
   return (
     <div className={shared.mask} onClick={(e) => { if (e.target === e.currentTarget) close() }}>
       <div className={styles.manager}>
@@ -154,6 +167,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
               truncated={search.truncated}
               t={t}
               onOpenNote={openSearchNote}
+              onViewInSidebar={viewInSidebar}
             />
             : <WorkspaceList
             workspaces={workspaces}

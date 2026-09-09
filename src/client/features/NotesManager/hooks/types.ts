@@ -38,4 +38,10 @@ export interface NotesManagerProps {
   t: TranslateNS<'md-notes'>
   /** Session services for the AI conflict flow (optional — flow degrades to manual). */
   sessions?: SessionsLike
+  /**
+   * Open a right-Sidebar resource address (search hits' "view in sidebar"
+   * action). Absent on dsh builds without the right Sidebar — the action
+   * hides instead of failing.
+   */
+  openSidebarResource?: (address: string) => void
 }

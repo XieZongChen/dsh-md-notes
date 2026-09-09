@@ -8,7 +8,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconFolderOpen16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconFolderOpen16, IconPanelLeftOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NoteHits, SearchHit } from '../../api.ts'
 import type { SearchPhase } from '../hooks/useNoteSearch.ts'
 import { highlightSegments } from '../search.ts'
@@ -22,9 +22,14 @@ interface SearchResultsProps {
   t: TranslateNS<'md-notes'>
   /** Open the note; `hit` (when present) is the row to locate in the editor. */
   onOpenNote: (wsId: string, name: string, hit: SearchHit | undefined) => void
+  /**
+   * Open the note in the right-Sidebar viewer (closing the manager).
+   * Absent on dsh builds without the Sidebar — the action hides.
+   */
+  onViewInSidebar?: (wsId: string, name: string) => void
 }
 
-export function SearchResults({ phase, results, truncated, t, onOpenNote }: SearchResultsProps): React.ReactElement {
+export function SearchResults({ phase, results, truncated, t, onOpenNote, onViewInSidebar }: SearchResultsProps): React.ReactElement {
   /** Group hits by workspace, preserving the host's (registry) order. */
   const groups: Array<{ wsId: string; name: string; notes: NoteHits[] }> = []
   for (const note of results) {
@@ -60,6 +65,21 @@ export function SearchResults({ phase, results, truncated, t, onOpenNote }: Sear
                           <span className={styles.noteTitle} title={note.title}>{note.title}</span>
                           {note.titleMatch && <span className={styles.titleHit}>{t('search.titleHit')}</span>}
                           <span className={styles.hitCount}>{t('search.hits', { count: note.totalHits })}</span>
+                          {onViewInSidebar !== undefined && (
+                            <button
+                              type="button"
+                              className={styles.sidebarBtn}
+                              aria-label={t('search.viewInSidebar')}
+                              title={t('search.viewInSidebar')}
+                              data-search-view-in-sidebar
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onViewInSidebar(note.workspaceId, note.name)
+                              }}
+                            >
+                              <IconPanelLeftOutline16 />
+                            </button>
+                          )}
                         </div>
                         {note.hits.map((hit) => (
                           <div

@@ -76,9 +76,16 @@ function NotesOverlay(props: {
   t: TranslateNS<'md-notes'>
   /** Session services for the AI conflict flow (ctx.get('sessions')). */
   sessions?: SessionsLike
+  /** Right-Sidebar navigation (search hits' "view in sidebar"); absent without the Sidebar. */
+  openSidebarResource?: (address: string) => void
 }): React.ReactElement | null {
   const s = useStore(props.store)
-  if (s.managerOpen) return React.createElement(NotesManager, { store: props.store, tracker: props.tracker, t: props.t, sessions: props.sessions })
+  if (s.managerOpen) {
+    return React.createElement(NotesManager, {
+      store: props.store, tracker: props.tracker, t: props.t, sessions: props.sessions,
+      openSidebarResource: props.openSidebarResource,
+    })
+  }
   if (s.picker) {
     return React.createElement(NotePicker, {
       questionText: s.picker.questionText,
@@ -103,6 +110,18 @@ export function apply(ctx: ClientContext): void {
   const tracker = createBusyTracker(store)
   const t = ctx.locale.bind('md-notes')
   ctx.effect(() => ctx.locale.register('md-notes', { zh, en }), 'dsh-md-notes: locale dicts')
+
+  // Right-Sidebar services (dsh 0.1.5+), OPTIONAL like inputTriggers below:
+  // without them the note-viewer tab and the search hits' "view in sidebar"
+  // action stay disabled; every other registration keeps working.
+  const tabs = ctx.get('sidebarRightTabs')
+  const sidebar = ctx.get('sidebarRight')
+  const openSidebarResource = sidebar === undefined
+    ? undefined
+    : (address: string): void => { sidebar.openResource(address) }
+  if (tabs === undefined || sidebar === undefined) {
+    console.warn('[dsh-md-notes] sidebarRight services unavailable — the note-viewer tab stays disabled')
+  }
 
   // Note-reference chip logo: paint the plugin icon as the chip's domain
   // glyph. The notes `@` source sets a reserved `appearance` value 'notes', so
@@ -240,7 +259,11 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.slots.inject('shell.overlay', () => ctx.slots.register(
     { name: 'shell.overlay', id: 'dsh-notes-overlay', order: 100, label: t('sidebar.entry'), locale: 'md-notes' },
     (props: { t: TranslateNS<'md-notes'> }) =>
-      React.createElement(NotesOverlay, { store, tracker, t: props.t, sessions: ctx.get('sessions') as SessionsLike | undefined }),
+      React.createElement(NotesOverlay, {
+        store, tracker, t: props.t,
+        sessions: ctx.get('sessions') as SessionsLike | undefined,
+        openSidebarResource,
+      }),
   )), 'dsh-md-notes: overlay')
 
   ctx.effect(() => ctx.slots.inject('settings.section', () => ctx.slots.register(
@@ -248,17 +271,8 @@ export function apply(ctx: ClientContext): void {
     SettingsSection,
   )), 'dsh-md-notes: settings section')
 
-  // --- right-Sidebar note-viewer tab (dsh 0.1.5+; both services optional) ---
-  // Like inputTriggers above, the Sidebar services are OPTIONAL: without them
-  // (dsh builds predating the right Sidebar) only this viewer stays disabled —
-  // every other registration above already lives.
-  const tabs = ctx.get('sidebarRightTabs')
-  const sidebar = ctx.get('sidebarRight')
-  if (tabs === undefined || sidebar === undefined) {
-    console.warn('[dsh-md-notes] sidebarRight services unavailable — the note-viewer tab stays disabled')
-    return
-  }
-  const openResource = (address: string): void => { sidebar.openResource(address) }
+  // --- right-Sidebar note-viewer tab (dsh 0.1.5+; services looked up above) ---
+  if (tabs === undefined || openSidebarResource === undefined) return
   ctx.effect(() => tabs.register({
     id: 'dsh-md-notes/note-viewer',
     kind: 'md-notes',
@@ -270,7 +284,7 @@ export function apply(ctx: ClientContext): void {
     title: noteTitleOf,
   }), 'dsh-md-notes: note viewer type')
   ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
-    { name: 'sidebar.right.pane.tab', key: 'dsh-md-notes/note-viewer', locale: 'md-notes', inject: () => ({ openResource }) },
+    { name: 'sidebar.right.pane.tab', key: 'dsh-md-notes/note-viewer', locale: 'md-notes', inject: () => ({ openResource: openSidebarResource }) },
     NoteViewer,
   )), 'dsh-md-notes: note viewer body')
 }
