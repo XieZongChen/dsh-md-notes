@@ -24,7 +24,7 @@ import type {
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ListResult, NoteSummary, WorkspaceNotes } from '../api.ts'
 import { api } from '../api.ts'
-import { chipLabel, parentDir, refPath, relFrom } from './paths.ts'
+import { chipLabel, noteRefAddress, parentDir, refPath, relFrom } from './paths.ts'
 import { resolveNoteRef } from './resolve.ts'
 
 /** Source identity: the menu group title and the chip `source` field. */
@@ -77,8 +77,15 @@ export type ReTrackHook = (sessionId: SessionId, caret: number) => void
  * `dispose` clears it (the registering effect calls it on HMR/unmount).
  * @param t - bound `md-notes` translate (localized error copy).
  * @param reTrack - optional composer re-track hook (workspace auto-complete).
+ * @param openSidebarResource - optional right-Sidebar navigation (chip-click
+ * preview into the note viewer); absent on dsh builds without the Sidebar —
+ * `openReference` then declines and the editor gesture stays unchanged.
  */
-export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackHook): NotesSourceBundle {
+export function createNotesSource(
+  t: TranslateNS<'md-notes'>,
+  reTrack?: ReTrackHook,
+  openSidebarResource?: (address: string) => void,
+): NotesSourceBundle {
   /** Single-flight current-workspace list per session (shared by warm + candidates). */
   const fetches = new Map<SessionId, Promise<readonly WorkspaceNotes[]>>()
   /** Settled current-workspace list per session (backs the synchronous lexicon). */
@@ -318,6 +325,16 @@ export function createNotesSource(t: TranslateNS<'md-notes'>, reTrack?: ReTrackH
         clipboardText: ref.crossWs ? `@${ref.ws.name}/${candidate.name}` : `@${candidate.name}`,
       }
       return { insert }
+    },
+    // Chip-click preview (dsh 0.1.5+ editor gesture): open the referenced note
+    // in the right-Sidebar viewer at the chip's own ref — session-relative refs
+    // ride the session-scoped file address (the grammar keeps `..`; the viewer
+    // resolves against the session root), the absolute pick-time fallback rides
+    // an absolute address. Declining (no Sidebar) leaves the gesture unchanged.
+    openReference(session, { ref }) {
+      if (openSidebarResource === undefined) return false
+      openSidebarResource(noteRefAddress(session.sessionId, ref))
+      return true
     },
     codec: {
       // The pipeline copies chips from the insert-time clipboardText, so this

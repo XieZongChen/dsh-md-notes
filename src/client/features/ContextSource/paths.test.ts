@@ -4,8 +4,9 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { canon, chipLabel, parentDir, refPath, relFrom } from './paths.ts'
+import { noteTargetOf } from '../NoteViewer/address.ts'
 import type { NoteSummary, WorkspaceNotes } from '../api.ts'
+import { chipLabel, canon, noteRefAddress, parentDir, refPath, relFrom } from './paths.ts'
 
 describe('relFrom', () => {
   it('same-root target yields the down path with no ../', () => {
@@ -73,5 +74,33 @@ describe('chipLabel', () => {
   it('keeps short titles as-is, including CJK', () => {
     expect(chipLabel('ab')).toBe('ab')
     expect(chipLabel('笔记甲乙')).toBe('笔记甲乙')
+  })
+})
+
+describe('noteRefAddress', () => {
+  it('a session-relative ref becomes a session-scoped file address', () => {
+    expect(noteRefAddress('s1', '.dsh-notes/plan.md'))
+      .toBe('dsh-resource://file/session/s1/.dsh-notes/plan.md')
+  })
+
+  it('a cross-workspace ../ ref keeps its dot segments (the viewer resolves them)', () => {
+    expect(noteRefAddress('s1', '../ws-b/.dsh-notes/b.md'))
+      .toBe('dsh-resource://file/session/s1/../ws-b/.dsh-notes/b.md')
+  })
+
+  it('the absolute pick-time fallback becomes an absolute address (drive or slash)', () => {
+    expect(noteRefAddress('s1', '/base/ws-a/.dsh-notes/a.md'))
+      .toBe('dsh-resource://file/absolute/base/ws-a/.dsh-notes/a.md')
+    expect(noteRefAddress('s1', 'C:/x/ws/.dsh-notes/a.md'))
+      .toBe('dsh-resource://file/absolute/C:/x/ws/.dsh-notes/a.md')
+  })
+
+  it('round-trips into the viewer mapping (noteTargetOf resolves either form)', () => {
+    const groups = [
+      { workspaceId: 'a', name: 'A', notesDir: '/base/ws-a/.dsh-notes', notes: [] },
+      { workspaceId: 'b', name: 'B', notesDir: '/base/ws-b/.dsh-notes', notes: [] },
+    ]
+    expect(noteTargetOf(noteRefAddress('s1', '../ws-b/.dsh-notes/b.md'), groups, '/base/ws-a')?.name).toBe('b.md')
+    expect(noteTargetOf(noteRefAddress('s1', '/base/ws-b/.dsh-notes/b.md'), groups, undefined)?.name).toBe('b.md')
   })
 })

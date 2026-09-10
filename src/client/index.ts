@@ -221,7 +221,7 @@ export function apply(ctx: ClientContext): void {
     queueMicrotask(() => {
       inputTriggers.sessionOf(actx).track(state.draft, caret, { tier: triggerGuard(state.phase) }, state.draftRev)
     })
-  })
+  }, openSidebarResource)
   ctx.effect(() => {
     const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract | undefined
     if (inputTriggers === undefined) {

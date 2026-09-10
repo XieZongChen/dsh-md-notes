@@ -5,6 +5,7 @@
  * @module dsh-md-notes/client/ContextSource/paths
  */
 
+import { absoluteFileAddress, sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
 import type { NoteSummary, WorkspaceNotes } from '../api.ts'
 
 /**
@@ -48,6 +49,22 @@ export function parentDir(dir: string): string {
 /** Absolute path of one note (the target for the session-relative path). */
 export function refPath(ws: WorkspaceNotes, note: NoteSummary): string {
   return ws.notesDir.endsWith('/') ? ws.notesDir + note.name : `${ws.notesDir}/${note.name}`
+}
+
+/**
+ * The right-Sidebar address for one chip `ref` (the editor's reference-preview
+ * gesture, dsh 0.1.5+ `InputTriggerSource.openReference`): session-relative
+ * refs become session-scoped file addresses (the grammar keeps `..` segments;
+ * the note viewer resolves them against the session root), the absolute
+ * pick-time fallback becomes an absolute address.
+ * @param sessionId - the composer's session (the ref is relative to its root).
+ * @param ref - the chip's stored ref, exactly as inserted by `onPick`.
+ * @returns the `dsh-resource://file/…` address to open.
+ */
+export function noteRefAddress(sessionId: string, ref: string): string {
+  return /^[A-Za-z]:/.test(ref) || ref.startsWith('/')
+    ? absoluteFileAddress(ref)
+    : sessionFileAddress(sessionId, ref)
 }
 
 /**
