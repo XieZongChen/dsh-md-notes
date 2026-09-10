@@ -55,7 +55,6 @@ const PLATFORM_MODULES = [
   '@deepseek-ai/dsh-client-ui-sidebar/client',
   '@deepseek-ai/dsh-client-ui-sidebar-right',
   '@deepseek-ai/dsh-client-ui-sidebar-right/client',
-  '@deepseek-ai/dsh-util-workspace-path',
   '@deepseek-ai/dsh-client-ui-layout',
   '@deepseek-ai/dsh-client-ui-layout/client',
   '@deepseek-ai/dsh-client-ui-primitives',

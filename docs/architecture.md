@@ -204,8 +204,10 @@ client 的 `api<M>()` 按其推导精确返回类型；下表为可读摘要）�
   `ctx.get('sidebarRightTabs')` / `ctx.get('sidebarRight')` 注册 `md-notes` tab 类型
   （`extension` 优先级认领 `/.dsh-notes/<名>.md` 文件地址）与 keyed seat
   `sidebar.right.pane.tab` 的 body；地址 →（工作区, 笔记名）映射是纯逻辑
-  （`NoteViewer/address.ts`，`parseFileAddress` 来自 `@deepseek-ai/dsh-util-workspace-path`，
-  经 `dsh.client.external` 声明进模块表）；正文走插件自身 `list`/`read` API。服务缺失
+  （`NoteViewer/address.ts`，`parseFileAddress` 等来自 `@deepseek-ai/dsh-util-workspace-path`——
+  该包按 dsh 自家 client 构建的 `INLINE_SAFE` 约定**内联进插件 bundle**：纯函数可内联，
+  且浏览器模块表只有 client 包的 row，非 client 包的运行时导入不能走 external，实测会
+  `missed the module table` 启动失败）；正文走插件自身 `list`/`read` API。服务缺失
   （旧 dsh）时整体静默禁用（同 inputTriggers 模式）。
 - **i18n**：所有 UI 文案在 `features/locales/`（`zh.ts` 源字典、`en.ts` 映射类型强制同键，
   `LocaleNamespaceMap` 合并 `md-notes` 命名空间）；组件用 `t(key, params)` 读取，随 dsh 语言

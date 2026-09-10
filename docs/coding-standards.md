@@ -344,6 +344,7 @@
 | 17 | `settings.ts` `mergeSettings` | `gitCentral.branch` 空串会回退 L2 值，用户想清空分支时无法清空 | 低 | 评估语义：空串应表示「未设置/回退默认 main」并写清 |
 | 18 | 文档内部不一致 | write-lock.md §4 与 §6 的 noteKey 写法不一致 | 低 | 对齐 host 锁 key（`workspaceId/name`）与 client busy key（`note/workspaceId/name`）的表述 |
 | 19 | git.ts 同步标记升级路径 | v0.11.0 首同步标记机制上线前已存在的存量 clone 无 `.git/dsh-md-notes-synced.json`，升级后按首次同步处理：每次打开笔记走全量拉取+冲突横幅、每次推送被全量拦截，直到某次 pull/push 成功才自愈 | 中 | apply 时播种：clone 早于进程启动且无标记 → 视为已同步（2026-09-05 排查发现，详见 docs/debug.md §3） |
+| 20 | ✅ `tsdown.config.ts` + `package.json` | client 运行时 import 非 client 包（`dsh-util-workspace-path`）声明为 external：浏览器模块表只有 client 包 row → 启动 `missed the module table` 失败；typecheck/测试发现不了（纯 boot 期问题） | 高 | 已修：按 dsh `INLINE_SAFE` 约定改内联打包（去掉 external 声明与 tsdown external 项）；见 architecture §查看器 |
 
 > 本节是活的：修掉一条就把该行标 ✅ 并注明 commit；新增隐患随时补。目标是在功能继续增长前
 > 把「高/中」级别清空。

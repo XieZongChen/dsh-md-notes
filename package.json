@@ -49,9 +49,6 @@
         "@deepseek-ai/dsh-client-ui-chat",
         "@deepseek-ai/dsh-client-ui-sidebar-right"
       ],
-      "external": [
-        "@deepseek-ai/dsh-util-workspace-path"
-      ],
       "platform": "web"
     }
   },
