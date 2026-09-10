@@ -113,14 +113,13 @@ export function apply(ctx: ClientContext): void {
 
   // Right-Sidebar services (dsh 0.1.5+), OPTIONAL like inputTriggers below:
   // without them the note-viewer tab and the search hits' "view in sidebar"
-  // action stay disabled; every other registration keeps working.
-  const tabs = ctx.get('sidebarRightTabs')
-  const sidebar = ctx.get('sidebarRight')
-  const openSidebarResource = sidebar === undefined
-    ? undefined
-    : (address: string): void => { sidebar.openResource(address) }
-  if (tabs === undefined || sidebar === undefined) {
-    console.warn('[dsh-md-notes] sidebarRight services unavailable — the note-viewer tab stays disabled')
+  // action stay disabled; every other registration keeps working. Call-time
+  // lookup keeps this stable across boot/HMR service-arrival timing.
+  const openSidebarResource = (address: string): void => {
+    ctx.get('sidebarRight')?.openResource(address)
+  }
+  if (ctx.get('sidebarRightTabs') === undefined) {
+    console.warn('[dsh-md-notes] sidebarRight not ready yet — the note viewer registers when the service arrives')
   }
 
   // Note-reference chip logo: paint the plugin icon as the chip's domain
@@ -222,19 +221,26 @@ export function apply(ctx: ClientContext): void {
       inputTriggers.sessionOf(actx).track(state.draft, caret, { tier: triggerGuard(state.phase) }, state.draftRev)
     })
   }, openSidebarResource)
-  ctx.effect(() => {
+  const registerAtSource = (): (() => void) => {
     const inputTriggers = ctx.get('inputTriggers') as InputTriggerServiceContract | undefined
-    if (inputTriggers === undefined) {
-      // Graceful degradation (docs/architecture.md §4): only the `@` notes
-      // source is lost; every other slot keeps working.
-      console.warn('[dsh-md-notes] inputTriggers service unavailable — the @ notes reference source stays disabled')
-      return () => {}
-    }
+    if (inputTriggers === undefined) return () => {}
     const unregister = inputTriggers.registerSource(notesSource.source)
     return () => {
       unregister()
       notesSource.dispose()
     }
+  }
+  ctx.effect(() => {
+    if (ctx.get('inputTriggers') !== undefined) return registerAtSource()
+    // Graceful degradation + LATE ACTIVATION: only the `@` notes source is
+    // lost while the service is absent (every other slot keeps working), but
+    // a boot/HMR reload can re-run this apply before ui-input-trigger starts
+    // its service — `ctx.inject` (dsh's own optional-service pattern, see
+    // client-modules' webServer carrier) fires the registration on arrival.
+    console.warn('[dsh-md-notes] inputTriggers not ready yet — the @ source registers when the service arrives')
+    let dispose: (() => void) | undefined
+    void ctx.inject(['inputTriggers'], () => { dispose = registerAtSource() })
+    return () => { dispose?.() }
   }, 'dsh-md-notes: @ source')
 
   ctx.effect(() => ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register(
@@ -271,20 +277,25 @@ export function apply(ctx: ClientContext): void {
     SettingsSection,
   )), 'dsh-md-notes: settings section')
 
-  // --- right-Sidebar note-viewer tab (dsh 0.1.5+; services looked up above) ---
-  if (tabs === undefined || openSidebarResource === undefined) return
-  ctx.effect(() => tabs.register({
+  // --- right-Sidebar note-viewer tab (dsh 0.1.5+; late activation, see @ source) ---
+  const registerViewer = (): void => {
+    const tabsNow = ctx.get('sidebarRightTabs')
+    if (tabsNow === undefined) return
+    ctx.effect(() => tabsNow.register({
     id: 'dsh-md-notes/note-viewer',
     kind: 'md-notes',
     // Whole-address match (contains `:`): any scope whose path ends in
     // `/.dsh-notes/<name>.md`; `extension` priority beats the builtin text
     // viewer for note files.
-    patterns: ['dsh-resource://file/**/.dsh-notes/*.md'],
-    canOpen: canOpenNoteAddress,
-    title: noteTitleOf,
-  }), 'dsh-md-notes: note viewer type')
-  ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
-    { name: 'sidebar.right.pane.tab', key: 'dsh-md-notes/note-viewer', locale: 'md-notes', inject: () => ({ openResource: openSidebarResource }) },
-    NoteViewer,
-  )), 'dsh-md-notes: note viewer body')
+      patterns: ['dsh-resource://file/**/.dsh-notes/*.md'],
+      canOpen: canOpenNoteAddress,
+      title: noteTitleOf,
+    }), 'dsh-md-notes: note viewer type')
+    ctx.effect(() => ctx.slots.inject('sidebar.right.pane.tab', () => ctx.slots.register(
+      { name: 'sidebar.right.pane.tab', key: 'dsh-md-notes/note-viewer', locale: 'md-notes', inject: () => ({ openResource: openSidebarResource }) },
+      NoteViewer,
+    )), 'dsh-md-notes: note viewer body')
+  }
+  if (ctx.get('sidebarRightTabs') !== undefined) registerViewer()
+  else void ctx.inject(['sidebarRightTabs'], () => { registerViewer() })
 }
