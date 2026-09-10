@@ -132,6 +132,14 @@ A picker opens:
    <answer>
    ```
 
+**Deliverables and images ride along**: when the answer produced files (code,
+image paths, …), the captured note gains a "📎 produced files" section linking
+them relative to the note's directory (anywhere in the workspace); images in
+the answer are referenced IN PLACE via the plugin's route (zero copy) and
+render inline. Note: image bytes live in this machine's dsh attachment store —
+on machines a git-synced note reaches, the text arrives but images do not
+display; a "copy into repo" option may follow if that matters to you.
+
 ## 4. Referencing notes in a conversation (@)
 
 Type **`@`** in the chat input to pick a note: the pick inserts a **note chip**,
