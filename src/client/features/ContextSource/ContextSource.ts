@@ -133,16 +133,28 @@ export function createNotesSource(
   const fetchCurrent = (sessionId: SessionId): Promise<readonly WorkspaceNotes[]> => {
     const existing = fetches.get(sessionId)
     if (existing !== undefined) return existing
+    // Whether an empty result is FINAL (no workspaces exist at all) or
+    // TRANSIENT (workspaces exist but THIS session did not resolve one yet —
+    // a draft session not yet materialized host-side, e.g. the auto-opened
+    // first page after `dsh web` starts).
+    let transientEmpty = false
     const promise = (async () => {
       const res = await api('list', { sessionId })
       if (!res.ok) throw new Error(res.error)
-      return res.workspaces ?? []
+      const workspaces = res.workspaces ?? []
+      transientEmpty = workspaces.length === 0 && res.noWorkspaces !== true
+      return workspaces
     })()
     fetches.set(sessionId, promise)
     promise.then(
       (workspaces) => {
         settled.set(sessionId, workspaces)
         notifyLexicon(sessionId)
+        // A transient empty result must not poison the key either: without
+        // this, the FIRST page after a server start caches the blank list
+        // forever (`settled` never expires) — the `@` menu stays empty no
+        // matter how long one waits; only a page refresh reset it.
+        if (transientEmpty && fetches.get(sessionId) === promise) fetches.delete(sessionId)
       },
       () => {
         // A failed fetch must not poison the key: the next consumer retries.
