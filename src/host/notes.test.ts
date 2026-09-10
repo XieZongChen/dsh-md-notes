@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -305,5 +305,50 @@ describe('searchNotes', () => {
     await writeFile(join(dir, 'dup.md'), '# d\nneedle needle\n', 'utf8')
     const res = await searchNotes([ws('w1', dir)], 'needle needle')
     expect(one(one(res.results).hits).ranges).toHaveLength(2) // one pass, no double counting
+  })
+})
+
+describe('appendConversation capture extras', () => {
+  it('renders produced files as note-dir-relative markdown links (deduped)', async () => {
+    const base = await tempDir()
+    const notesDir = join(base, '.dsh-notes')
+    const res = await appendConversation(
+      notesDir, 'log.md', 'q', 'a', 'S',
+      { user: 'U', assistant: 'A', files: 'Files' },
+      { files: [join(base, '产物.png'), join(base, 'src', 'main.ts'), join(base, '产物.png')] },
+    )
+    expect(res.ok).toBe(true)
+    const content = await readFile(join(notesDir, 'log.md'), 'utf8')
+    expect(content).toContain('### 📎 Files')
+    expect(content).toContain('- [产物.png](../产物.png)')
+    expect(content).toContain('- [main.ts](../src/main.ts)')
+    expect(content.match(/main\.ts\]/g)?.length).toBe(1)
+  })
+
+  it('references captured images through the in-place asset route (no copy)', async () => {
+    const base = await tempDir()
+    const notesDir = join(base, '.dsh-notes')
+    const image = { attachmentId: 'abc123', mediaType: 'image/png', bytes: 99, width: 8, height: 6 }
+    const res = await appendConversation(notesDir, 'log.md', 'q', 'a', '', undefined, { images: [image] })
+    expect(res.ok).toBe(true)
+    const content = await readFile(join(notesDir, 'log.md'), 'utf8')
+    expect(content).toContain('![image](/plugins/md-notes/asset?id=abc123&mt=image%2Fpng&b=99&w=8&h=6)')
+    // Zero copy: the workspace gains no assets dir; the notes dir gains only
+    // the note + the plugin's own meta cache.
+    expect(await readdir(base)).toEqual(['.dsh-notes'])
+    expect((await readdir(notesDir)).sort()).toEqual(['log.md', 'meta.json'])
+  })
+
+  it('skips malformed image refs and blank file paths without adding sections', async () => {
+    const base = await tempDir()
+    const notesDir = join(base, '.dsh-notes')
+    const res = await appendConversation(notesDir, 'log.md', 'q', 'a', '', undefined, {
+      files: ['  '],
+      images: [{ attachmentId: '../evil', mediaType: 'image/png', bytes: 1, width: 1, height: 1 }],
+    })
+    expect(res.ok).toBe(true)
+    const content = await readFile(join(notesDir, 'log.md'), 'utf8')
+    expect(content).not.toContain('📎')
+    expect(content).not.toContain('asset?')
   })
 })

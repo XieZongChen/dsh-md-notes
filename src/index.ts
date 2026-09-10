@@ -35,6 +35,7 @@ import { createKeyedLock, createKeyedMutex } from './host/keyed-lock.ts'
 import { MdNotesSettingsSchema, mergeSettings, MD_NOTES_NS, type MdNotesSettings } from './host/settings.ts'
 import { registerNoteContextInjection } from './host/context-inject.ts'
 import { dshSessionsRoot, scanAndRepairSessions } from './host/sessions-repair.ts'
+import { assetHandler, type AttachmentsLike } from './host/assets.ts'
 import { createUpdateChecker } from './host/update.ts'
 
 /** Plugin row config. */
@@ -340,6 +341,11 @@ export function apply(ctx: Context, config: Config): void {
     path: prefix,
     handler,
   }), 'dsh-md-notes: api route')
+  ctx.effect(() => web.register({
+    kind: 'exact',
+    path: `${prefix}/asset`,
+    handler: assetHandler(() => ctx.get('attachments') as AttachmentsLike | undefined, authorize),
+  }), 'dsh-md-notes: asset route')
   ctx.effect(() => web.register({
     kind: 'exact',
     path: `${prefix}/icon.svg`,
