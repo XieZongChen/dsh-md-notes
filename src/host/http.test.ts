@@ -96,6 +96,7 @@ function makeDeps(overrides: Partial<NotesApiDeps> = {}): NotesApiDeps {
     readSettings: () => ({}),
     hasWorkspaces: () => true,
     checkUpdate: vi.fn(async () => ({ ok: false as const, error: 'x' })),
+    repairSessions: vi.fn(async () => ({ ok: true as const, scanned: 0, repaired: 0, events: 0, failed: 0, stillBlocked: [] })),
     git: {
       status: vi.fn(async () => ({ ok: true, remote: 'https://example.com/r.git' })),
       init: vi.fn(async () => false),

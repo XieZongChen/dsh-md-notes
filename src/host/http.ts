@@ -8,7 +8,7 @@
 
 import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { ApiResult, UpdateInfo, WorkspaceNotes } from '../contract.ts'
+import type { ApiResult, SessionRepairReport, UpdateInfo, WorkspaceNotes } from '../contract.ts'
 import {
   appendConversation, createNote, deleteNote, listNotes, readNote, sanitizeName, searchNotes, writeNote,
 } from './notes.ts'
@@ -108,6 +108,8 @@ export interface NotesApiDeps {
   authorize?: (req: IncomingMessage) => 401 | 403 | undefined
   /** npm update check: latest published version vs the installed one (cached). */
   checkUpdate(): Promise<ApiResult<UpdateInfo>>
+  /** One-shot legacy-session repair sweep (sessions-repair.ts). */
+  repairSessions(): Promise<ApiResult<SessionRepairReport>>
   /** Bound git operations. */
   git: GitApi
   /** Process-scoped write mutex (notes domain key: `<workspaceId>/<name>`). */
@@ -262,6 +264,10 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
     }
     case 'gitSettings': {
       return { ok: true, settings: deps.readSettings() }
+    }
+    case 'repairSessions': {
+      const r = await deps.repairSessions()
+      return r
     }
     case 'checkUpdate': {
       const r = await deps.checkUpdate()

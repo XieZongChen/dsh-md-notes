@@ -111,6 +111,20 @@ export interface UpdateInfo {
   hasUpdate: boolean
 }
 
+/** Outcome of the legacy-session repair sweep (`repairSessions`). */
+export interface SessionRepairReport {
+  /** Session log files examined. */
+  scanned: number
+  /** Files rewritten (contained legacy `md-notes` message sources). */
+  repaired: number
+  /** Message-source objects rewritten to the official `plugin` form. */
+  events: number
+  /** Files that failed to decompress/rewrite (left untouched; backup kept when made). */
+  failed: number
+  /** Other source kinds found in repaired files that dsh's migration whitelist may still refuse (deduped). */
+  stillBlocked: string[]
+}
+
 /** Localized section labels for `appendConversation` (client sends; host renders). */
 export interface AppendLabels {
   user?: string
@@ -168,6 +182,16 @@ export interface ApiContract {
       workspaceId?: string
     }
     res: ApiResult<{ name: string }>
+  }
+  /**
+   * One-shot maintenance sweep over `~/.dsh/sessions`: rewrite legacy
+   * `source.kind === 'md-notes'` message sources (written by plugin ≤0.12.0 on
+   * dsh ≤0.1.3) to the official `plugin` variant so dsh ≥0.1.5's V0→V3 session
+   * migration accepts the log again. Originals are backed up beside each file.
+   */
+  repairSessions: {
+    req: Record<string, never>
+    res: ApiResult<SessionRepairReport>
   }
   /**
    * Full-text search across every workspace's notes (the manager search box).

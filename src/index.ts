@@ -13,6 +13,7 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import type { ApiResult, SessionRepairReport } from './contract.ts'
 import type { Context } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
@@ -33,6 +34,7 @@ import { iconHandler, notesApiHandler, type GitApi, type NotesApiDeps, type Work
 import { createKeyedLock, createKeyedMutex } from './host/keyed-lock.ts'
 import { MdNotesSettingsSchema, mergeSettings, MD_NOTES_NS, type MdNotesSettings } from './host/settings.ts'
 import { registerNoteContextInjection } from './host/context-inject.ts'
+import { dshSessionsRoot, scanAndRepairSessions } from './host/sessions-repair.ts'
 import { createUpdateChecker } from './host/update.ts'
 
 /** Plugin row config. */
@@ -301,6 +303,13 @@ export function apply(ctx: Context, config: Config): void {
   const authorize = (req: IncomingMessage): 401 | 403 | undefined =>
     (ctx.get('connection') as ConnectionLike | undefined)?.requestRejection({ headers: req.headers })
 
+  const repairSessionsDeps = async (): Promise<ApiResult<SessionRepairReport>> => {
+    try {
+      return { ok: true, ...(await scanAndRepairSessions(dshSessionsRoot())) }
+    } catch (error: unknown) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  }
   const deps: NotesApiDeps = {
     resolveDir,
     resolveRepo,
@@ -313,6 +322,7 @@ export function apply(ctx: Context, config: Config): void {
       return registry !== undefined && registry.list().length > 0
     },
     checkUpdate,
+    repairSessions: repairSessionsDeps,
     git,
     lock: createKeyedLock(),
     authorize,
