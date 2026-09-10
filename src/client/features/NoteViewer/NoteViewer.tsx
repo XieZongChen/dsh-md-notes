@@ -25,6 +25,7 @@ import { absoluteFileAddress, parseFileAddress } from '@deepseek-ai/dsh-util-wor
 import { api, type WorkspaceNotes } from '../api.ts'
 import { noteTargetOf, sessionRootOf, type NoteTarget } from './address.ts'
 import { preprocessWikiLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
+import { createNotePathImages } from '../path-images.ts'
 import css from './note-viewer.module.css'
 
 /** The owner-provided navigation face (registered `inject` in `client/index.ts`). */
@@ -128,6 +129,15 @@ export function NoteViewer({ useTabInfo, openResource, t }: NoteViewerProps): Re
     [ready],
   )
 
+  // Local images resolve against the note's own directory (same vocabulary as
+  // the manager preview).
+  const pathImages = React.useMemo(
+    () => ready === undefined
+      ? undefined
+      : createNotePathImages(window.location.protocol, window.location.origin, ready.target.notesDir),
+    [ready],
+  )
+
   if (ready === undefined) {
     return (
       <div className={css.status} data-note-viewer-state={phase.kind}>
@@ -163,7 +173,7 @@ export function NoteViewer({ useTabInfo, openResource, t }: NoteViewerProps): Re
         </button>
       </div>
       <div className={css.body} data-note-viewer-body>
-        <MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} />
+        <MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} pathImages={pathImages} />
       </div>
     </div>
   )

@@ -18,6 +18,7 @@ import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialo
 import { ICON_URL } from '../api.ts'
 import { preprocessWikiLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
 import { noteFileAddress } from '../NoteViewer/address.ts'
+import { createNotePathImages } from '../path-images.ts'
 import { useUpdateAvailable } from '../update.ts'
 import shared from '../styles.module.css'
 import styles from './components/notes-manager.module.css'
@@ -81,6 +82,16 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   const previewText = React.useMemo(
     () => preprocessWikiLinks(content, workspaces, selectedWsId),
     [content, workspaces, selectedWsId],
+  )
+
+  // Local images in the preview (`![](img.png)`) resolve against the selected
+  // note's own directory; without a selected workspace there is no rewrite.
+  const selectedNotesDir = workspaces.find((w) => w.workspaceId === selectedWsId)?.notesDir
+  const pathImages = React.useMemo(
+    () => selectedNotesDir === undefined
+      ? undefined
+      : createNotePathImages(window.location.protocol, window.location.origin, selectedNotesDir),
+    [selectedNotesDir],
   )
 
   // Search box (docs/search.md §2): a non-empty query swaps the left pane for
@@ -229,7 +240,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     ? <div className={styles.editorLoading}><LoadingIndicator label={t('git.loading')} /></div>
                     : mode === 'edit'
                       ? <textarea ref={editorRef} className={styles.textarea} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
-                      : <div className={`${styles.preview} ${shared.scrollWide}`}><MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} /></div>}
+                      : <div className={`${styles.preview} ${shared.scrollWide}`}><MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} pathImages={pathImages} /></div>}
                 </>
               )}
           </div>
