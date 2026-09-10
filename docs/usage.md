@@ -141,10 +141,13 @@ the model can see and cite the note without you having to tell it to read files.
 ### 4.1 Picking a note
 
 1. Type `@` → the candidate menu lists notes of the **current workspace**
-   (file icon; the title is the primary row, the file name the secondary line).
+   (plugin logo leading; the title is the primary row, the file name the
+   secondary line).
 2. Select with arrows / click → a note chip appears (leading with the plugin
    icon); keep typing `@` to add more.
 3. Keep typing to **filter** the candidates (by title or file name).
+4. **Click an inserted chip** (dsh ≥ 0.1.5) → opens that note's preview in the
+   right sidebar, so you can confirm what you are referencing before sending.
 
 ### 4.2 Referencing notes from other workspaces
 
@@ -164,7 +167,10 @@ Two things:
 1. **Your message keeps a readable reference line** (standard markdown link
    syntax) — e.g. `Referenced note [title](.dsh-notes/note.md)` (same workspace)
    or `Referenced note [title](../other-dir/.dsh-notes/note.md)` (cross-workspace)
-   — it tells the model (and you) which note was referenced;
+   — it tells the model (and you) which note was referenced. References are
+   **always relative paths** — never absolute paths from your machine (so
+   nothing about your local directories leaks even if the message is captured
+   into a note that git-syncs);
 2. **The plugin's backend (the local dsh process) injects the note's content into the model context** — a collapsible
    "context injection" row (source `md-notes`) appears in the chat; expand it to
    see the injected content. The model gets the content directly — it does **not**

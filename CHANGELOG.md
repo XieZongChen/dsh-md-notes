@@ -51,6 +51,13 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Added
 
+- **@ note-chip click preview**: clicking an inserted note chip in the composer
+  opens that note in the right-sidebar viewer before sending (the dsh 0.1.5+
+  reference-preview gesture); on builds without the right sidebar the click
+  behavior is unchanged. See
+  [docs/usage.md §4.1](docs/usage.md#41-picking-a-note).
+- **@ candidate rows now lead with the plugin logo**, matching the chip (the
+  generic file icon before).
 - **Search results "view in sidebar"**: every note row in the notes manager's
   search results gains a panel action — opens that note in the right-sidebar
   note viewer (absolute file address routed through `openResource`; the same
@@ -78,6 +85,16 @@ Only user-visible functional changes are recorded (no documentation, code refact
   V2→V3 log migration's source whitelist — `@` reference injection, injected-context row
   rendering (label still `md-notes`), and cross-step dedupe behave unchanged. Rationale in
   [docs/context.md §3.7](docs/context.md#37-模型可靠性host-端内容注入已实现).
+
+### Fixed
+
+- **@ references no longer carry absolute paths**: in a rare window (picking a
+  note before the session workspace list settles) a reference could serialize
+  an absolute path containing the machine's home directory into the message,
+  which could then reach a git-synced repo via "capture into note". The pick
+  now declines instead (just pick again); absolute-path chips persisted by
+  older versions are rewritten at submit time to
+  `workspace-name/.dsh-notes/note-name` — references are relative-only now.
 
 ## [0.12.0] - 2026-09-06
 
