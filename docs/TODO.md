@@ -6,6 +6,15 @@
 > **完全完结**的条目：实现后移入 [CHANGELOG.md](../CHANGELOG.md)（只记用户可见的功能性改动），
 > 并从本文删除；**部分落地**的条目保留，标注已完成部分与剩余工作。
 
+## dsh 兼容性（dsh 0.1.5-alpha.1 → 0.1.5-rc.2，2026-09-10）
+
+**判定：无新增影响（对未发版适配代码）；既有影响不变。** 本轮检查 dsh 推进到 `0.1.5-rc.2`（区间 +422 提交，途经 alpha.2 / rc.1）。插件 CHANGELOG 顶部有 `NEXT_VERSION`（source 适配 + 侧栏查看器等均未发版）——按 skill §5.0 **本次结果不入对照表**，待发版后再跑一次校验入表。
+
+- **区间核对（alpha.1 → rc.2）**：插件新旧代码依赖的全部契约面逐项 diff——`agent/pre-step`/`PreStepDecision`/`UserMessage.source`（runtime-types、message.ts 零 diff）、`SidebarRightTabDefinition`/`openResource`/`sidebar.right.pane.tab`（仅 guide 条目 description 转可选 + 新增 `rightbar.session` slot，均增量）、文件地址语法（`parseFileAddress` 改为前缀切分不再经 `new URL`——`..` 段不再折叠、忽略 query/fragment、session 地址允许绝对路径；插件 `resolvePosix` 词汇解析对此是超集兼容，`absoluteFileAddress` 行为不变）、`/api/file` 路由零变化、`MarkdownPathImages`/插件所用 15 个 primitives 符号全部健在（`DocumentFileIcon` 被移除换成 `FileTypeIcon`，插件未用）、input-trigger/conversation 契约增量（`icon` 兼容字符串旧值、`ReferenceInsert` 形状不变）、四个插件 slot 声明零变化。
+- **验证**：插件对 rc.2 checkout 跑 typecheck（0 错误）+ 230 测试 + 构建全绿。
+- **既有影响（0.1.3-alpha.2 → 0.1.5-alpha.1，2026-09-09 条目）不变**：V2→V3 迁移 `SOURCE_KINDS` 白名单仍未含 `'md-notes'`（上游无动作），已发布 0.12.0 的历史会话问题依旧；上游 issue 仍待提。
+- **下一步**：真机冒烟（rc.2）→ `changelog:release` 发版 → 重跑 `dsh 兼容性校验` 入表（`<新版本> ↔ 0.1.5-rc.2` 或届时最新）。
+
 ## dsh 兼容性（dsh 0.1.3-alpha.2 → 0.1.5-alpha.1，2026-09-09）
 
 **判定：有影响** —— Session 日志格式升 V3，V2→V3 迁移拒绝插件注入上下文的事件，历史会话不可读。**插件侧适配已完成（2026-09-09，`fix(inject)` 提交）**；上游 issue + 真机冒烟 + 发版入表前，`0.1.5-alpha.1` 不入 [compatibility.zh.md](compatibility.zh.md) 对照表。
