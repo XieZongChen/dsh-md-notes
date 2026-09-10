@@ -34,6 +34,27 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [msg, setMsg] = React.useState('')
   const [busy, setBusy] = React.useState(false)
+  // Legacy-session repair (sessions-repair.ts): one-shot sweep, result inline.
+  const [repairBusy, setRepairBusy] = React.useState(false)
+  const [repairMsg, setRepairMsg] = React.useState('')
+
+  const runRepair = (): void => {
+    if (repairBusy) return
+    setRepairBusy(true)
+    setRepairMsg(t('repair.running'))
+    void api('repairSessions', {}).then((r) => {
+      setRepairBusy(false)
+      if (!r.ok) {
+        setRepairMsg(t('repair.failedApi'))
+        return
+      }
+      const parts = [r.repaired > 0
+        ? t('repair.done', { scanned: r.scanned, repaired: r.repaired, events: r.events })
+        : t('repair.none', { scanned: r.scanned })]
+      if (r.failed > 0) parts.push(t('repair.failedFiles', { count: r.failed }))
+      if (r.stillBlocked.length > 0) parts.push(t('repair.blocked', { kinds: r.stillBlocked.join('、') }))
+      setRepairMsg(parts.join('；'))
+    })
   const dirtyScalar = React.useRef<Set<string>>(new Set())
   const dirtyCentral = React.useRef(false)
   const dirtyWs = React.useRef<Set<string>>(new Set())
@@ -244,6 +265,17 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
             })}
         </div>
       )}
+
+      <div className={styles.repairPanel}>
+        <div className={styles.repairText}>
+          <div className={styles.repairTitle}>{t('repair.title')}</div>
+          <div className={styles.repairDesc}>{t('repair.desc')}</div>
+          {repairMsg !== '' && <div className={styles.repairMsg} data-repair-result={repairMsg}>{repairMsg}</div>}
+        </div>
+        <button type="button" className={styles.saveBtn} disabled={repairBusy} onClick={runRepair} data-repair-run>
+          {repairBusy ? t('repair.running') : t('repair.run')}
+        </button>
+      </div>
 
       <div className={styles.foot}>
         <span className={styles.msg}>{msg}</span>

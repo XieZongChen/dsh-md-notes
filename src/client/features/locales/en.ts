@@ -159,5 +159,14 @@ export const en: { [K in keyof typeof zh]: string } = {
   'viewer.retry': 'Retry',
   'viewer.reload': 'Reload',
   'search.viewInSidebar': 'View in sidebar',
+  'repair.title': 'Repair legacy sessions',
+  'repair.desc': 'Note context written into history by old plugin versions (source: md-notes) makes dsh 0.1.5+ refuse to open those sessions. This scans every local session log and rewrites those sources to the official form; originals are backed up beside each file, no restart needed.',
+  'repair.run': 'Scan and repair',
+  'repair.running': 'Scanning…',
+  'repair.done': 'Scanned {scanned} logs, repaired {repaired} ({events} sources rewritten)',
+  'repair.none': 'Scanned {scanned} logs, nothing to repair',
+  'repair.failedFiles': '{count} files failed (left untouched)',
+  'repair.failedApi': 'Repair run failed. Please retry.',
+  'repair.blocked': "Note: some sessions still carry dsh's own legacy source kinds ({kinds}) — may need upstream support",
 
 }

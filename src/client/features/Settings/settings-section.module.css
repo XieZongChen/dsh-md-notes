@@ -197,3 +197,40 @@
   opacity: 0.4;
   cursor: default;
 }
+
+/* Legacy-session repair: a maintenance row pinned at the form's bottom. */
+.repairPanel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-module-platform);
+  padding: 12px 14px;
+}
+
+.repairText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.repairTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.repairDesc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.repairMsg {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-secondary);
+  word-break: break-all;
+}

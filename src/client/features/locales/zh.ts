@@ -156,5 +156,14 @@ export const zh = {
   'viewer.retry': '重试',
   'viewer.reload': '刷新',
   'search.viewInSidebar': '在侧栏查看',
+  'repair.title': '历史会话修复',
+  'repair.desc': '旧版本插件在历史会话里写入的笔记上下文（source: md-notes）会让 dsh 0.1.5+ 拒绝打开该会话。点击后扫描全部本地会话，把这些来源改写为官方格式；原文件会在同目录备份，无需重启。',
+  'repair.run': '扫描并修复',
+  'repair.running': '扫描中…',
+  'repair.done': '已扫描 {scanned} 个日志，修复 {repaired} 个（改写 {events} 处来源）',
+  'repair.none': '已扫描 {scanned} 个日志，无需修复',
+  'repair.failedFiles': '{count} 个文件处理失败（未改动）',
+  'repair.failedApi': '修复执行失败，请重试',
+  'repair.blocked': '注意：部分会话仍含 dsh 自身的历史来源类型（{kinds}），或需等待 dsh 上游支持',
 
 } as const
