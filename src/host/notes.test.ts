@@ -82,6 +82,13 @@ describe('notes file ops', () => {
     expect((await listNotes(dir)).notes.some((n) => n.name === name)).toBe(false)
   })
 
+  it('refuses an empty answer with a coded error (client localizes it)', async () => {
+    const base = await tempDir()
+    const res = await appendConversation(join(base, '.dsh-notes'), 'log.md', 'q', '', '', undefined)
+    if (res.ok) throw new Error('expected the coded failure branch')
+    expect(res.code).toBe('empty-answer')
+  })
+
   it('createNote honors an explicit file name independent of the title', async () => {
     const dir = await tempDir()
     const created = await createNote(dir, 'My Title', 'chosen-name')
