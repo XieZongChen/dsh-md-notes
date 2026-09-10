@@ -353,14 +353,24 @@ export function createNotesSource(
       return { insert }
     },
     // Chip-click preview (dsh 0.1.5+ editor gesture): open the referenced note
-    // in the right-Sidebar viewer at the chip's own ref — session-relative refs
-    // ride the session-scoped file address (the grammar keeps `..`; the viewer
-    // resolves against the session root), the absolute pick-time fallback rides
-    // an absolute address. Declining (no Sidebar) leaves the gesture unchanged.
+    // in the right-Sidebar viewer. Same-workspace refs ride the session-scoped
+    // address; CROSS-WORKSPACE refs (`../…`) resolve through the settled
+    // workspace snapshot to an ABSOLUTE address — picomatch's `**` (the
+    // Sidebar's tab routing) does not match `..` segments, so a dotted session
+    // address is unclaimable and `claim` THROWS. Every failure declines
+    // (returns false) instead of throwing: this runs inside Lexical's chip
+    // command, and an escaping throw poisons the editor (error #20 cascade,
+    // the chip becomes undeletable — measured 2026-09-11).
     openReference(session, { ref }) {
       if (openSidebarResource === undefined) return false
-      openSidebarResource(noteRefAddress(session.sessionId, ref))
-      return true
+      const address = noteRefAddress(session.sessionId, ref, allSettled?.workspaces ?? [])
+      if (address === undefined) return false
+      try {
+        openSidebarResource(address)
+        return true
+      } catch {
+        return false
+      }
     },
     codec: {
       // The pipeline copies chips from the insert-time clipboardText, so this

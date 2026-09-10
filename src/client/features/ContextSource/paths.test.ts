@@ -84,9 +84,20 @@ describe('noteRefAddress', () => {
       .toBe('dsh-resource://file/session/s1/.dsh-notes/plan.md')
   })
 
-  it('a cross-workspace ../ ref keeps its dot segments (the viewer resolves them)', () => {
-    expect(noteRefAddress('s1', '../ws-b/.dsh-notes/b.md'))
-      .toBe('dsh-resource://file/session/s1/../ws-b/.dsh-notes/b.md')
+  it('a cross-workspace ../ ref resolves through the workspace snapshot to an ABSOLUTE address (picomatch cannot claim dotted session addresses)', () => {
+    const groups = [
+      { workspaceId: 'a', name: 'A', notesDir: '/base/ws-a/.dsh-notes', notes: [] },
+      { workspaceId: 'b', name: 'B', notesDir: '/base/ws-b/.dsh-notes', notes: [{ name: 'b.md', title: 'B', updatedAt: 0 }] },
+    ]
+    expect(noteRefAddress('s1', '../ws-b/.dsh-notes/b.md', groups))
+      .toBe('dsh-resource://file/absolute/base/ws-b/.dsh-notes/b.md')
+  })
+
+  it('a cross-workspace ../ ref without a usable snapshot DECLINES (undefined), never a dotted session address', () => {
+    expect(noteRefAddress('s1', '../ws-b/.dsh-notes/b.md')).toBeUndefined()
+    expect(noteRefAddress('s1', '../ghost/.dsh-notes/b.md', [
+      { workspaceId: 'b', name: 'B', notesDir: '/base/ws-b/.dsh-notes', notes: [{ name: 'b.md', title: 'B', updatedAt: 0 }] },
+    ])).toBeUndefined()
   })
 
   it('the absolute pick-time fallback becomes an absolute address (drive or slash)', () => {
@@ -99,10 +110,10 @@ describe('noteRefAddress', () => {
   it('round-trips into the viewer mapping (noteTargetOf resolves either form)', () => {
     const groups = [
       { workspaceId: 'a', name: 'A', notesDir: '/base/ws-a/.dsh-notes', notes: [] },
-      { workspaceId: 'b', name: 'B', notesDir: '/base/ws-b/.dsh-notes', notes: [] },
+      { workspaceId: 'b', name: 'B', notesDir: '/base/ws-b/.dsh-notes', notes: [{ name: 'b.md', title: 'B', updatedAt: 0 }] },
     ]
-    expect(noteTargetOf(noteRefAddress('s1', '../ws-b/.dsh-notes/b.md'), groups, '/base/ws-a')?.name).toBe('b.md')
-    expect(noteTargetOf(noteRefAddress('s1', '/base/ws-b/.dsh-notes/b.md'), groups, undefined)?.name).toBe('b.md')
+    expect(noteTargetOf(noteRefAddress('s1', '../ws-b/.dsh-notes/b.md', groups) ?? '', groups, '/base/ws-a')?.name).toBe('b.md')
+    expect(noteTargetOf(noteRefAddress('s1', '/base/ws-b/.dsh-notes/b.md') ?? '', groups, undefined)?.name).toBe('b.md')
   })
 })
 

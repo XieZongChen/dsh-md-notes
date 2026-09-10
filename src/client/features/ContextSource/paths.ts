@@ -6,6 +6,7 @@
  */
 
 import { absoluteFileAddress, sessionFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
+import { resolveNoteRef } from './resolve.ts'
 import type { NoteSummary, WorkspaceNotes } from '../api.ts'
 
 /**
@@ -53,18 +54,30 @@ export function refPath(ws: WorkspaceNotes, note: NoteSummary): string {
 
 /**
  * The right-Sidebar address for one chip `ref` (the editor's reference-preview
- * gesture, dsh 0.1.5+ `InputTriggerSource.openReference`): session-relative
- * refs become session-scoped file addresses (the grammar keeps `..` segments;
- * the note viewer resolves them against the session root), the absolute
- * pick-time fallback becomes an absolute address.
- * @param sessionId - the composer's session (the ref is relative to its root).
+ * gesture, dsh 0.1.5+ `InputTriggerSource.openReference`).
+ *
+ * Cross-workspace refs (`../<dir>/…`) MUST resolve to an ABSOLUTE address:
+ * the Sidebar's tab-type routing matches patterns with picomatch, whose `**`
+ * does not match a literal `..` segment — a session address carrying `..` is
+ * unclaimable by ANY type (measured 2026-09-11) and `claim` throws. Resolution
+ * needs the workspace list; without a usable snapshot the caller declines
+ * (returns `undefined`) rather than building a broken address.
+ * @param sessionId - the composer's session (same-workspace refs ride it).
  * @param ref - the chip's stored ref, exactly as inserted by `onPick`.
- * @returns the `dsh-resource://file/…` address to open.
+ * @param workspaces - the latest full workspace snapshot (may be empty while
+ * the first cross-workspace fetch has not settled yet).
+ * @returns the address to open, or `undefined` to decline the gesture.
  */
-export function noteRefAddress(sessionId: string, ref: string): string {
-  return isAbsoluteRef(ref)
-    ? absoluteFileAddress(ref)
-    : sessionFileAddress(sessionId, ref)
+export function noteRefAddress(
+  sessionId: string,
+  ref: string,
+  workspaces: readonly WorkspaceNotes[] = [],
+): string | undefined {
+  if (isAbsoluteRef(ref)) return absoluteFileAddress(ref)
+  if (!ref.split('/').includes('..')) return sessionFileAddress(sessionId, ref)
+  const found = resolveNoteRef(workspaces, ref)
+  if (found === undefined) return undefined
+  return absoluteFileAddress(`${found.owner.notesDir}/${found.name}`)
 }
 
 /**

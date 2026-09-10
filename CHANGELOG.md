@@ -107,6 +107,16 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Fixed
 
+- **Clicking a cross-workspace note chip crashed the composer (no viewer, chip
+  undeletable)**: the preview address for cross-workspace references carries
+  `..` segments, which picomatch's `**` (the sidebar's tab routing) cannot
+  match — no type claims it, `claim` throws through Lexical's chip command and
+  poisons the editor (the #20 error cascade; the chip could not be deleted).
+  Cross-workspace refs now resolve through the settled workspace snapshot to
+  an ABSOLUTE address (an in-memory navigation argument only — never enters
+  the draft, message, notes, or logs); an unsettled snapshot or any open
+  failure declines safely (the click becomes a no-op) instead of throwing
+  into the editor.
 - **`@` menu empty on the first page after startup (refresh fixed it)**: on the
   page auto-opened right after `dsh web` starts, a draft session is not yet
   materialized host-side, and the `@` source's per-session note list cached
