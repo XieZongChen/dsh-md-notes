@@ -82,8 +82,10 @@ dsh web / 硬刷新**（例如「只改了 src/client/features/NotesManager → 
   两份 locale 加文案。
 - **新增 slot / 扩展点**：先查 harness 对应包的 slot 声明（`*.client.ts` 的 SlotMap），
   注册照抄现有 `ctx.slots.inject` 模式；拿不到的扩展点进 `docs/TODO.md` 平台问题区。
-- **升级 dsh 适配**：`npm run link-deps` 后 typecheck 会暴露断裂面；迁移完成后更新
-  `docs/compatibility.md` 对照表 + CHANGELOG「适配 deepseek-harness `<版本>`」条目。
+- **升级 dsh 适配**：只对齐稳定版（rc/final）——跑 `dsh 兼容性校验` 前先看 skill §0
+  触发闸门（无新 rc/final 直接结束，alpha 仅「用新能力/追认 breaking」定点跑）；
+  `npm run link-deps` 后 typecheck 会暴露断裂面；迁移完成后更新
+  `docs/compatibility(.zh).md` 对照表 + CHANGELOG「适配 deepseek-harness `<版本>`」条目。
 
 ## 提交 / CHANGELOG / 文档约定
 
@@ -106,5 +108,5 @@ dsh web / 硬刷新**（例如「只改了 src/client/features/NotesManager → 
 | [search.md](docs/search.md) | 笔记搜索设计（契约/匹配语义/上限 + 命中定位机制与实现状态） |
 | [state.md](docs/state.md) / [write-lock.md](docs/write-lock.md) | 状态分层与写锁协议 |
 | [coding-standards.md](docs/coding-standards.md) | 分层/命名/类型/错误码/锁/测试规范 + §12 隐患清单 |
-| [compatibility(.zh).md](docs/compatibility.zh.md) | 插件版本 ↔ dsh 版本对照表 |
+| [compatibility(.zh).md](docs/compatibility.zh.md) | 插件版本 ↔ dsh 版本对照表 + 稳定版对齐规则 |
 | [TODO.md](docs/TODO.md) | 功能规划与平台能力缺口（含各 hack 的替换条件） |

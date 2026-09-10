@@ -195,8 +195,11 @@ client 的 `api<M>()` 按其推导精确返回类型；下表为可读摘要）�
   （`ref` = **会话工作区相对路径**：同工作区 `.dsh-notes/xxx.md`、跨工作区 `../<目录>/…`，
   `label` = 前置截断标题）；`codec.serialize` 提交时校验笔记仍存在并输出**标准 markdown
   链接** `[标题](路径)`，失效则抛本地化错误阻断发送；
-  `warm`/`lexicon`/`subscribeLexicon` 提供纯文本装饰热快照。无 `inputTriggers` 时特性静默
-  禁用（console.warn）。序列化格式与交互细节见 [context.md](context.md)。
+  `warm`/`lexicon`/`subscribeLexicon` 提供纯文本装饰热快照；候选行 `icon` 为插件 logo
+  组件（`NoteLogoIcon`，dsh 0.1.5-rc 起支持）；`openReference`（可选，0.1.5-rc）把 chip
+  点击转成文件地址交给 `sidebarRight.openResource` 打开查看器。serialize 对绝对路径 ref
+  一律改写为「工作区名/.dsh-notes/名」（隐私：引用只含相对路径）。无 `inputTriggers` 时
+  特性静默禁用（console.warn）。序列化格式与交互细节见 [context.md](context.md)。
 - **右侧 Sidebar 笔记查看器**（`features/NoteViewer/`，dsh 0.1.5+）：`apply` 里经可选服务
   `ctx.get('sidebarRightTabs')` / `ctx.get('sidebarRight')` 注册 `md-notes` tab 类型
   （`extension` 优先级认领 `/.dsh-notes/<名>.md` 文件地址）与 keyed seat

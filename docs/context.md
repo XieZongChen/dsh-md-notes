@@ -5,7 +5,7 @@
 
 ## 0. 实现状态
 
-> 最后更新 2026-08-23。✅ 已实现（0.4.0 起，0.7.0 补充 chip logo 与路径 fallback）；⏳ 少量待实测。
+> 最后更新 2026-09-11。✅ 已实现（0.4.0 起，0.7.0 补充 chip logo 与路径 fallback，0.1.5-rc 线补 chip 点击预览与相对路径保证）；⏳ 少量待实测。
 
 ### 已确认（dsh 源码调研）
 
@@ -33,6 +33,11 @@
 - ✅ **chip 前置插件 logo**（0.7.0）：保留 `appearance='notes'` 作用域 + 注入 scoped 样式绘制图标
 - ✅ **引用路径 fallback**（0.7.0）：工作区改名后，serialize 用标题生成路径兜底，
   引用不再指向不存在位置
+- ✅ **候选行插件 logo**（0.1.5-rc 线）：`icon` 字段组件化，候选行行首为插件 logo
+- ✅ **chip 点击预览**（0.1.5-rc 线，dsh `openReference` 手势）：点击已插入的 chip 在
+  右侧栏笔记查看器打开该笔记（ref 转文件地址；无 Sidebar 时点击无副作用）
+- ✅ **引用只含相对路径**（隐私保证）：pick 不再产生绝对路径 ref；serialize 对遗留
+  绝对 ref 改写为「工作区名/.dsh-notes/名」——引用行不会把本机目录带进消息/笔记/git
 - 🚧 知识库式自动检索（超出 dsh 原生能力，需自定义，见 §4）
 
 ### 待实测（真实会话）
@@ -61,7 +66,8 @@
 | `InputTriggerService.registerSource` | 注册一个 `@` 触发源 | `trigger: '@'`，命名 `notes`（唯一；平台建议名） |
 | `candidates(session, req)` | 菜单候选列表 | 从 host `list` 拉当前工作区笔记 → `{ name, description, icon, hint }` |
 | `onPick(pick)` | 选中回调 | 返回 `ReferenceInsert { source, ref, label, clipboardText }` |
-| `ReferenceInsert` | 插入 U+FFFC 占位符（UI 渲染为 chip） | `source: 'notes'`、`ref: 会话工作区相对路径`、`label: 标题` |
+| `ReferenceInsert` | 插入 U+FFFC 占位符（UI 渲染为 chip） | `source: 'notes'`、`ref: 会话工作区相对路径`（**绝不绝对路径**，隐私保证）、`label: 标题` |
+| `openReference`（可选，0.1.5-rc） | chip 点击手势 | ref 转文件地址 → `sidebarRight.openResource` 开查看器；无 Sidebar 返回 false |
 | `ReferenceCodec` | 提交时把引用**序列化为模型文本** | `serialize(ref)` → 输出**路径 + 标题**（见 §3.3） |
 | `warm(session)` | 会话诞生时预取数据 | 预取笔记名列表（配合 lexicon） |
 | `lexicon(session)` | 纯文本 `@笔记名` 高亮装饰（同步热快照） | 返回笔记标题数组；**仅装饰，不参与引用语义**（见 §3.1） |
