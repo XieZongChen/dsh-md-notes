@@ -131,8 +131,6 @@ export interface AppendLabels {
   assistant?: string
   empty?: string
   image?: string
-  /** Heading for the produced-files section (v-next: capture extras). */
-  files?: string
 }
 
 // ---- envelope ----
@@ -182,8 +180,6 @@ export interface ApiContract {
       sessionTitle?: string
       labels?: AppendLabels
       workspaceId?: string
-      /** Absolute paths of files the answer produced (referenced, not copied). */
-      files?: string[]
     }
     res: ApiResult<{ name: string }>
   }

@@ -35,8 +35,6 @@ export interface NotePickerProps {
   answerText: string
   /** Session title for the append heading (client-side; '' → timestamp only). */
   sessionTitle: string
-  /** Produced-file absolute paths (capture extras; optional). */
-  files?: string[]
   /** Shared store; closing the picker clears `picker`. */
   store: NotesUiStore
   /** In-flight write tracker: busy notes are not selectable (docs/write-lock.md §7.2). */
@@ -49,7 +47,7 @@ export interface NotePickerProps {
  * The note-selection popup.
  */
 export function NotePicker(props: NotePickerProps): React.ReactElement {
-  const { questionText, answerText, sessionTitle, files, store, tracker, t } = props
+  const { questionText, answerText, sessionTitle, store, tracker, t } = props
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [noWorkspaces, setNoWorkspaces] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
@@ -129,13 +127,11 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
       questionText,
       answerText,
       sessionTitle,
-      ...(files !== undefined && files.length > 0 ? { files } : {}),
       labels: {
         user: t('picker.labelUser'),
         assistant: t('picker.labelAssistant'),
         empty: t('picker.labelEmpty'),
         image: t('picker.labelImage'),
-        files: t('picker.labelFiles'),
       },
     })).then((res) => {
       if (res.ok) {

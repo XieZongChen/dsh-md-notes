@@ -91,7 +91,6 @@ function NotesOverlay(props: {
       questionText: s.picker.questionText,
       answerText: s.picker.answerText,
       sessionTitle: s.picker.sessionTitle,
-      ...(s.picker.files !== undefined ? { files: s.picker.files } : {}),
       store: props.store,
       tracker: props.tracker,
       t: props.t,
@@ -260,9 +259,6 @@ export function apply(ctx: ClientContext): void {
         getSessionTitle,
         store,
         t: props.t,
-        resolveCwd: (sid: string): string | undefined =>
-          (ctx.get('sessions') as { list?: { getSnapshot(): { byId?: Record<string, { cwd?: string }> } } } | undefined)
-            ?.list?.getSnapshot().byId?.[sid]?.cwd,
       }),
   )), 'dsh-md-notes: assistant action')
 

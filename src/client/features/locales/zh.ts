@@ -66,7 +66,6 @@ export const zh = {
   'picker.labelUser': '用户',
   'picker.labelAssistant': 'DSH',
   'picker.labelEmpty': '（无）',
-  'picker.labelFiles': '产出文件',
   'picker.labelImage': '[图片]',
   'picker.needSelect': '请先选择或新建一篇笔记',
   'git.title': 'Git 同步',

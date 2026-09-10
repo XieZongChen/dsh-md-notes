@@ -174,36 +174,13 @@ export async function deleteNote(dir: string, rawName: string): Promise<{ ok: tr
  * / `emptyText`) come from the caller (the client localizes them) so the note
  * content follows the UI language; default to neutral English when omitted.
  */
-/** Extras captured from the assistant message (client snapshot → host rendering). */
-export interface AppendExtras {
-  /** Absolute paths of files the answer produced; rendered as markdown links relative to the note dir. */
-  files?: readonly string[]
-}
-
-/** Markdown-safe link path: spaces/parens escaped so `[name](path)` stays one token. */
-function mdPath(path: string): string {
-  return path.replace(/\(/g, '%28').replace(/\)/g, '%29').replace(/ /g, '%20')
-}
-
-/** POSIX-relative path from the note's dir to an absolute target (`..` climbs out of `.dsh-notes`). */
-function relFromDir(dir: string, target: string): string {
-  const f = dir.replace(/\\/g, '/').split('/').filter(Boolean)
-  const t = target.replace(/\\/g, '/').split('/').filter(Boolean)
-  let i = 0
-  while (i < f.length && i < t.length && f[i] === t[i]) i += 1
-  const ups = f.length - i
-  const down = t.slice(i).join('/')
-  return ups === 0 ? down : `${'../'.repeat(ups)}${down}`
-}
-
 export async function appendConversation(
   dir: string,
   noteName: string,
   questionText: string,
   answerText: string,
   sessionTitle = '',
-  labels?: { user?: string; assistant?: string; empty?: string; image?: string; files?: string },
-  extras?: AppendExtras,
+  labels?: { user?: string; assistant?: string; empty?: string; image?: string },
 ): Promise<{ ok: true; name: string } | { ok: false; error: string; code?: string }> {
   // Coded so the client localizes it (an English free-text error would leak
   // into the localized picker message — bilingual audit 2026-09-11).
@@ -221,18 +198,7 @@ export async function appendConversation(
   // has no title); role labels are h3 subsection headings with role emoji so
   // the preview clearly separates the user question from the assistant answer.
   const heading = sessionTitle !== '' ? `## ${sessionTitle} -- ${stamp}` : `## ${stamp}`
-  let section = `\n\n---\n\n${heading}\n\n### 👤 ${userLabel}\n\n${questionText || emptyText}\n\n### 🤖 ${assistantLabel}\n\n${answerText}\n`
-  // Produced files: markdown links relative to the note's own dir (the
-  // `.dsh-notes` dir — `../x.png` reaches the workspace root, matching the
-  // preview's path-images vocabulary). Duplicates collapse in first-seen order.
-  const files = [...new Set(extras?.files ?? [])].filter(p => p.trim() !== '')
-  if (files.length > 0) {
-    const links = files.map(p => {
-      const base = p.replace(/\\/g, '/').split('/').filter(Boolean).pop() ?? p
-      return `- [${base}](${mdPath(relFromDir(dir, p))})`
-    })
-    section += `\n### 📎 ${labels?.files ?? 'Files'}\n\n${links.join('\n')}\n`
-  }
+  const section = `\n\n---\n\n${heading}\n\n### 👤 ${userLabel}\n\n${questionText || emptyText}\n\n### 🤖 ${assistantLabel}\n\n${answerText}\n`
   await mkdir(dir, { recursive: true })
   let content = ''
   try {

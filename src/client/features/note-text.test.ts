@@ -17,7 +17,7 @@ describe('captureMessageText', () => {
       userNode('Q2'),
       assistantNode('m2', [textBlock('A2')]),
     ]
-    expect(captureMessageText(nodes, 'm2')).toEqual({ answerText: 'A2', questionText: 'Q2', producedPaths: [] })
+    expect(captureMessageText(nodes, 'm2')).toEqual({ answerText: 'A2', questionText: 'Q2' })
   })
 
   it('skips reasoning and keeps only visible text', () => {
@@ -25,7 +25,7 @@ describe('captureMessageText', () => {
       userNode('Q'),
       assistantNode('m', [reasoningBlock('think'), textBlock('visible')]),
     ]
-    expect(captureMessageText(nodes, 'm')).toEqual({ answerText: 'visible', questionText: 'Q', producedPaths: [] })
+    expect(captureMessageText(nodes, 'm')).toEqual({ answerText: 'visible', questionText: 'Q' })
   })
 
   it('returns null when the message is not materialized', () => {

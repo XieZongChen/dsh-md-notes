@@ -28,8 +28,6 @@ export interface NotesUiState {
     questionText: string
     answerText: string
     sessionTitle: string
-    /** Produced-file absolute paths (capture extras; optional). */
-    files?: string[]
   } | null
   /**
    * In-flight async tasks, keyed by `<domain>/<resource>` (generic busy

@@ -186,11 +186,6 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       const labels = typeof req.labels === 'object' && req.labels !== null
         ? (req.labels as { user?: string; assistant?: string; empty?: string; image?: string })
         : undefined
-      // Capture extras (client snapshot): produced file paths (absolute) and
-      // image blocks (durable attachment refs → in-place asset URLs).
-      const files = Array.isArray(req.files)
-        ? req.files.filter((p): p is string => typeof p === 'string' && p.trim() !== '')
-        : undefined
       const lock = await deps.lock.with(`${workspaceId}/${noteName}`, () => appendConversation(
         dir,
         noteName,
@@ -198,7 +193,6 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
         String(req.answerText ?? ''),
         String(req.sessionTitle ?? ''),
         labels,
-        files !== undefined ? { files } : undefined,
       ))
       return lock.acquired
         ? lock.value

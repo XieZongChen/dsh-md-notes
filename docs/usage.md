@@ -132,10 +132,6 @@ A picker opens:
    <answer>
    ```
 
-**Produced files ride along**: when the answer produced files (code, …), the
-captured note gains a "📎 produced files" section linking them relative to the
-note's directory (anywhere in the workspace). Images in answers are not yet
-supported in captured notes.
 
 ## 4. Referencing notes in a conversation (@)
 

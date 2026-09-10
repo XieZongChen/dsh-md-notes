@@ -52,11 +52,6 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Added
 
-- **Capture into note carries produced files**: when capturing an answer into
-  a note, files the answer produced (`write` / `edit` / `str_replace_editor`
-  paths) ride along as note-dir-relative links (a `📎 produced files` section,
-  deduped). See
-  [docs/usage.md §3](docs/usage.md#3-capturing-a-conversation-into-a-note).
 - **Settings: "Repair legacy sessions"**: a one-click sweep over every local
   session log rewrites the `md-notes` message sources written by old plugin
   versions into the official `plugin` **minimal form** (dropping extra members
