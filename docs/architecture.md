@@ -199,8 +199,11 @@ client 的 `api<M>()` 按其推导精确返回类型；下表为可读摘要）�
   `warm`/`lexicon`/`subscribeLexicon` 提供纯文本装饰热快照；候选行 `icon` 为插件 logo
   组件（`NoteLogoIcon`，dsh 0.1.5-rc 起支持）；`openReference`（可选，0.1.5-rc）把 chip
   点击转成文件地址交给 `sidebarRight.openResource` 打开查看器。serialize 对绝对路径 ref
-  一律改写为「工作区名/.dsh-notes/名」（隐私：引用只含相对路径）。无 `inputTriggers` 时
-  特性静默禁用（console.warn）。序列化格式与交互细节见 [context.md](context.md)。
+  一律改写为「工作区名/.dsh-notes/名」（隐私：引用只含相对路径）。`inputTriggers` 为
+  可选服务且走**晚到激活**：apply 期 `ctx.get` 未就绪时（cordis 服务启动与模块到达
+  存在时序交错）改经 `ctx.inject([...])` 在服务启动时补注册——dsh 自家 client-modules
+  的 webServer 载体同款模式（2026-09-11 实测修复 @ 菜单空白）。序列化格式与交互细节见
+  [context.md](context.md)。
 - **右侧 Sidebar 笔记查看器**（`features/NoteViewer/`，dsh 0.1.5+）：`apply` 里经可选服务
   `ctx.get('sidebarRightTabs')` / `ctx.get('sidebarRight')` 注册 `md-notes` tab 类型
   （`extension` 优先级认领 `/.dsh-notes/<名>.md` 文件地址）与 keyed seat
