@@ -1,10 +1,18 @@
 /**
- * Note interlink resolution + wiki-link preprocessing for the notes manager
- * preview. dsh 0.1.2-alpha.1 opened `MarkdownText.fileMentions`: an inline-code
- * token (`` `x` ``) whose resolver returns `{ open, label, title }` renders as a
- * clickable link. Notes therefore interlink through two equivalent spellings:
+ * Note interlink resolution + link preprocessing for the notes previews.
+ * dsh 0.1.2-alpha.1 opened `MarkdownText.fileMentions`: an inline-code token
+ * (`` `x` ``) whose resolver returns `{ open, label, title }` renders as a
+ * clickable link. Notes therefore interlink through three equivalent spellings:
  * - `` `笔记名` `` — native fileMentions (no preprocessing);
- * - `[[笔记名]]` — wiki syntax, rewritten to backticks here before rendering.
+ * - `[[笔记名]]` — wiki syntax, rewritten to backticks here before rendering;
+ * - `[任意文字](路径)` — a markdown link whose destination is a note path
+ *   (`.dsh-notes/<名>.md`, optionally `../<工作区>/.dsh-notes/…`). This is the
+ *   form the injected citation convention teaches the MODEL, so answers
+ *   captured into notes (记入笔记) carry it verbatim; without the rewrite the
+ *   preview shows a dead relative link. Destination resolution is layered:
+ *   exact path semantics first (`resolveNoteRef`), then a basename fallback
+ *   for sloppy forms (e.g. `../.dsh-notes/x.md` the model wrote against the
+ *   wrong depth). Image links (`![…](…)`) are never rewritten.
  *
  * Resolution matches a note by its display title or file basename (both
  * case-insensitive), preferring the current workspace on cross-workspace name
@@ -13,6 +21,7 @@
  */
 
 import type { WorkspaceNotes } from './api.ts'
+import { resolveNoteRef } from './ContextSource/resolve.ts'
 
 /** One resolved link target (workspace + note). */
 export interface NoteLink {
@@ -117,12 +126,47 @@ export function titleMatchCount(
 /** Match one wiki link `[[name]]` (no nesting, no newline inside the brackets). */
 const WIKI_LINK_RE = /\[\[([^\[\]\n]+)\]\]/g
 
+/** Match one markdown link `[text](dest)` that is NOT an image (`!`-prefixed). */
+const MD_LINK_RE = /(?<!!)\[([^\]\n]*)\]\(([^)\n]+)\)/g
+
+/** Whether a markdown destination names a note path (any depth, `../`-prefixed or not). */
+function notePathName(dest: string): string | undefined {
+  const m = /(?:^|\/)(?:\.\.\/(?:[^/]+\/)*)?\.dsh-notes\/([^/]+)\.md$/.exec(dest)
+  return m === null ? undefined : (m[1] ?? '')
+}
+
 /**
- * Rewrite `[[name]]` to `` `name` `` for tokens that resolve to a note, so
- * MarkdownText's `fileMentions` can link them. Code fences are left untouched:
- * a `[[…]]` inside a code block stays literal.
+ * Resolve one markdown-link destination to its note: exact path semantics
+ * (`resolveNoteRef`) first, then a basename fallback for model-sloppy forms
+ * whose `..` depth does not match any workspace root.
  */
-export function preprocessWikiLinks(
+function resolveNoteDest(
+  dest: string,
+  workspaces: readonly WorkspaceNotes[],
+  preferredWsId: string | null,
+): string | undefined {
+  const byPath = resolveNoteRef(workspaces, dest)
+  if (byPath !== undefined && byPath.owner.notes.some((n) => n.name === byPath.name)) {
+    return byPath.owner.workspaceId === preferredWsId
+      ? byPath.name.replace(/\.md$/i, '')
+      : `${byPath.owner.name}/${byPath.name.replace(/\.md$/i, '')}`
+  }
+  const name = notePathName(dest)
+  if (name === undefined) return undefined
+  const byName = resolveNoteLink(name, workspaces, preferredWsId)
+  return byName === undefined ? undefined
+    : byName.workspaceId === preferredWsId ? byName.name.replace(/\.md$/i, '')
+      : `${workspaces.find((w) => w.workspaceId === byName.workspaceId)?.name ?? ''}/${byName.name.replace(/\.md$/i, '')}`
+}
+
+/**
+ * Rewrite interlink spellings MarkdownText cannot link on its own — `[[name]]`
+ * wiki links and `[text](note path)` markdown links — to `` `token` `` for
+ * tokens that resolve to a note, so `fileMentions` can link them. The markdown
+ * form keeps neither text nor destination (the rendered label becomes the
+ * note's own title via the resolver). Code fences are left untouched.
+ */
+export function preprocessNoteLinks(
   content: string,
   workspaces: readonly WorkspaceNotes[],
   preferredWsId: string | null,
@@ -142,7 +186,16 @@ export function preprocessWikiLinks(
       return line
     }
     if (inFence) return line
-    return line.replace(WIKI_LINK_RE, (full, name) =>
-      resolveNoteLink(name, workspaces, preferredWsId) !== undefined ? `\`${name}\`` : full)
+    return line
+      .replace(WIKI_LINK_RE, (full, name) =>
+        resolveNoteLink(name, workspaces, preferredWsId) !== undefined ? `\`${name}\`` : full)
+      .replace(MD_LINK_RE, (full, _text, dest) => {
+        if (/\s/.test(dest)) return full
+        const token = resolveNoteDest(dest, workspaces, preferredWsId)
+        return token === undefined ? full : `\`${token}\``
+      })
   }).join('\n')
 }
+
+/** Backwards-compatible alias (the preprocessing grew beyond wiki links). */
+export const preprocessWikiLinks = preprocessNoteLinks

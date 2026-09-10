@@ -24,7 +24,7 @@ import {
 import { absoluteFileAddress, parseFileAddress } from '@deepseek-ai/dsh-util-workspace-path'
 import { api, type WorkspaceNotes } from '../api.ts'
 import { noteTargetOf, sessionRootOf, type NoteTarget } from './address.ts'
-import { preprocessWikiLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
+import { preprocessNoteLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
 import { createNotePathImages } from '../path-images.ts'
 import css from './note-viewer.module.css'
 
@@ -125,7 +125,7 @@ export function NoteViewer({ useTabInfo, openResource, t }: NoteViewerProps): Re
   }), [ready, openResource, t])
 
   const previewText = React.useMemo(
-    () => ready === undefined ? '' : preprocessWikiLinks(ready.content, ready.groups, ready.target.workspaceId),
+    () => ready === undefined ? '' : preprocessNoteLinks(ready.content, ready.groups, ready.target.workspaceId),
     [ready],
   )
 

@@ -118,6 +118,13 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Fixed
 
+- **Previews now linkify markdown note-path links**: the injected citation
+  convention teaches the model to reference notes as `[title](path)`, and such
+  links land in notes verbatim via "capture into note" — but previews only
+  recognized `` `name` `` and `[[name]]` spellings. `[any text](.dsh-notes/…)`
+  (including `../<workspace>/…` cross-workspace forms and model-sloppy depths)
+  now rewrites to a clickable interlink; images and unknown targets stay
+  untouched. Active in both the manager preview and the sidebar viewer.
 - **Clicking a cross-workspace note chip crashed the composer (no viewer, chip
   undeletable)**: the preview address for cross-workspace references carries
   `..` segments, which picomatch's `**` (the sidebar's tab routing) cannot

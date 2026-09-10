@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { preprocessWikiLinks, resolveNoteLink, titleMatchCount } from './note-links.ts'
+import { preprocessNoteLinks, resolveNoteLink, titleMatchCount } from './note-links.ts'
 import type { WorkspaceNotes } from './api.ts'
 
 /** Two workspaces, `foo.md` present in both (name collision across workspaces). */
@@ -118,19 +118,43 @@ describe('titleMatchCount', () => {
 
 describe('preprocessWikiLinks', () => {
   it('rewrites a resolving [[name]] to a backtick token', () => {
-    expect(preprocessWikiLinks('see [[foo]] here', workspaces, 'ws-a')).toBe('see `foo` here')
+    expect(preprocessNoteLinks('see [[foo]] here', workspaces, 'ws-a')).toBe('see `foo` here')
   })
 
   it('rewrites a workspace-qualified [[ws/name]] to a backtick token', () => {
-    expect(preprocessWikiLinks('see [[工作区B/foo]] here', workspaces, 'ws-a')).toBe('see `工作区B/foo` here')
+    expect(preprocessNoteLinks('see [[工作区B/foo]] here', workspaces, 'ws-a')).toBe('see `工作区B/foo` here')
   })
 
   it('leaves an unresolvable [[name]] literal', () => {
-    expect(preprocessWikiLinks('[[nope]]', workspaces, 'ws-a')).toBe('[[nope]]')
+    expect(preprocessNoteLinks('[[nope]]', workspaces, 'ws-a')).toBe('[[nope]]')
   })
 
   it('does not rewrite inside a code fence', () => {
     const src = '```\n[[foo]]\n```\noutside [[foo]]'
-    expect(preprocessWikiLinks(src, workspaces, 'ws-a')).toBe('```\n[[foo]]\n```\noutside `foo`')
+    expect(preprocessNoteLinks(src, workspaces, 'ws-a')).toBe('```\n[[foo]]\n```\noutside `foo`')
+  })
+})
+
+describe('preprocessNoteLinks — markdown path links', () => {
+  it('rewrites a same-workspace note link to a backtick token', () => {
+    expect(preprocessNoteLinks('see [测试](.dsh-notes/foo.md) here', workspaces, 'ws-a')).toBe('see `foo` here')
+  })
+
+  it('rewrites a cross-workspace link to the workspace-qualified token (exact path semantics)', () => {
+    expect(preprocessNoteLinks('see [x](../b/.dsh-notes/foo.md)', workspaces, 'ws-a')).toBe('see `工作区B/foo` here'.replace(' here', ''))
+  })
+
+  it('falls back to basename for model-sloppy depths (../.dsh-notes/name.md)', () => {
+    expect(preprocessNoteLinks('see [x](../.dsh-notes/bar.md) here', workspaces, 'ws-a')).toBe('see `bar` here')
+  })
+
+  it('leaves non-note links, images, and unknown notes untouched', () => {
+    const line = 'a [readme](readme.md) b ![img](.dsh-notes/foo.md) c [x](.dsh-notes/ghost.md) d [site](https://a.b/x.md)'
+    expect(preprocessNoteLinks(line, workspaces, 'ws-a')).toBe(line)
+  })
+
+  it('leaves markdown links inside code fences untouched', () => {
+    const content = 'text\n```\n[x](.dsh-notes/foo.md)\n```\nafter'
+    expect(preprocessNoteLinks(content, workspaces, 'ws-a')).toBe(content)
   })
 })

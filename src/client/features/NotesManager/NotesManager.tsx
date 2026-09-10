@@ -16,7 +16,7 @@ import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-clie
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
 import { ICON_URL } from '../api.ts'
-import { preprocessWikiLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
+import { preprocessNoteLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
 import { noteFileAddress } from '../NoteViewer/address.ts'
 import { createNotePathImages } from '../path-images.ts'
 import { useUpdateAvailable } from '../update.ts'
@@ -80,7 +80,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   }), [workspaces, selectedWsId])
 
   const previewText = React.useMemo(
-    () => preprocessWikiLinks(content, workspaces, selectedWsId),
+    () => preprocessNoteLinks(content, workspaces, selectedWsId),
     [content, workspaces, selectedWsId],
   )
 
