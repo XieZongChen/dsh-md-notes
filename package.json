@@ -36,6 +36,7 @@
     "CHANGELOG.zh.md"
   ],
   "dsh": {
+    "manifestVersion": 1,
     "bundle": {
       "patch": "./cordis.patch.yml"
     },
@@ -67,6 +68,7 @@
   },
   "license": "MIT",
   "engines": {
+    "dsh": ">=0.1.5-rc.2 <0.1.6",
     "node": "^22.19.0 || >=24.0.0"
   },
   "peerDependencies": {
