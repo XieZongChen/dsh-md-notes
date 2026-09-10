@@ -1,6 +1,6 @@
 /**
- * Capture extras for "capture into note": produced-file paths and image-block
- * attachment refs collected from one assistant message's blocks. Produced
+ * Capture extras for "capture into note": produced-file paths collected from
+ * one assistant message's blocks. Produced
  * paths replicate dsh's own deliverables derivation
  * (`ui-deliverables/turn-deliverables.ts` `mutationPath`): successful-looking
  * `write` / `edit` / mutating `str_replace_editor` calls contribute the path
@@ -50,15 +50,6 @@ export function mutationPathOf(name: string, argsRaw: string): string | null {
   }
 }
 
-/** One captured image block (the durable attachment reference). */
-export interface CapturedImageRef {
-  attachmentId: string
-  mediaType: string
-  bytes: number
-  width: number
-  height: number
-  [key: string]: unknown
-}
 
 /** Produced-file paths of one assistant message, first-seen order, deduped. */
 export function producedPathsOf(blocks: readonly AssistantBlock[] | undefined): string[] {
@@ -74,17 +65,3 @@ export function producedPathsOf(blocks: readonly AssistantBlock[] | undefined): 
   return paths
 }
 
-/** Image-block attachment refs of one assistant message, in block order. */
-export function imageRefsOf(blocks: readonly AssistantBlock[] | undefined): CapturedImageRef[] {
-  const refs: CapturedImageRef[] = []
-  const seen = new Set<string>()
-  for (const block of blocks ?? []) {
-    if (block.kind !== 'image') continue
-    const { attachmentId, mediaType } = block.attachment
-    if (typeof attachmentId !== 'string' || typeof mediaType !== 'string') continue
-    if (seen.has(attachmentId)) continue
-    seen.add(attachmentId)
-    refs.push({ ...block.attachment })
-  }
-  return refs
-}

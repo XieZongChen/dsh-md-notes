@@ -135,15 +135,6 @@ export interface AppendLabels {
   files?: string
 }
 
-/** One image block captured from an assistant message (client sends; host exports bytes). */
-export interface CapturedImage {
-  /** Attachment-store identifier (opaque; never a path). */
-  attachmentId: string
-  /** Media type verified by the store (drives the asset file extension). */
-  mediaType: string
-  [key: string]: unknown
-}
-
 // ---- envelope ----
 
 /** The failure branch every method shares (`code` drives the client's localized copy). */
@@ -193,8 +184,6 @@ export interface ApiContract {
       workspaceId?: string
       /** Absolute paths of files the answer produced (referenced, not copied). */
       files?: string[]
-      /** Image blocks of the answer (bytes exported into `<notesDir>/assets/`). */
-      images?: CapturedImage[]
     }
     res: ApiResult<{ name: string }>
   }

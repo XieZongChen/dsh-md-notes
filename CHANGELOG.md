@@ -52,16 +52,10 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Added
 
-- **Capture into note carries deliverables and images**: when capturing an
-  answer into a note, files the answer produced (`write` / `edit` /
-  `str_replace_editor` paths) ride along as note-dir-relative links (a
-  `📎 produced files` section, deduped); images in the answer are referenced
-  IN PLACE through the plugin's own route — **zero copy** (the URL carries the
-  durable attachment reference; the host reads bytes from dsh's attachment
-  store on demand and writes nothing anywhere; previews render them inline).
-  Limitation: image bytes stay in the local attachment store — on machines a
-  git-synced note reaches, the text arrives but images do not display (a
-  "copy into repo" option could follow if cross-machine images matter). See
+- **Capture into note carries produced files**: when capturing an answer into
+  a note, files the answer produced (`write` / `edit` / `str_replace_editor`
+  paths) ride along as note-dir-relative links (a `📎 produced files` section,
+  deduped). See
   [docs/usage.md §3](docs/usage.md#3-capturing-a-conversation-into-a-note).
 - **Settings: "Repair legacy sessions"**: a one-click sweep over every local
   session log rewrites the `md-notes` message sources written by old plugin

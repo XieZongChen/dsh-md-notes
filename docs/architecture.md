@@ -154,9 +154,6 @@ dsh-md-notes/
 - HTTP 路由（`ctx.webServer.register`）：
   - `{ kind: 'prefix', path: route }`：仅接受 `POST`；body 为 `{ method, ...args }`。
   - `{ kind: 'exact', path: `${route}/icon.svg` }`：GET 返回 `assets/dsh-md-notes.svg`（`image/svg+xml`）。
-  - `{ kind: 'exact', path: `${route}/asset` }`：GET **原位**返回附件图片字节（`host/assets.ts`；
-    URL 携带完整持久附件引用作 query 参数，host 重构 ref 后经 attachment 服务读取校验，
-    零复制；同一信任围栏保护）。
 - 所有副作用（路由注册、settings 注册）都包在 `ctx.effect(..., label)` 内，HMR 安全。
 
 ### Host API 端点

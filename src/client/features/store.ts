@@ -15,7 +15,6 @@
  */
 
 import { createSnapshotStore, type SnapshotStore } from '@deepseek-ai/dsh-client-store'
-import type { CapturedImageRef } from './capture-extras.ts'
 
 /** Which overlay is open, and the conversation a note picker was opened for. */
 export interface NotesUiState {
@@ -31,8 +30,6 @@ export interface NotesUiState {
     sessionTitle: string
     /** Produced-file absolute paths (capture extras; optional). */
     files?: string[]
-    /** Image-block attachment refs (referenced in place; optional). */
-    images?: CapturedImageRef[]
   } | null
   /**
    * In-flight async tasks, keyed by `<domain>/<resource>` (generic busy

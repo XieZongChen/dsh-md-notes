@@ -92,7 +92,6 @@ function NotesOverlay(props: {
       answerText: s.picker.answerText,
       sessionTitle: s.picker.sessionTitle,
       ...(s.picker.files !== undefined ? { files: s.picker.files } : {}),
-      ...(s.picker.images !== undefined ? { images: s.picker.images } : {}),
       store: props.store,
       tracker: props.tracker,
       t: props.t,

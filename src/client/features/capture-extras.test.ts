@@ -1,20 +1,17 @@
 /**
  * Tests for the capture-extras derivation: produced-file paths replicate the
- * deliverables mutation semantics (complete mutating calls only, deduped) and
- * image-block refs collect the durable attachment reference.
+ * deliverables mutation semantics (complete mutating calls only, deduped).
  * @module dsh-md-notes/client/capture-extras.test
  */
 
 import { describe, expect, it } from 'vitest'
 import type { AssistantBlock } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { imageRefsOf, mutationPathOf, producedPathsOf } from './capture-extras.ts'
+import { mutationPathOf, producedPathsOf } from './capture-extras.ts'
 
 const write = (path: string): AssistantBlock =>
   ({ kind: 'tool-call', callId: 'c1', name: 'write', argsRaw: JSON.stringify({ file_path: path, content: 'x' }) })
 const editCall = (path: string): AssistantBlock =>
   ({ kind: 'tool-call', callId: 'c2', name: 'edit', argsRaw: JSON.stringify({ file_path: path, old_string: 'a', new_string: 'b' }) })
-const image = (id: string): AssistantBlock =>
-  ({ kind: 'image', attachment: { attachmentId: id, mediaType: 'image/png', bytes: 9, width: 4, height: 4 } as never })
 
 describe('mutationPathOf', () => {
   it('accepts complete write/edit/mutating editor calls with their path', () => {
@@ -47,11 +44,3 @@ describe('producedPathsOf', () => {
   })
 })
 
-describe('imageRefsOf', () => {
-  it('collects durable refs in block order, deduped by id', () => {
-    const blocks = [image('i1'), { kind: 'text', text: 't' } as AssistantBlock, image('i1'), image('i2')]
-    const refs = imageRefsOf(blocks)
-    expect(refs.map(r => r.attachmentId)).toEqual(['i1', 'i2'])
-    expect(refs[0]).toMatchObject({ mediaType: 'image/png', bytes: 9, width: 4, height: 4 })
-  })
-})

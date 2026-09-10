@@ -9,7 +9,6 @@
  */
 
 import * as React from 'react'
-import type { CapturedImageRef } from '../capture-extras.ts'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { WorkspaceNotes } from '../api.ts'
@@ -38,8 +37,6 @@ export interface NotePickerProps {
   sessionTitle: string
   /** Produced-file absolute paths (capture extras; optional). */
   files?: string[]
-  /** Image-block attachment refs (capture extras; optional). */
-  images?: CapturedImageRef[]
   /** Shared store; closing the picker clears `picker`. */
   store: NotesUiStore
   /** In-flight write tracker: busy notes are not selectable (docs/write-lock.md §7.2). */
@@ -52,7 +49,7 @@ export interface NotePickerProps {
  * The note-selection popup.
  */
 export function NotePicker(props: NotePickerProps): React.ReactElement {
-  const { questionText, answerText, sessionTitle, files, images, store, tracker, t } = props
+  const { questionText, answerText, sessionTitle, files, store, tracker, t } = props
   const [workspaces, setWorkspaces] = React.useState<WorkspaceNotes[]>([])
   const [noWorkspaces, setNoWorkspaces] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
@@ -133,7 +130,6 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
       answerText,
       sessionTitle,
       ...(files !== undefined && files.length > 0 ? { files } : {}),
-      ...(images !== undefined && images.length > 0 ? { images } : {}),
       labels: {
         user: t('picker.labelUser'),
         assistant: t('picker.labelAssistant'),

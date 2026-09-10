@@ -9,7 +9,7 @@
  */
 
 import type { AssistantBlock, ConversationNode } from '@deepseek-ai/dsh-client-ui-conversation/client'
-import { imageRefsOf, producedPathsOf, type CapturedImageRef } from './capture-extras.ts'
+import { producedPathsOf } from './capture-extras.ts'
 
 /** The captured texts + extras for one note append. */
 export interface CapturedMessageText {
@@ -17,8 +17,6 @@ export interface CapturedMessageText {
   answerText: string
   /** The most recent user question preceding this answer. */
   questionText: string
-  /** Image blocks' durable attachment refs (referenced in place; host route). */
-  images: CapturedImageRef[]
   /** Produced-file paths as the tool calls spelled them (cwd-relative or absolute). */
   producedPaths: string[]
 }
@@ -50,7 +48,6 @@ export function captureMessageText(
 ): CapturedMessageText | null {
   let answerText = ''
   let questionText = ''
-  let images: CapturedImageRef[] = []
   let producedPaths: string[] = []
   let found = false
   for (const node of nodes) {
@@ -62,13 +59,12 @@ export function captureMessageText(
     }
     if (node.kind === 'assistant' && node.messageId === messageId) {
       answerText = assistantBlocksText(node.blocks, imageLabel)
-      images = imageRefsOf(node.blocks)
       producedPaths = producedPathsOf(node.blocks)
       found = true
       break
     }
   }
-  return found ? { answerText, questionText, images, producedPaths } : null
+  return found ? { answerText, questionText, producedPaths } : null
 }
 
 /** Text of a user message's content blocks (text + image placeholder). */

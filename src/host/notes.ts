@@ -7,8 +7,7 @@
 
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { NoteHits, NoteSummary, SearchHit, CapturedImage } from '../contract.ts'
-import { assetUrlOf } from './assets.ts'
+import type { NoteHits, NoteSummary, SearchHit } from '../contract.ts'
 
 export type { NoteHits, NoteSummary, SearchHit }
 
@@ -179,8 +178,6 @@ export async function deleteNote(dir: string, rawName: string): Promise<{ ok: tr
 export interface AppendExtras {
   /** Absolute paths of files the answer produced; rendered as markdown links relative to the note dir. */
   files?: readonly string[]
-  /** Image blocks; referenced IN PLACE through the plugin's asset route (no copy — assets.ts). */
-  images?: readonly CapturedImage[]
 }
 
 /** Markdown-safe link path: spaces/parens escaped so `[name](path)` stays one token. */
@@ -234,15 +231,6 @@ export async function appendConversation(
     })
     section += `\n### 📎 ${labels?.files ?? 'Files'}\n\n${links.join('\n')}\n`
   }
-  // Images: referenced IN PLACE via the plugin's asset route — the URL carries
-  // the durable attachment reference (id/media/bytes/size) and the host serves
-  // the bytes from the attachment store on demand (zero copy, assets.ts).
-  // The preview's path-images vocabulary vouches the same-origin URL.
-  for (const image of extras?.images ?? []) {
-    const url = assetUrlOf(image)
-    if (url !== undefined) section += `\n![image](${url})\n`
-  }
-
   await mkdir(dir, { recursive: true })
   let content = ''
   try {

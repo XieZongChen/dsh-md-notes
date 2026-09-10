@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -325,30 +325,13 @@ describe('appendConversation capture extras', () => {
     expect(content.match(/main\.ts\]/g)?.length).toBe(1)
   })
 
-  it('references captured images through the in-place asset route (no copy)', async () => {
-    const base = await tempDir()
-    const notesDir = join(base, '.dsh-notes')
-    const image = { attachmentId: 'abc123', mediaType: 'image/png', bytes: 99, width: 8, height: 6 }
-    const res = await appendConversation(notesDir, 'log.md', 'q', 'a', '', undefined, { images: [image] })
-    expect(res.ok).toBe(true)
-    const content = await readFile(join(notesDir, 'log.md'), 'utf8')
-    expect(content).toContain('![image](/plugins/md-notes/asset?id=abc123&mt=image%2Fpng&b=99&w=8&h=6)')
-    // Zero copy: the workspace gains no assets dir; the notes dir gains only
-    // the note + the plugin's own meta cache.
-    expect(await readdir(base)).toEqual(['.dsh-notes'])
-    expect((await readdir(notesDir)).sort()).toEqual(['log.md', 'meta.json'])
-  })
 
-  it('skips malformed image refs and blank file paths without adding sections', async () => {
+  it('skips blank file paths without adding the section', async () => {
     const base = await tempDir()
     const notesDir = join(base, '.dsh-notes')
-    const res = await appendConversation(notesDir, 'log.md', 'q', 'a', '', undefined, {
-      files: ['  '],
-      images: [{ attachmentId: '../evil', mediaType: 'image/png', bytes: 1, width: 1, height: 1 }],
-    })
+    const res = await appendConversation(notesDir, 'log.md', 'q', 'a', '', undefined, { files: ['  '] })
     expect(res.ok).toBe(true)
     const content = await readFile(join(notesDir, 'log.md'), 'utf8')
     expect(content).not.toContain('📎')
-    expect(content).not.toContain('asset?')
   })
 })

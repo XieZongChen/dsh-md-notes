@@ -49,9 +49,9 @@ export function NoteAction(props: NoteActionProps): React.ReactElement {
     // Image placeholder follows the UI language ([图片] / [image]).
     const captured = captureMessageText(snap.legacy.nodes, messageId, t('picker.labelImage'))
     if (captured === null) return
-    // Capture extras: image blocks ride as durable refs; produced paths
-    // absolutize against the session cwd so the host can relativize to any
-    // target workspace's notes dir (unknown cwd → files dropped, images kept).
+    // Capture extras: produced paths absolutize against the session cwd so the
+    // host can relativize to any target workspace's notes dir (unknown cwd →
+    // files dropped).
     const cwd = resolveCwd?.(sessionId)
     const files = cwd === undefined ? [] : captured.producedPaths
       .map(p => (p.startsWith('/') ? p : resolvePosix(cwd, p)))
@@ -62,7 +62,6 @@ export function NoteAction(props: NoteActionProps): React.ReactElement {
         answerText: captured.answerText,
         sessionTitle: getSessionTitle(sessionId),
         ...(files.length > 0 ? { files } : {}),
-        ...(captured.images.length > 0 ? { images: captured.images } : {}),
       }
     })
   }

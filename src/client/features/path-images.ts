@@ -17,8 +17,6 @@
 import type { MarkdownPathImages } from '@deepseek-ai/dsh-client-ui-primitives'
 import { resolvePosix } from './NoteViewer/address.ts'
 
-/** Same-origin destinations this plugin itself vouches (the in-place asset route). */
-const PLUGIN_ASSET_PREFIX = '/plugins/md-notes/asset'
 
 /** Destinations carrying a scheme (`data:`, `C:/` drive letters…) are never rewrites. */
 const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]*:/
@@ -42,9 +40,6 @@ export function createNotePathImages(
       // Empty, protocol-relative, and scheme-carrying destinations are never
       // Host-served local files — leave them to the alt-text fallback.
       if (value.length === 0 || value.startsWith('//') || SCHEME_RE.test(value)) return undefined
-      // The plugin's own asset route is already a displayable same-origin URL
-      // (in-place attachment bytes, host/assets.ts) — vouch it verbatim.
-      if (value.startsWith(PLUGIN_ASSET_PREFIX)) return `${origin}${value}`
       const base = notesDir.replace(/\\/g, '/')
       const resolved = value.startsWith('/') ? resolvePosix('', value) : resolvePosix(base, value)
       // A Windows drive base (`C:/…`) keeps its drive prefix, no leading `/`.

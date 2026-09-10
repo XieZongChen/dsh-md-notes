@@ -8,7 +8,7 @@
 
 import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { ApiResult, CapturedImage, SessionRepairReport, UpdateInfo, WorkspaceNotes } from '../contract.ts'
+import type { ApiResult, SessionRepairReport, UpdateInfo, WorkspaceNotes } from '../contract.ts'
 import {
   appendConversation, createNote, deleteNote, listNotes, readNote, sanitizeName, searchNotes, writeNote,
 } from './notes.ts'
@@ -191,9 +191,6 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       const files = Array.isArray(req.files)
         ? req.files.filter((p): p is string => typeof p === 'string' && p.trim() !== '')
         : undefined
-      const images = Array.isArray(req.images)
-        ? req.images.filter((i): i is CapturedImage => typeof i === 'object' && i !== null && typeof (i as Record<string, unknown>).attachmentId === 'string')
-        : undefined
       const lock = await deps.lock.with(`${workspaceId}/${noteName}`, () => appendConversation(
         dir,
         noteName,
@@ -201,7 +198,7 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
         String(req.answerText ?? ''),
         String(req.sessionTitle ?? ''),
         labels,
-        (files !== undefined || images !== undefined) ? { files, images } : undefined,
+        files !== undefined ? { files } : undefined,
       ))
       return lock.acquired
         ? lock.value
