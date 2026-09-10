@@ -130,6 +130,7 @@ export function gitErrorText(t: TranslateNS<'md-notes'>, code: string | undefine
     case 'remote-changed': return t('git.errRemoteChanged', { names: detail ?? '' })
     case 'non-fast-forward': return t('git.errNonFastForward')
     case 'note-writing': return t('git.errNoteWriting')
+    case 'empty-answer': return t('picker.errEmptyAnswer')
     default: return t('git.failed', { error: detail ?? code ?? '' })
   }
 }

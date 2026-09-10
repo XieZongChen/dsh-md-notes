@@ -204,8 +204,10 @@ export async function appendConversation(
   sessionTitle = '',
   labels?: { user?: string; assistant?: string; empty?: string; image?: string; files?: string },
   extras?: AppendExtras,
-): Promise<{ ok: true; name: string } | { ok: false; error: string }> {
-  if (answerText === '') return { ok: false, error: 'assistant message not found' }
+): Promise<{ ok: true; name: string } | { ok: false; error: string; code?: string }> {
+  // Coded so the client localizes it (an English free-text error would leak
+  // into the localized picker message — bilingual audit 2026-09-11).
+  if (answerText === '') return { ok: false, code: 'empty-answer', error: 'assistant message not found' }
 
   // Normalize + sanitize the target basename (same guard as read/write/delete):
   // blocks `../` path traversal and absolute paths before any join below.

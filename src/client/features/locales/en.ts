@@ -64,6 +64,7 @@ export const en: { [K in keyof typeof zh]: string } = {
   'picker.writing': 'Writing…',
   'picker.write': 'Write to note',
   'picker.written': 'Written ✓',
+  'picker.errEmptyAnswer': 'The answer has no text content to capture.',
   'picker.writeFailed': 'Write failed: {error}.',
   'picker.labelUser': 'User',
   'picker.labelAssistant': 'DSH',

@@ -12,7 +12,7 @@ import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { WorkspaceNotes } from '../api.ts'
-import { api, ICON_URL } from '../api.ts'
+import { gitErrorText, api, ICON_URL } from '../api.ts'
 import type { NotesUiStore } from '../store.ts'
 import { noteKey, type BusyTracker } from '../busy.ts'
 import type { MdNotesKey } from '../locales/index.ts'
@@ -142,7 +142,9 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
         setStatus({ key: 'picker.written' })
         window.setTimeout(() => store.update((d) => { d.picker = null }), 900)
       } else {
-        setStatus({ key: 'picker.writeFailed', params: { error: res.error } })
+        // Coded failures localize (gitErrorText); only code-less transport
+        // errors fall back to the raw text (bilingual audit 2026-09-11).
+        setStatus({ key: 'picker.writeFailed', params: { error: res.code !== undefined ? gitErrorText(t, res.code, res.error) : res.error } })
       }
     }).finally(() => setBusy(false))
   }

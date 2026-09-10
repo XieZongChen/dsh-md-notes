@@ -61,6 +61,7 @@ export const zh = {
   'picker.writing': '写入中…',
   'picker.write': '写入笔记',
   'picker.written': '已写入 ✓',
+  'picker.errEmptyAnswer': '该回答没有可记入的文本内容',
   'picker.writeFailed': '写入失败: {error}',
   'picker.labelUser': '用户',
   'picker.labelAssistant': 'DSH',

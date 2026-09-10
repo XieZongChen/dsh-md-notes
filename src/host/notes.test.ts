@@ -326,6 +326,13 @@ describe('appendConversation capture extras', () => {
   })
 
 
+  it('refuses an empty answer with a coded error (client localizes it)', async () => {
+    const base = await tempDir()
+    const res = await appendConversation(join(base, '.dsh-notes'), 'log.md', 'q', '', '', undefined)
+    expect(res.ok).toBe(false)
+    expect(res.code).toBe('empty-answer')
+  })
+
   it('skips blank file paths without adding the section', async () => {
     const base = await tempDir()
     const notesDir = join(base, '.dsh-notes')
