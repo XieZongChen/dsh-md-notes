@@ -6,7 +6,8 @@
 import { describe, expect, it } from 'vitest'
 import { noteTargetOf } from '../NoteViewer/address.ts'
 import type { NoteSummary, WorkspaceNotes } from '../api.ts'
-import { chipLabel, canon, noteRefAddress, parentDir, refPath, relFrom } from './paths.ts'
+import { chipLabel, canon, isAbsoluteRef, noteRefAddress, parentDir, qualifiedRefOf, refPath, relFrom } from './paths.ts'
+import { resolveNoteRef } from './resolve.ts'
 
 describe('relFrom', () => {
   it('same-root target yields the down path with no ../', () => {
@@ -102,5 +103,22 @@ describe('noteRefAddress', () => {
     ]
     expect(noteTargetOf(noteRefAddress('s1', '../ws-b/.dsh-notes/b.md'), groups, '/base/ws-a')?.name).toBe('b.md')
     expect(noteTargetOf(noteRefAddress('s1', '/base/ws-b/.dsh-notes/b.md'), groups, undefined)?.name).toBe('b.md')
+  })
+})
+
+describe('absolute-ref privacy helpers', () => {
+  it('isAbsoluteRef recognizes POSIX and drive forms, rejects relative shapes', () => {
+    expect(isAbsoluteRef('/Users/me/ws/.dsh-notes/a.md')).toBe(true)
+    expect(isAbsoluteRef('C:/x/.dsh-notes/a.md')).toBe(true)
+    expect(isAbsoluteRef('.dsh-notes/a.md')).toBe(false)
+    expect(isAbsoluteRef('../ws-b/.dsh-notes/a.md')).toBe(false)
+  })
+
+  it('qualifiedRefOf exposes only the workspace name + note, and round-trips resolveNoteRef', () => {
+    const ws = { workspaceId: 'b', name: 'Beta', notesDir: '/base/ws-b/.dsh-notes', notes: [{ name: 'b.md', title: 'B', updatedAt: 0 }] }
+    const qualified = qualifiedRefOf(ws, 'b.md')
+    expect(qualified).toBe('Beta/.dsh-notes/b.md')
+    expect(resolveNoteRef([ws], qualified)).toEqual({ owner: ws, name: 'b.md' })
+    expect(qualified.includes('/Users/')).toBe(false)
   })
 })

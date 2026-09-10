@@ -62,9 +62,29 @@ export function refPath(ws: WorkspaceNotes, note: NoteSummary): string {
  * @returns the `dsh-resource://file/…` address to open.
  */
 export function noteRefAddress(sessionId: string, ref: string): string {
-  return /^[A-Za-z]:/.test(ref) || ref.startsWith('/')
+  return isAbsoluteRef(ref)
     ? absoluteFileAddress(ref)
     : sessionFileAddress(sessionId, ref)
+}
+
+/**
+ * Whether a chip ref is an ABSOLUTE path (POSIX `/…` or a Windows drive).
+ * Absolute refs must never be serialized into messages (privacy: 记入笔记 can
+ * copy a message into a note that git-syncs to the repo). New picks never
+ * store one; this recognizes legacy chips from older plugin builds.
+ */
+export function isAbsoluteRef(ref: string): boolean {
+  return /^[A-Za-z]:/.test(ref) || ref.startsWith('/')
+}
+
+/**
+ * The workspace-qualified replacement for a legacy absolute ref:
+ * `<工作区名>/.dsh-notes/<name>` — resolvable (resolve.ts `<wsName>/…`
+ * branch, matched by workspace name) and human-meaningful, while exposing no
+ * more than the cross-workspace reference form already does.
+ */
+export function qualifiedRefOf(ws: { name: string }, noteName: string): string {
+  return `${ws.name}/.dsh-notes/${noteName}`
 }
 
 /**

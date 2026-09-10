@@ -26,7 +26,7 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { IconProps } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ListResult, NoteSummary, WorkspaceNotes } from '../api.ts'
 import { api, ICON_URL } from '../api.ts'
-import { chipLabel, noteRefAddress, parentDir, refPath, relFrom } from './paths.ts'
+import { chipLabel, isAbsoluteRef, noteRefAddress, parentDir, qualifiedRefOf, refPath, relFrom } from './paths.ts'
 import { resolveNoteRef } from './resolve.ts'
 
 /** Source identity: the menu group title and the chip `source` field. */
@@ -315,13 +315,16 @@ export function createNotesSource(
       const sessionRoot = sessionWs !== undefined && typeof sessionWs.notesDir === 'string'
         ? parentDir(sessionWs.notesDir)
         : undefined
-      // Fallback when the session workspace is unknown (its list fetch never
-      // settled): use the ABSOLUTE note path (directory name, never the title
-      // — a workspace title can be renamed while its directory stays fixed, so
-      // a title-derived path would point at a nonexistent location).
-      const path = sessionRoot !== undefined
-        ? relFrom(sessionRoot, refPath(ref.ws, ref.note))
-        : refPath(ref.ws, ref.note)
+      // PRIVACY: an absolute path must NEVER ride the chip (serialize emits the
+      // ref verbatim into the user message, and 记入笔记 can copy that message
+      // into a note that git-syncs to the repo — leaking the home directory).
+      // This branch is a near-dead guard (the menu's candidates already
+      // settled the session list); refuse the pick rather than persist one.
+      if (sessionRoot === undefined) {
+        warnStaleHost()
+        return undefined
+      }
+      const path = relFrom(sessionRoot, refPath(ref.ws, ref.note))
       const insert: ReferenceInsert = {
         source: NOTES_SOURCE,
         ref: path,
@@ -379,8 +382,19 @@ export function createNotesSource(
         // jump feature) recognizes it as a link. The title is escaped for
         // markdown link syntax (brackets/parens); the path is the same
         // workspace-relative reference as before.
+        //
+        // PRIVACY: a legacy chip (persisted draft from a build that still
+        // stored the absolute pick-time fallback) is rewritten to the
+        // workspace-qualified form — absolute paths must never reach a
+        // serialized message, because 记入笔记 can copy the message into a
+        // note that git-syncs to the repo. The qualified form still resolves
+        // (resolve.ts `<wsName>/…` branch) and stays human-meaningful; the
+        // host-side content injection reads the note regardless.
         const title = note.title.replace(/]/g, '\\]').replace(/\(/g, '\\(')
-        return t('context.reference', { title, path: ref })
+        const safeRef = isAbsoluteRef(ref)
+          ? qualifiedRefOf(found.owner, note.name)
+          : ref
+        return t('context.reference', { title, path: safeRef })
       },
     },
     warm(session) {
