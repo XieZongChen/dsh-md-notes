@@ -47,10 +47,19 @@ Only user-visible functional changes are recorded (no documentation, code refact
   migration whitelist (tracked in the compatibility entry at the top of
   [docs/TODO.md](docs/TODO.md)). From this version on the injection uses the official source
   shape, so **new sessions are unaffected** — and sessions written by the new plugin version
-  on older dsh (V2 logs) also migrate smoothly.
+  on older dsh (V2 logs) also migrate smoothly. The settings panel now ships a one-click
+  **"Repair legacy sessions"** action (see Added below) that rewrites affected logs in place.
 
 ### Added
 
+- **Settings: "Repair legacy sessions"**: a one-click sweep over every local
+  session log rewrites the `md-notes` message sources written by old plugin
+  versions into the official `plugin` form, restoring readability of history
+  that dsh 0.1.5+ refuses to open. Each original is backed up beside its file
+  (`*.dsh-md-notes-repair.bak`), replacement is atomic, no restart needed; the
+  result reports scanned/repaired counts, failures, and any dsh-native legacy
+  source kinds that may still block a session. See
+  [docs/usage.md §6](docs/usage.md#6-the-settings-panel).
 - **dsh version alignment rule (stable versions only)**: from now on the plugin
   aligns only with dsh `rc` and (future) `final` releases — dsh's npm `latest`
   dist-tag points at an rc, which is what users actually install; alphas are no

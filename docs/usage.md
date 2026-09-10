@@ -292,6 +292,13 @@ open dsh's Settings → **MD Notes** section). Everything Git-related is here:
 - **Commit author name / email** (used when the repository has no git identity
   configured; otherwise the repo's own config wins).
 
+**Repair legacy sessions** (after upgrading to dsh ≥ 0.1.5 from an older line): the
+"Repair legacy sessions" button at the bottom of the settings panel scans every local
+session log and rewrites the note-context sources written by old plugin versions into the
+official form, restoring history that dsh 0.1.5+ refuses to open. Originals are backed up
+beside each file; no restart needed. If the result reports dsh-native legacy source kinds
+still blocking a session, that needs upstream support.
+
 ## 7. Update notifications
 
 The plugin checks npm for a newer version of `dsh-md-notes` when it loads

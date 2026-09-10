@@ -177,6 +177,7 @@ client 的 `api<M>()` 按其推导精确返回类型；下表为可读摘要）�
 | `gitSettings` | — | `{ ok, settings }`（L3 原始值，设置表单用） |
 | `gitConfig` | 白名单 L3 keys | `{ ok }`（写设置） |
 | `checkUpdate` | — | `{ ok, update: { current, latest, hasUpdate } }`（npm 版本检测，host 缓存 10 分钟） |
+| `repairSessions` | — | `{ ok, scanned/repaired/events/failed, stillBlocked[] }`（一次性修复旧版 `md-notes` 消息来源 → 官方 `plugin` 形态；逐文件备份 + 原子替换，`sessions-repair.ts`） |
 
 ## 4. 前端（src/client/）
 
