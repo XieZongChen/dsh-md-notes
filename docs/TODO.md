@@ -13,7 +13,7 @@
 - **区间核对（alpha.1 → rc.2）**：插件新旧代码依赖的全部契约面逐项 diff——`agent/pre-step`/`PreStepDecision`/`UserMessage.source`（runtime-types、message.ts 零 diff）、`SidebarRightTabDefinition`/`openResource`/`sidebar.right.pane.tab`（仅 guide 条目 description 转可选 + 新增 `rightbar.session` slot，均增量）、文件地址语法（`parseFileAddress` 改为前缀切分不再经 `new URL`——`..` 段不再折叠、忽略 query/fragment、session 地址允许绝对路径；插件 `resolvePosix` 词汇解析对此是超集兼容，`absoluteFileAddress` 行为不变）、`/api/file` 路由零变化、`MarkdownPathImages`/插件所用 15 个 primitives 符号全部健在（`DocumentFileIcon` 被移除换成 `FileTypeIcon`，插件未用）、input-trigger/conversation 契约增量（`icon` 兼容字符串旧值、`ReferenceInsert` 形状不变）、四个插件 slot 声明零变化。
 - **验证**：插件对 rc.2 checkout 跑 typecheck（0 错误）+ 230 测试 + 构建全绿。
 - **既有影响（0.1.3-alpha.2 → 0.1.5-alpha.1，2026-09-09 条目）不变**：V2→V3 迁移 `SOURCE_KINDS` 白名单仍未含 `'md-notes'`（上游无动作），已发布 0.12.0 的历史会话问题依旧；上游 issue 仍待提。
-- **下一步**：真机冒烟（rc.2）→ `changelog:release` 发版 → 重跑 `dsh 兼容性校验` 入表（`<新版本> ↔ 0.1.5-rc.2` 或届时最新）。
+- **下一步**：真机冒烟（rc.2）→ `changelog:release` 发版 → 重跑 `dsh 兼容性校验` 入表（`<新版本> ↔ 0.1.5-rc.2` 或届时最新稳定版）。**对齐规则已定**（2026-09-11，见 skill §0 与 compatibility §三/README）：后续仅新 rc/final 触发校验，0.1.5 线剩余 alpha 与 0.1.6 线 alpha 不再逐版检查。
 
 ## dsh 兼容性（dsh 0.1.3-alpha.2 → 0.1.5-alpha.1，2026-09-09）
 

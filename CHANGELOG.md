@@ -51,6 +51,14 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Added
 
+- **dsh version alignment rule (stable versions only)**: from now on the plugin
+  aligns only with dsh `rc` and (future) `final` releases — dsh's npm `latest`
+  dist-tag points at an rc, which is what users actually install; alphas are no
+  longer checked per-version (one rc check covers the whole line's alpha range;
+  a specific alpha is spot-checked only to use a capability it introduced or to
+  confirm a breaking change). See the
+  [README compatibility section](README.md#compatibility) and
+  [docs/compatibility.md](docs/compatibility.md).
 - **@ note-chip click preview**: clicking an inserted note chip in the composer
   opens that note in the right-sidebar viewer before sending (the dsh 0.1.5+
   reference-preview gesture); on builds without the right sidebar the click

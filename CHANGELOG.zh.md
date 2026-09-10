@@ -40,6 +40,12 @@
 
 ### Added
 
+- **dsh 版本对齐规则（只对齐稳定版）**：插件此后只对齐 dsh 的 `rc` 与（将来的）`final`
+  版本——dsh 的 npm `latest` 指向的就是 rc，即用户实际安装的版本；`alpha` 不再逐版做
+  兼容性校验（一条 minor 线的 alpha 由该线 rc 的一次校验整体覆盖，仅「使用其新能力」
+  或「追认破坏性变更」时定点检查）。规则详见
+  [README 兼容性章节](README.zh.md#兼容性compatibility) 与
+  [docs/compatibility.zh.md](docs/compatibility.zh.md)。
 - **@ 笔记 chip 点击预览**：发送前点击输入框里已插入的笔记 chip，在右侧栏笔记查看器中
   打开该笔记（dsh 0.1.5+ 的引用预览手势）；无右侧 Sidebar 的构建上点击行为不变。见
   [docs/usage.zh.md §4.1](docs/usage.zh.md#41-选择笔记)。
