@@ -17,23 +17,34 @@
  * @module dsh-md-notes/client/ContextSource
  */
 
+import * as React from 'react'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type {
   InputTriggerCandidate, InputTriggerSource, ReferenceInsert,
 } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
+import type { IconProps } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { ListResult, NoteSummary, WorkspaceNotes } from '../api.ts'
-import { api } from '../api.ts'
+import { api, ICON_URL } from '../api.ts'
 import { chipLabel, noteRefAddress, parentDir, refPath, relFrom } from './paths.ts'
 import { resolveNoteRef } from './resolve.ts'
 
 /** Source identity: the menu group title and the chip `source` field. */
 export const NOTES_SOURCE = 'notes'
 
-/** Candidate row glyph: a semantic icon kind — ui-input-trigger now renders a
- *  real glyph for `file`/`folder`/`session` (arbitrary emoji/URL no longer
- *  valid), so notes use the built-in file glyph. */
-const NOTE_ICON = 'file'
+/**
+ * Candidate row glyph: the plugin logo. dsh 0.1.5-rc's `icon` field accepts an
+ * icon component alongside the semantic kinds (the menu renders it at 16px);
+ * before that the rows used the built-in `file` glyph. The logo matches the
+ * chip, which has carried it since 0.7.0 (scoped style over
+ * `data-reference-appearance="notes"`).
+ */
+function NoteLogoIcon({ size = 16, className }: IconProps): React.ReactElement {
+  return React.createElement('img', {
+    src: ICON_URL, width: size, height: size, alt: '', 'aria-hidden': true,
+    draggable: false, className,
+  })
+}
 
 /** One candidate's resolved note identity (built at candidates time, picked by object identity). */
 interface NoteRef {
@@ -185,7 +196,7 @@ export function createNotesSource(
       const candidate: InputTriggerCandidate = {
         name: note.title,
         description: crossWs ? `${ws.name} · ${note.name.replace(/\.md$/i, '')}` : note.name.replace(/\.md$/i, ''),
-        icon: NOTE_ICON,
+        icon: NoteLogoIcon,
       }
       rows.push(candidate)
       refs.set(candidate, { ws, note, crossWs })
