@@ -55,6 +55,8 @@ export function SettingsSection(props: SettingsSectionProps): React.ReactElement
       if (r.stillBlocked.length > 0) parts.push(t('repair.blocked', { kinds: r.stillBlocked.join('、') }))
       setRepairMsg(parts.join('；'))
     })
+  }
+
   const dirtyScalar = React.useRef<Set<string>>(new Set())
   const dirtyCentral = React.useRef(false)
   const dirtyWs = React.useRef<Set<string>>(new Set())
