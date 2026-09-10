@@ -1,6 +1,6 @@
 ---
 name: dsh-compat-check
-description: dsh 兼容性校验。用户说"dsh 兼容性校验"、"兼容性检查"、"校验 dsh 兼容性"、"检查 dsh 兼容性"时触发——先拉取 dsh main（master）分支代码，对比兼容性对照表（docs/compatibility.zh.md 最新一行）最后验证的 deepseek-harness 版本到当前最新版本的变更，判断是否影响插件功能：有影响则将影响范围写成兼容 todo 放入 TODO 文档最上方；无影响则更新兼容性对照表（docs/compatibility.zh.md 主表顶部追加一行 + 反查表同步，英文版 compatibility.md 跟随翻译）并把 README 兼容性章节刷新为主表最新三行（不含备注列）的对应表格。
+description: dsh 兼容性校验（只对齐稳定版：默认仅在新 rc/final tag 时触发，alpha 仅在「使用其新能力」或「追认 breaking」时定点跑）。用户说"dsh 兼容性校验"、"兼容性检查"、"校验 dsh 兼容性"、"检查 dsh 兼容性"时触发——先拉取 dsh master 并按 §0 触发策略判断是否需要继续；继续则对比兼容性对照表（docs/compatibility.zh.md 最新一行）最后验证的 deepseek-harness 版本到当前最新版本的变更，判断是否影响插件功能：有影响则将影响范围写成兼容 todo 放入 TODO 文档最上方；无影响则更新兼容性对照表（docs/compatibility.zh.md 主表顶部追加一行 + 反查表同步，英文版 compatibility.md 跟随翻译）并把 README 兼容性章节刷新为主表最新三行（不含备注列）的对应表格。
 ---
 
 # dsh 兼容性校验（Compatibility Check）
@@ -10,9 +10,25 @@ dsh 发版后需校验：自兼容性对照表（`docs/compatibility.zh.md` 最�
 deepseek-harness 版本以来，dsh 的变更是否影响插件功能。**有影响 → 写兼容 todo；
 无影响 → 更新兼容性对照表 + README 兼容性表格。**
 
+## 0. 触发策略（只对齐稳定版）
+
+dsh 全部版本都是 pre-release，且 npm 的 `latest` dist-tag 指向的就是 **rc**（用户实际
+安装的"稳定版"）；alpha 约 1-2 天一发、一条 minor 线约一周内被某个 rc 收口，逐 alpha
+校验不可持续。因此：
+
+- **默认触发 = 新的 rc 或 final tag**。运行本流程前先 fetch 并看 tag：自对照表最新已
+  验证版本以来**没有新的 rc/final** → 直接汇报「无新稳定版，跳过」结束（不跑分析、
+  不改文档、不提交）。
+- **alpha 不主动触发**。仅两种情况对特定 alpha 定点跑本流程：
+  1. 插件要**使用**该 alpha 引入的新能力（对该 alpha 定点校验，入表时备注写明）；
+  2. **追认已知 breaking**（如 Session 格式迁移）需要提前确认修复。
+- 一次 rc 校验**天然覆盖该线之前的全部 alpha**：分析区间的起点是上次已验证版本，
+  中间的 alpha 提交全部落在区间 diff 内，无需逐个检查。
+- 对照表只收 rc/final 组合（含按上述例外定点校验过的 alpha）；历史 alpha 行保留不删。
+
 ## 流程总览
 
-1. 拉取 dsh 仓库最新代码（默认分支）
+1. 拉取 dsh 仓库最新代码（默认分支），按 §0 判断是否需要继续
 2. 读取兼容性对照表（`docs/compatibility.zh.md`，中文版为主）与插件 README（中英两份）
    兼容性表格，确定上次验证的 dsh 版本与插件版本
 3. 收集「上次验证版本 → 当前最新」区间内 dsh 的变更
@@ -188,6 +204,8 @@ git push
 
 ## 注意事项
 
+- **先过 §0 触发闸门**：fetch 后没有新 rc/final tag 就直接结束（除非用户点名要查某个
+  alpha），不要对每个 alpha 都跑全流程。
 - **默认分支是 master**：dsh 仓库默认分支为 `master`，拉取时不要写死 `main`。
 - **起点要准**：对比起点是 `docs/compatibility.zh.md` 主表**最新一行**（最近一次验证）的
   dsh 版本，不是任意旧版本；找不到对应 release 提交时先确认起点，不要跳过。
