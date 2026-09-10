@@ -105,6 +105,11 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Fixed
 
+- **`.conflicts` leftovers after conflict resolution**: sidecar cleanup only
+  rode the AI push tool's path — resolving through the manager's push or
+  "merge remote & retry" left the `.dsh-notes/.conflicts/` directory behind.
+  Cleanup now runs at gitPush's success exit (shared by every push path; the
+  AI flow is unchanged).
 - **@ references no longer carry absolute paths**: in a rare window (picking a
   note before the session workspace list settles) a reference could serialize
   an absolute path containing the machine's home directory into the message,

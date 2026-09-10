@@ -85,6 +85,11 @@
 - **@ 引用 chip 尺寸/结构不可定制**：chip 为 4em 硬编码（`DshChipCell` 字体），且 chip DOM
   无 `[data-slot]` 锚点（非 slot 渲染点），合规注入路径也不可用；`conversation.chat.node`
   是节点级扩展点、非 chip 级。更宽的 chip 标签区需 dsh 开放 chip 尺寸/渲染扩展点。
+- **右侧 Sidebar 文件树的文件图标不可定制**（2026-09-11 核实）：`ui-sidebar-files` 的行
+  图标走 `FileTypeIcon kind={classifyFileType(name)}`——分类表（`EXTENSION_TYPES` /
+  `NAME_TYPES`）是 ui-primitives 内部封闭联合，无服务、无 slot、无声明合并接缝；插件无法
+  让 `.dsh-notes` 下的笔记文件在文件树里显示插件 logo（候选/chip/查看器侧已有 logo，唯
+  文件树缺位）。根治条件：dsh 开放按路径/目录的图标覆盖（如 classifyFileType 注册器）。
 - **会话头右上角 slot（`conversation.session.header.corner`）不可用**（2026-09-10 核实）：
   dsh 0.1.5 的 `ui-sidebar-right` 已把该**单占位**（single）席位用于自己的侧栏展开按钮
   （`ExpandButton`，默认优先级 0）；同一优先级的第二次注册会**抛错**（会让插件 client 整体
