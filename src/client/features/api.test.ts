@@ -8,7 +8,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { api } from './api.ts'
+import { api, gitErrorText } from './api.ts'
 
 const jsonResponse = (status: number, body: unknown): Response =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
@@ -63,5 +63,29 @@ describe('api envelope', () => {
     ac.abort()
     const res = await api('list', {}, ac.signal)
     expect(res.ok).toBe(false)
+  })
+})
+
+/** Locale stub: key + params rendered deterministically for assertions. */
+const tStub = ((key: string, params?: Record<string, unknown>) =>
+  params === undefined ? key : `${key}:${JSON.stringify(params)}`) as never
+
+describe('gitErrorText (code → localized copy)', () => {
+  it('maps every known code to its locale key (params where templated)', () => {
+    expect(gitErrorText(tStub, 'no-repo', undefined)).toBe('git.errNoRepo')
+    expect(gitErrorText(tStub, 'no-workspace', undefined)).toBe('git.errNoWorkspace')
+    expect(gitErrorText(tStub, 'identity', undefined)).toBe('git.errIdentity')
+    expect(gitErrorText(tStub, 'non-fast-forward', undefined)).toBe('git.errNonFastForward')
+    expect(gitErrorText(tStub, 'note-writing', undefined)).toBe('git.errNoteWriting')
+    expect(gitErrorText(tStub, 'empty-answer', undefined)).toBe('picker.errEmptyAnswer')
+    expect(gitErrorText(tStub, 'sync-branch', 'boom')).toBe('git.errSyncBranch:{"detail":"boom"}')
+    expect(gitErrorText(tStub, 'git-failed', 'x')).toBe('git.errGitFailed:{"detail":"x"}')
+    expect(gitErrorText(tStub, 'remote-changed', 'a.md')).toBe('git.errRemoteChanged:{"names":"a.md"}')
+  })
+
+  it('falls back to the generic failure with the raw detail for unknown or missing codes', () => {
+    expect(gitErrorText(tStub, 'mystery', 'raw text')).toBe('git.failed:{"error":"raw text"}')
+    expect(gitErrorText(tStub, 'mystery', undefined)).toBe('git.failed:{"error":"mystery"}')
+    expect(gitErrorText(tStub, undefined, undefined)).toBe('git.failed:{"error":""}')
   })
 })
