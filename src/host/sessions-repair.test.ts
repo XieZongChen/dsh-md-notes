@@ -70,12 +70,28 @@ describe('dshSessionsRoot', () => {
 })
 
 describe('rewriteLogText', () => {
-  it('rewrites the legacy source to the official plugin form, keeping path', () => {
+  it('rewrites the legacy source to the MINIMAL official plugin form (path dropped, v0→v1 key set)', () => {
     const line = mdNotesEvent('plan.md')
     const { text, count } = rewriteLogText(`${HEADER}\n${line}\n`)
     expect(count).toBe(1)
     const event = JSON.parse(text.split('\n')[1] as string)
-    expect(event.data.source).toEqual({ kind: 'plugin', plugin: 'md-notes', path: '/base/ws-a/.dsh-notes/plan.md' })
+    expect(event.data.source).toEqual({ kind: 'plugin', plugin: 'md-notes' })
+  })
+
+  it('normalizes the intermediate plugin+path shape from a first repair pass (idempotent)', () => {
+    const intermediate = JSON.stringify({ type: 'user/message', seq: 7, time: 7, data: { id: 'm7', role: 'user', content: [], source: { kind: 'plugin', plugin: 'md-notes', path: '/x/.dsh-notes/a.md' } } })
+    const { text, count } = rewriteLogText(`${intermediate}\n`)
+    expect(count).toBe(1)
+    expect(JSON.parse(text).data.source).toEqual({ kind: 'plugin', plugin: 'md-notes' })
+    // 已是最小形态 → 不再计数
+    expect(rewriteLogText(text).count).toBe(0)
+  })
+
+  it('keeps another plugin source (with its own members) untouched', () => {
+    const foreign = JSON.stringify({ type: 'user/message', seq: 8, time: 8, data: { id: 'm8', role: 'user', content: [], source: { kind: 'plugin', plugin: 'compact', compactionId: 'c1' } } })
+    const out = rewriteLogText(`${foreign}\n`)
+    expect(out.count).toBe(0)
+    expect(out.text).toBe(`${foreign}\n`)
   })
 
   it('rewrites sources nested in arrays and other message carriers', () => {
@@ -118,7 +134,8 @@ describe('scanAndRepairSessions', () => {
 
     const text = decompressFrames(await readFile(affected))
     expect(text.includes('"kind":"md-notes"')).toBe(false)
-    expect(text.includes('"kind":"plugin","plugin":"md-notes","path":"/base/ws-a/.dsh-notes/a.md"')).toBe(true)
+    expect(text.includes('"kind":"plugin","plugin":"md-notes"}')).toBe(true)
+    expect(text.includes('"path":"/base/ws-a/.dsh-notes/a.md"')).toBe(false)
     // 未受影响的行字节不变（plainEvent 原样保留）
     expect(text.includes(plainEvent)).toBe(true)
     // header 单独成帧、事件行完整
@@ -129,6 +146,13 @@ describe('scanAndRepairSessions', () => {
     // 干净文件无备份
     const dirY = await readdir(join(root, '--proj-a--', 'session-y'))
     expect(dirY.some(n => n.includes('repair.bak'))).toBe(false)
+
+    // 二次清理：已是最小形态的文件不再改写、备份不被中间态覆盖
+    const again = await scanAndRepairSessions(root)
+    expect(again.repaired).toBe(0)
+    expect(again.events).toBe(0)
+    const backup2 = await readFile(`${affected}.dsh-md-notes-repair.bak`)
+    expect(decompressFrames(backup2).includes('"kind":"md-notes"')).toBe(true)
   })
 
   it('returns zeros when the sessions root does not exist', async () => {

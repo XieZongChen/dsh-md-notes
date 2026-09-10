@@ -54,7 +54,9 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 - **Settings: "Repair legacy sessions"**: a one-click sweep over every local
   session log rewrites the `md-notes` message sources written by old plugin
-  versions into the official `plugin` form, restoring readability of history
+  versions into the official `plugin` **minimal form** (dropping extra members
+  such as `path` per the v0→v1 migration's exact key set; idempotent — a
+  second pass cleans earlier intermediate output), restoring readability of history
   that dsh 0.1.5+ refuses to open. Each original is backed up beside its file
   (`*.dsh-md-notes-repair.bak`), replacement is atomic, no restart needed; the
   result reports scanned/repaired counts, failures, and any dsh-native legacy

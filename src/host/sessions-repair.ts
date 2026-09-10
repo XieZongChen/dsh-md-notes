@@ -8,9 +8,20 @@
  * plugin: 'md-notes', path }` form; this sweep rewrites the legacy form in
  * old logs to the same official shape.
  *
+ * The rewrite target is the MINIMAL official form `{ kind: 'plugin',
+ * plugin: 'md-notes' }` — the v0→v1 migration validates a plugin source's
+ * EXACT key set (`session-format-v0-to-v1` `pluginSourceValue`: only
+ * kind/plugin plus optional form/sections/summary), so the legacy `path`
+ * member (and anything else) must be dropped; only the migration chain
+ * enforces this, V3-native logs carry the runtime `path` untouched (it feeds
+ * the live dedupe and V3's read/write sides do not validate source keys).
+ * The sweep is IDEMPOTENT and also normalizes the intermediate
+ * `plugin + path` shape a first repair pass may have produced.
+ *
  * Safety: files without a legacy source are left byte-untouched; every
- * rewritten file is backed up beside the original (`…jsonl.zstd.dsh-md-notes-repair.bak`)
- * and replaced atomically (temp file + rename); repacked frames are complete,
+ * rewritten file is backed up beside the original — the FIRST original only,
+ * a `.bak` already present is never overwritten (`…jsonl.zstd.dsh-md-notes-repair.bak`)
+ * — and replaced atomically (temp file + rename); repacked frames are complete,
  * checksummed Zstandard frames over complete JSONL lines — the exact shape
  * dsh's reader consumes (`session-persistence-jsonl/src/zstd.ts`). The
  * `stillBlocked` report lists OTHER source kinds the migration may still
@@ -19,6 +30,7 @@
  * @module dsh-md-notes/sessions-repair
  */
 
+import { constants as fsConstants } from 'node:fs'
 import { copyFile, readdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -78,7 +90,23 @@ export function decompressFrames(buf: Buffer): string {
   return chunks.join('')
 }
 
-/** Recursively rewrite `{ source: { kind: 'md-notes', … } }` to the official plugin form. */
+/** Keys a migrated plugin source may carry beyond kind/plugin (v0→v1 rule). */
+const PLUGIN_SOURCE_OPTIONAL_KEYS = new Set(['form', 'sections', 'summary'])
+
+/** Whether one source object is (or was) one of our injected-context sources. */
+function isOurSource(source: Record<string, unknown>): boolean {
+  if (source.kind === 'md-notes') return true
+  // Intermediate shape from a first repair pass: official kind, extra members.
+  return source.kind === 'plugin' && source.plugin === 'md-notes'
+}
+
+/**
+ * Recursively rewrite our legacy sources to the minimal official plugin form.
+ * `{ kind: 'md-notes', … }` and the intermediate `{ kind: 'plugin',
+ * plugin: 'md-notes', … }` both collapse to `{ kind: 'plugin',
+ * plugin: 'md-notes' }` — extra members (the dedupe `path`) are dropped
+ * because the v0→v1 migration validates the plugin source's exact key set.
+ */
 function rewriteSources(value: unknown, tally: { count: number }): unknown {
   if (Array.isArray(value)) {
     for (let i = 0; i < value.length; i += 1) value[i] = rewriteSources(value[i], tally)
@@ -87,10 +115,16 @@ function rewriteSources(value: unknown, tally: { count: number }): unknown {
   if (value === null || typeof value !== 'object') return value
   const record = value as Record<string, unknown>
   const source = record.source
-  if (source !== null && typeof source === 'object' && (source as Record<string, unknown>).kind === 'md-notes') {
-    const { kind: _kind, ...rest } = source as Record<string, unknown>
-    record.source = { kind: 'plugin', plugin: 'md-notes', ...rest }
-    tally.count += 1
+  if (source !== null && typeof source === 'object') {
+    const src = source as Record<string, unknown>
+    if (isOurSource(src)) {
+      const carriesExtra = src.kind === 'md-notes'
+        || Object.keys(src).some(k => k !== 'kind' && k !== 'plugin' && !PLUGIN_SOURCE_OPTIONAL_KEYS.has(k))
+      if (carriesExtra) {
+        record.source = { kind: 'plugin', plugin: 'md-notes' }
+        tally.count += 1
+      }
+    }
   }
   for (const key of Object.keys(record)) {
     if (key !== 'source') record[key] = rewriteSources(record[key], tally)
@@ -176,7 +210,14 @@ async function repairFile(file: string): Promise<number> {
   const text = decompressFrames(await readFile(file))
   const rewritten = rewriteLogText(text)
   if (rewritten.count === 0) return 0
-  await copyFile(file, `${file}.dsh-md-notes-repair.bak`)
+  // The FIRST original is the backup worth keeping: never overwrite an
+  // existing .bak with a later intermediate state.
+  const backup = `${file}.dsh-md-notes-repair.bak`
+  try {
+    await copyFile(file, backup, fsConstants.COPYFILE_EXCL)
+  } catch {
+    /* backup already exists (EEXIST) — keep the first original */
+  }
   const tmp = `${file}.tmp-repair`
   await writeFile(tmp, repack(rewritten.text))
   await rename(tmp, file)
