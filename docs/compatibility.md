@@ -63,6 +63,14 @@ in the tables below.
 
 ## 3. Principles
 
+- **Stable versions only (rc/final)**: the tables record only **rc and (future) final**
+  combinations. Every dsh version is a pre-release and npm's `latest` dist-tag points at an
+  rc — that is what users actually install. Alphas ship every day or two and are superseded
+  by the line's rc within about a week, so they are **not** checked per-version: one rc
+  check covers the whole line's alpha range (the analysis interval starts at the last
+  verified version, so intermediate alphas fall inside its diff). A specific alpha is
+  checked only when the plugin wants to **use** a capability it introduced, or to confirm a
+  known breaking change; such spot checks are noted in the row's Notes.
 - **Pin the combination**: the plugin is not bound to a specific mainline commit; to pin a
   fixed dsh + plugin combo, pin the plugin version at install time —
   `dsh plugin --profile web add dsh-md-notes@<version>`. Runtime dependencies

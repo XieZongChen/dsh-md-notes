@@ -42,6 +42,14 @@ dsh iterates fast and provides **no backward compatibility**, so a fixed dsh ver
 matches fixed plugin versions. Verified combinations are listed below (full adaptation
 history in [docs/compatibility.md](docs/compatibility.md)):
 
+**Version alignment rule**: the plugin aligns only with dsh **stable versions** — `rc`
+and (future) `final` releases. dsh's npm `latest` dist-tag points at an rc, which is what
+users actually install; alphas ship every day or two and are superseded by the line's rc
+within about a week, so they are **not adapted per-version** — one rc check covers the
+whole line's alpha range, and a specific alpha is checked only when the plugin wants to use
+a capability it introduced or to confirm a breaking change. The table below therefore only
+lists rc/final versions (early alpha rows are kept as history).
+
 | Plugin version | dsh version | Verified on |
 |---|---|---|
 | 0.12.0 | `0.1.3-alpha.2` | 2026-09-07 |

@@ -58,6 +58,12 @@ dsh 仍处于快速原型迭代阶段，**不做向下兼容**——固定 dsh �
 
 ## 三、适配原则
 
+- **只对齐稳定版（rc/final）**：本表只收录 **rc 与（将来的）final** 版本组合。dsh 全部
+  版本均为 pre-release 且 npm `latest` 指向的就是 rc（用户实际安装的"稳定版"）；alpha
+  约 1-2 天一发、很快被同线 rc 收口，故 alpha **不逐版校验/入表**——一条 minor 线的
+  alpha 区间由该线 rc 的一次校验整体覆盖（分析区间的起点是上次已验证版本，中间 alpha
+  全部落在区间 diff 内）。仅两种情况对特定 alpha 定点校验：插件要**使用**其引入的新
+  能力，或**追认已知 breaking**；定点校验过的 alpha 入表时在备注写明。
 - **固定组合**：插件不绑定具体 mainline commit；需要固定 dsh + 插件组合时，安装时固定
   插件版本即可——`dsh plugin --profile web add dsh-md-notes@<版本>`。运行时依赖
   （`@deepseek-ai/*`、`react`）以可选 peer 依赖声明，从 dsh 安装中解析。
