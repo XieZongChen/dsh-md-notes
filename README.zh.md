@@ -50,12 +50,12 @@ rc/final 版本（早期 alpha 行为历史记录保留）。
 
 | 插件版本 | dsh 版本 | 验证日期 |
 |---|---|---|
+| 0.13.0 | `0.1.5-rc.2` | 2026-09-11 |
 | 0.12.0 | `0.1.3-alpha.2` | 2026-09-07 |
 | 0.11.0 | `0.1.3-alpha.2` | 2026-09-07 |
-| 0.10.1 | `0.1.3-alpha.2` | 2026-09-07 |
 
 插件未绑定具体 mainline commit；如需固定组合，请在安装时固定插件版本
-（如 `dsh plugin --profile web add dsh-md-notes@0.12.0`）。运行时依赖（`@deepseek-ai/*`、`react`）
+（如 `dsh plugin --profile web add dsh-md-notes@0.13.0`）。运行时依赖（`@deepseek-ai/*`、`react`）
 以可选 peer 依赖声明，从 dsh 安装中解析。
 
 ## 安装 / 卸载（Install / Uninstall）

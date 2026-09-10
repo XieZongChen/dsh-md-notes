@@ -31,7 +31,7 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
-## NEXT_VERSION
+## [0.13.0] - 2026-09-11
 
 ### Breaking
 
@@ -142,6 +142,12 @@ Only user-visible functional changes are recorded (no documentation, code refact
   now declines instead (just pick again); absolute-path chips persisted by
   older versions are rewritten at submit time to
   `workspace-name/.dsh-notes/note-name` — references are relative-only now.
+- **English leaking into localized capture-failure notices**: a failed
+  "capture into note" pasted the host's raw English error string (e.g.
+  `assistant message not found`) straight into the localized message. The
+  empty-answer refusal is now a coded error (`empty-answer`) with its own
+  copy, every coded failure localizes by code, and only code-less transport
+  errors fall back to the raw text.
 
 ## [0.12.0] - 2026-09-06
 

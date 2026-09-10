@@ -17,6 +17,7 @@ in the tables below.
 
 | Plugin version | dsh version | Verified on | Notes |
 |---|---|---|---|
+| `0.13.0` | `0.1.5-rc.2` | 2026-09-11 | Verified (typecheck/tests/build green against the rc.2 checkout; manual smoke rows in docs/smoke-test.md §11 matrix) |
 | `0.12.0` | `0.1.3-alpha.2` | 2026-09-07 | Verified |
 | `0.11.0` | `0.1.3-alpha.2` | 2026-09-07 | Chained inference: 0.11.0↔0.1.3-alpha.1 verified + alpha.1→alpha.2 zero contract change |
 | `0.10.1` | `0.1.3-alpha.2` | 2026-09-07 | Chained inference: 0.10.1↔alpha.5 verified + alpha.5→alpha.2 zero contract change |
@@ -50,6 +51,7 @@ in the tables below.
 
 | dsh version | Verified plugin versions (newest → oldest) | Last verified |
 |---|---|---|
+| `0.1.5-rc.2` | `0.13.0` | 2026-09-11 |
 | `0.1.3-alpha.2` | `0.12.0`, `0.11.0`, `0.10.1`, `0.10.0` | 2026-09-07 |
 | `0.1.3-alpha.1` | `0.12.0`, `0.11.0`, `0.10.1`, `0.10.0` | 2026-09-06 |
 | `0.1.2-alpha.5` | `0.10.1`, `0.10.0` | 2026-09-03 |
