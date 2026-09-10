@@ -76,6 +76,11 @@
 - **@ 引用 chip 尺寸/结构不可定制**：chip 为 4em 硬编码（`DshChipCell` 字体），且 chip DOM
   无 `[data-slot]` 锚点（非 slot 渲染点），合规注入路径也不可用；`conversation.chat.node`
   是节点级扩展点、非 chip 级。更宽的 chip 标签区需 dsh 开放 chip 尺寸/渲染扩展点。
+- **会话头右上角 slot（`conversation.session.header.corner`）不可用**（2026-09-10 核实）：
+  dsh 0.1.5 的 `ui-sidebar-right` 已把该**单占位**（single）席位用于自己的侧栏展开按钮
+  （`ExpandButton`，默认优先级 0）；同一优先级的第二次注册会**抛错**（会让插件 client 整体
+  加载失败），换优先级则是「遮蔽」而非共存（顶掉展开按钮）。插件如需会话头常驻控件，只能
+  等 dsh 开放第二个角落位或把 corner 改为 list 席位——待跟进上游。
 
 ## 1. 笔记引用进对话的细化（@ 引用已实现）
 

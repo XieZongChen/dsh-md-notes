@@ -210,7 +210,12 @@ dsh 设置面板（`settings.section` 注册）提供完整配置，表单控件
   会话相对与绝对两种作用域都支持，跨工作区 `../` 引用走绝对地址）。同一地址复用同一 tab。
 - **入口**：凡经 dsh 原生「文件打开」管线点到笔记文件的地方（对话中的文件链接/提及、
   文件树等），都路由到本查看器；笔记互链（`` `名` `` / `[[名]]`）点击也在侧栏开新 tab
-  （目标笔记的绝对地址）。
+  （目标笔记的绝对地址）；管理器搜索结果的笔记行另有「在侧栏查看」动作
+  （`noteFileAddress` 建地址 → `openResource` → 关闭管理器，见 [search.md §2](search.md)）。
+- **本地图片**：笔记里的本地路径图片（`![](img.png)`、`../shot.png`、绝对路径）经
+  `MarkdownText.pathImages` 词汇表改写为同源认证的 `/api/file?path=…` URL 后渲染
+  （`features/path-images.ts`，目标相对笔记所在 `.dsh-notes` 目录解析；管理器预览与
+  查看器同词汇表；Electron `file://` 等非 HTTP 载体不启用，退回 alt 文本）。
 - **正文**：`MarkdownText` 渲染（与管理器预览同一词汇表：代码块复制、脚注、互链），
   头部为笔记标题 + 工作区 chip + 手动刷新；读取走插件自身 `list`/`read` API（地址 →
   工作区 + 笔记名映射见 `NoteViewer/address.ts`，纯逻辑含测试）。

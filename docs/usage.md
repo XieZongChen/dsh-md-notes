@@ -322,5 +322,9 @@ In dsh's right dockable sidebar, note files open in the plugin's **note viewer**
   clickable and open the target note as another sidebar tab.
 - The header shows the note title, its workspace, and a manual reload; the viewer
   is read-only — edit in the notes manager.
+- In the notes manager's search results, each note row has a "view in sidebar"
+  action: opens the note in the right sidebar and dismisses the manager.
+- Local images in notes (relative to the note's directory, or absolute paths)
+  render inline in previews.
 - Requires dsh ≥ 0.1.5 (a build with the right sidebar); on older builds the
   feature disables itself and everything else keeps working.

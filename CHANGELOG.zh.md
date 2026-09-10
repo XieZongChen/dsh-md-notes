@@ -40,6 +40,15 @@
 
 ### Added
 
+- **搜索结果「在侧栏查看」**：笔记管理器搜索结果里，每篇笔记行尾新增面板图标——在
+  右侧栏笔记查看器中打开该笔记（绝对文件地址经 `openResource` 路由，同笔记复用同一
+  tab）并收起全屏管理器。需要 dsh 0.1.5+ 的右侧 Sidebar；旧版本按钮自动隐藏。见
+  [docs/usage.zh.md §9](docs/usage.zh.md#9-在右侧栏快速查看笔记dsh-015)。
+- **预览本地图片渲染**：笔记中的本地路径图片（`![](img.png)`、`../shot.png`、绝对
+  路径）在管理器预览与侧栏查看器中直接显示——经 `MarkdownText.pathImages` 词汇表
+  改写为同源认证的 `/api/file` URL（目标相对笔记所在目录解析）。dsh < 0.1.5 或非
+  HTTP 载体（Electron `file://`）不启用，退回 alt 文本。见
+  [docs/usage.zh.md §9](docs/usage.zh.md#9-在右侧栏快速查看笔记dsh-015)。
 - **右侧 Sidebar 笔记查看器**：dsh 0.1.5+ 的右侧停靠面板里，笔记文件（`/.dsh-notes/…/*.md`
   地址）以 markdown 渲染打开（`extension` 优先级接管内置纯文本预览）——对话文件链接、
   文件树点选即达；正文互链（`` `名` `` / `[[名]]`）点击在侧栏开新 tab；头部含标题、

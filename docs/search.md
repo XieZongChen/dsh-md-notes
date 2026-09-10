@@ -84,6 +84,10 @@
   - 点**笔记行**：打开该笔记并定位到第一个命中（标题命中则只打开、定位到文首）；
   - 点**命中行**：打开该笔记并定位到该行、选中该行上的第一个命中 token。
   - 语义与现有 `open()` 一致：切笔记直接丢弃未保存内容（TODO 4.1 落地前不单独处理）。
+  - **「在侧栏查看」（dsh 0.1.5+）**：笔记行尾的 panel 图标把该笔记以绝对文件地址交给
+    `ctx.sidebarRight.openResource`（右侧栏笔记查看器，docs/features.md §2.9）并关闭管理器
+    （overlay 全屏，不关看不到侧栏）；Sidebar 服务缺失时按钮隐藏。地址由
+    `NoteViewer/address.ts` 的 `noteFileAddress(workspaces, wsId, name)` 生成。
 
 ## 3. 契约设计（src/contract.ts）
 

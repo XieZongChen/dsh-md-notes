@@ -51,6 +51,20 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Added
 
+- **Search results "view in sidebar"**: every note row in the notes manager's
+  search results gains a panel action — opens that note in the right-sidebar
+  note viewer (absolute file address routed through `openResource`; the same
+  note reuses its tab) and dismisses the fullscreen manager. Requires the
+  dsh 0.1.5+ right sidebar; the action hides on older builds. See
+  [docs/usage.md §9](docs/usage.md#9-quick-note-viewing-in-the-right-sidebar-dsh-015).
+- **Local images render in previews**: local-path images in notes
+  (`![](img.png)`, `../shot.png`, absolute paths) display inline in the
+  manager preview and the sidebar viewer — rewritten through
+  `MarkdownText`'s `pathImages` vocabulary to the same-origin authenticated
+  `/api/file` URL (destinations resolve against the note's own directory).
+  Not enabled on dsh < 0.1.5 or non-HTTP transports (Electron `file://`),
+  falling back to alt text. See
+  [docs/usage.md §9](docs/usage.md#9-quick-note-viewing-in-the-right-sidebar-dsh-015).
 - **Right-sidebar note viewer**: on dsh 0.1.5+'s right dockable sidebar, note files
   (`/.dsh-notes/…/*.md` addresses) open rendered as markdown (taking over the
   built-in plain-text preview at `extension` priority) — reachable from
