@@ -16,7 +16,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
 import {
-  clearConflictSidecars, createFetchDedup, gitInit, gitPull, gitPush, gitStatus, gitSync,
+  createFetchDedup, gitInit, gitPull, gitPush, gitStatus, gitSync,
   resolveWorkspaceRepo,
   type ResolvedRepo, type WorkspaceInfo,
 } from './git.ts'
@@ -353,7 +353,7 @@ describe('conflict sidecars + gitSync merge recovery (ai-conflict, docs/ai-confl
     // successful push must clear the sidecar dir.
     await writeFile(join(b.notesDir, 'a.md'), 'merged', 'utf8')
     expect((await gitPush(CTX, repoB, b.notesDir, 'merged', AUTHOR, true)).ok).toBe(true)
-    await clearConflictSidecars(b.notesDir)
+    // The successful push itself must retire the sidecars (no caller cleanup).
     const { stat } = await import('node:fs/promises')
     await expect(stat(join(b.notesDir, '.conflicts'))).rejects.toThrow()
     expect(await remoteFile(url, 'a.md')).toBe('merged')

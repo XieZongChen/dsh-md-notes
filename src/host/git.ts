@@ -816,6 +816,12 @@ export async function gitPush(
   }
   // The mirror succeeded: this notes dir now has a real last-synced baseline.
   markSyncedNotes(repo.repoDir, notesDir)
+  // A successful push means every conflict (if any) is resolved and synced —
+  // retire the AI-resolution sidecars here, at the single choke point every
+  // push path goes through (manager UI, merge-remote-retry, and the push_notes
+  // tool alike; pulling does NOT clear them — the AI flow reads them between
+  // its conflict pull and its resolving push).
+  await clearConflictSidecars(notesDir)
   return { ok: true }
 }
 

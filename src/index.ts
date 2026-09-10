@@ -26,7 +26,7 @@ import type {} from '@deepseek-ai/dsh-tools'
 import type {} from '@deepseek-ai/dsh-user-approval'
 import type {} from '@deepseek-ai/dsh-workspace'
 import {
-  clearConflictSidecars, createFetchDedup, gitInit, gitPull, gitPush, gitStatus, gitSync, normPath,
+  createFetchDedup, gitInit, gitPull, gitPush, gitStatus, gitSync, normPath,
   resolveNotesDir, resolveSharedRepo, resolveWorkspaceRepo,
   type ResolvedRepo, type WorkspaceInfo,
 } from './host/git.ts'
@@ -278,10 +278,8 @@ export function apply(ctx: Context, config: Config): void {
         }
         result = await git.push(repo, notesDir, commitMessage, true)
       }
-      if (result.ok === true) {
-        // The AI conflict flow is finished: drop its three-way sidecar files.
-        void clearConflictSidecars(notesDir)
-      }
+      // Sidecar cleanup rides the successful gitPush itself (single choke
+      // point shared with the manager UI's push and merge-remote-retry).
       return result.ok === true
         ? { ok: true }
         : { ok: false, code: result.code, error: result.error }
