@@ -107,6 +107,12 @@ Only user-visible functional changes are recorded (no documentation, code refact
 
 ### Fixed
 
+- **`@` menu empty on the first page after startup (refresh fixed it)**: on the
+  page auto-opened right after `dsh web` starts, a draft session is not yet
+  materialized host-side, and the `@` source's per-session note list cached
+  that "transiently empty" result **forever** — the menu stayed blank no
+  matter how long one waited; only a page refresh recovered. Empty results are
+  now retried on the next `@` unless no workspaces exist at all.
 - **`.conflicts` leftovers after conflict resolution**: sidecar cleanup only
   rode the AI push tool's path — resolving through the manager's push or
   "merge remote & retry" left the `.dsh-notes/.conflicts/` directory behind.
