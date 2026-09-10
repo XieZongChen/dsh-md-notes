@@ -17,6 +17,7 @@ import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { UseChat } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { NotesUiStore } from '../store.ts'
 import { captureMessageText } from '../note-text.ts'
+import { resolvePosix } from '../NoteViewer/address.ts'
 import { ICON_URL } from '../api.ts'
 import styles from './note-action.module.css'
 
@@ -32,13 +33,15 @@ export interface NoteActionProps {
   store: NotesUiStore
   /** Framework-injected locale seat (`md-notes` namespace). */
   t: TranslateNS<'md-notes'>
+  /** Resolve a session's workspace cwd (produced-path absolutization; optional). */
+  resolveCwd?: (sessionId: string) => string | undefined
 }
 
 /**
  * The per-answer note action button.
  */
 export function NoteAction(props: NoteActionProps): React.ReactElement {
-  const { sessionId, messageId, useChat, getSessionTitle, store, t } = props
+  const { sessionId, messageId, useChat, getSessionTitle, store, t, resolveCwd } = props
   const snap = useChat((s) => s)
   const openPicker = (): void => {
     // Capture the text in the browser (like the copy button) — the host
@@ -46,11 +49,20 @@ export function NoteAction(props: NoteActionProps): React.ReactElement {
     // Image placeholder follows the UI language ([图片] / [image]).
     const captured = captureMessageText(snap.legacy.nodes, messageId, t('picker.labelImage'))
     if (captured === null) return
+    // Capture extras: image blocks ride as durable refs; produced paths
+    // absolutize against the session cwd so the host can relativize to any
+    // target workspace's notes dir (unknown cwd → files dropped, images kept).
+    const cwd = resolveCwd?.(sessionId)
+    const files = cwd === undefined ? [] : captured.producedPaths
+      .map(p => (p.startsWith('/') ? p : resolvePosix(cwd, p)))
+      .filter(p => p.startsWith('/'))
     store.update((d) => {
       d.picker = {
         questionText: captured.questionText,
         answerText: captured.answerText,
         sessionTitle: getSessionTitle(sessionId),
+        ...(files.length > 0 ? { files } : {}),
+        ...(captured.images.length > 0 ? { images: captured.images } : {}),
       }
     })
   }

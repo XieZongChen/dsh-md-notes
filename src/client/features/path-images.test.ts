@@ -43,6 +43,12 @@ describe('createNotePathImages', () => {
     expect(resolve('')).toBeUndefined()
   })
 
+
+  it('vouches the plugin asset route verbatim as a same-origin URL', () => {
+    expect(resolve('/plugins/md-notes/asset?id=a&mt=image%2Fpng&b=1&w=2&h=3'))
+      .toBe('https://dsh.example/plugins/md-notes/asset?id=a&mt=image%2Fpng&b=1&w=2&h=3')
+  })
+
   it('declines everything on non-HTTP transports (Electron file://)', () => {
     expect(createNotePathImages('file:', 'file://x', DIR).resolve('a.png')).toBeUndefined()
   })
