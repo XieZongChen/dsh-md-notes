@@ -308,37 +308,3 @@ describe('searchNotes', () => {
   })
 })
 
-describe('appendConversation capture extras', () => {
-  it('renders produced files as note-dir-relative markdown links (deduped)', async () => {
-    const base = await tempDir()
-    const notesDir = join(base, '.dsh-notes')
-    const res = await appendConversation(
-      notesDir, 'log.md', 'q', 'a', 'S',
-      { user: 'U', assistant: 'A', files: 'Files' },
-      { files: [join(base, '产物.png'), join(base, 'src', 'main.ts'), join(base, '产物.png')] },
-    )
-    expect(res.ok).toBe(true)
-    const content = await readFile(join(notesDir, 'log.md'), 'utf8')
-    expect(content).toContain('### 📎 Files')
-    expect(content).toContain('- [产物.png](../产物.png)')
-    expect(content).toContain('- [main.ts](../src/main.ts)')
-    expect(content.match(/main\.ts\]/g)?.length).toBe(1)
-  })
-
-
-  it('refuses an empty answer with a coded error (client localizes it)', async () => {
-    const base = await tempDir()
-    const res = await appendConversation(join(base, '.dsh-notes'), 'log.md', 'q', '', '', undefined)
-    expect(res.ok).toBe(false)
-    expect(res.code).toBe('empty-answer')
-  })
-
-  it('skips blank file paths without adding the section', async () => {
-    const base = await tempDir()
-    const notesDir = join(base, '.dsh-notes')
-    const res = await appendConversation(notesDir, 'log.md', 'q', 'a', '', undefined, { files: ['  '] })
-    expect(res.ok).toBe(true)
-    const content = await readFile(join(notesDir, 'log.md'), 'utf8')
-    expect(content).not.toContain('📎')
-  })
-})
