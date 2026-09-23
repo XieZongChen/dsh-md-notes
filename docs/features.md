@@ -24,7 +24,7 @@
 | 版本更新提示 | 侧边栏入口 / 管理器标题栏 | npm 有新版时显示黄色「有新版本需要更新」tag |
 | 笔记引用进对话 | 对话输入框 `@` | 引用笔记，host 把内容注入模型上下文（见 [context.md](context.md)） |
 | 插入图片 | 编辑器内粘贴 / 拖入 | 图片存入 `.dsh-notes/assets/`，插入 `![](assets/…)` 相对引用；预览内联 + 点击灯箱（本机文件，不同步） |
-| agent 用笔记（记忆） | 模型自行调用（无需用户操作） | `note_search` / `note_read` / `note_write` 三个 agent 工具 + 每会话一条发现通知；`Config.agentTools` 可切 `off`/`read`/`write`（见 [memory.md](memory.md)） |
+| agent 用笔记（记忆，**默认关闭**） | 模型自行调用（需先设 `Config.agentTools`） | `note_search` / `note_read` / `note_write` 三个 agent 工具 + 每会话一条发现通知；默认 `off`，价值未验证（见 [memory.md](memory.md)、[memory-eval.md](memory-eval.md)） |
 | 设置 | 管理器标题栏 ⚙ / dsh 设置面板「MD 笔记」 | 模式、仓库 URL、分支、自动拉取、作者等 |
 
 ## 2. 功能详述
@@ -236,7 +236,7 @@ dsh 设置面板（`settings.section` 注册）提供完整配置，表单控件
   写路径与 UI 共用 `KeyedLock`。
 - **发现**：每个会话注入**一条**「笔记库存在 + 何时该查」的短通知（只在工作区有笔记时；
   措辞随档位），完整的「何时该查」策略放在工具描述里（唯一每步可见且不额外花 token 的通道）。
-- **档位** `Config.agentTools`：`write`（默认）/ `read`（agent 只查不写）/ `off`（回到纯文档管理器）。
+- **档位** `Config.agentTools`：**默认 `off`**（纯文档管理器，与加记忆之前行为一致）/ `read`（agent 只查不写）/ `write`（agent 可查可写，**实验性**）。
 - **尚未做**（评测结论前刻意冻结）：策展/provenance（谁在哪个会话写的、待审阅队列、回滚）、
   检索排序、个人跨工作区库。设计与动机见 [memory.md](memory.md)，价值判定方法见
   [memory-eval.md](memory-eval.md)。

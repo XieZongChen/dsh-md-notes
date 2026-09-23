@@ -61,8 +61,9 @@
 - **`note_read`**：按文件名或标题读某篇全文。跨工作区重名时会返回候选并询问，不会乱猜。
 - **`note_write`**：把**长期有效**的事实（你的偏好、约定、环境信息、决定）追加进笔记，
   下次会话还能查到。它**只追加、绝不覆盖**你的内容。
-- 不想让模型写、或完全不想让它碰笔记：在 profile 补丁里设 `agentTools: 'read'` /
-  `'off'`（默认 `'write'`）。设计与取舍见 [memory.md](memory.md)。
+- **本功能默认关闭**。要试用，在 profile 补丁里设 `agentTools: 'write'`（可查可写）或
+  `'read'`（只查不写），然后重启 dsh web。它的价值尚未验证——评测方法见
+  [memory-eval.md](memory-eval.md)，设计与取舍见 [memory.md](memory.md)。
 
 ### 插入图片
 

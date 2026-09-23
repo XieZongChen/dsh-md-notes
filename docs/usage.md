@@ -79,9 +79,10 @@ tools it can decide to use on its own.
 - **`note_write`** — appends **durable** facts (preferences, conventions,
   environment details, decisions) so a later session can find them. It only
   ever appends; your existing content is never overwritten.
-- To keep the agent read-only, or out of the notes entirely, set
-  `agentTools: 'read'` / `'off'` in the profile patch (default `'write'`).
-  Design and tradeoffs: [memory.md](memory.md).
+- **Off by default.** To try it, set `agentTools: 'write'` (read + write) or
+  `'read'` (read only) in the profile patch and restart dsh web. Its value is
+  unverified — see [memory-eval.md](memory-eval.md) for the measurement and
+  [memory.md](memory.md) for the design.
 
 ### Inserting images
 

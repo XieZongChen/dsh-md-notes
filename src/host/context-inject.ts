@@ -124,7 +124,7 @@ export function registerNoteContextInjection(
   ctx: Context,
   options: { tools?: NoteToolTier } = {},
 ): () => void {
-  const tier = options.tools ?? 'write'
+  const tier = options.tools ?? 'off'
   // Sessions that already got the notice. Scoped to this registration, so a
   // plugin reload re-sends it once per active session — one extra durable row,
   // never a repeated per-step cost.

@@ -62,15 +62,18 @@ Only user-visible functional changes are recorded (no documentation, code refact
   format reports why and inserts nothing. Images stay local for now — Git sync
   still mirrors `.md` only (see the
   [user guide](docs/usage.md#inserting-images)).
-- **Notes become memory the agent can consult and grow**: three agent tools —
-  `note_search` (keyword search across workspaces; with no query it lists the
-  most recent notes), `note_read` (full text), and `note_write` (append durable
-  facts — **append-only, never overwrites**; `create` is refused for an existing
-  file). A one-line notice at the start of each session tells the model the
-  library exists, so the user no longer has to attach a note with `@` first.
-  `Config.agentTools` selects the tier: `write` (default) / `read` (the agent
-  may look but not write) / `off` (back to a plain document manager). Design and
-  rationale: [docs/memory.md](docs/memory.md).
+- **Notes can serve as agent memory (off by default, experimental)**: three agent
+  tools — `note_search` (keyword search across workspaces; with no query it lists
+  the most recent notes), `note_read` (full text), and `note_write` (append
+  durable facts — **append-only, never overwrites**; `create` is refused for an
+  existing file). Once enabled, a one-line notice at the start of each session
+  tells the model the library exists, so the user no longer has to attach a note
+  with `@` first. `Config.agentTools` selects the tier: `off` (**the default** —
+  a plain document manager) / `read` (the agent may look but not write) /
+  `write` (read and write). Default-off is deliberate: the claim that this
+  improves answers is unverified, and defaulting it on would make users the
+  experiment. Design and the falsification method:
+  [docs/memory.md](docs/memory.md), [docs/memory-eval.md](docs/memory-eval.md).
 
 ## [0.13.0] - 2026-09-11
 

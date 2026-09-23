@@ -85,10 +85,16 @@ export interface Config {
   readonly checkUpdate?: boolean
   /**
    * Which agent-facing note tools the model may call (docs/memory.md):
-   * `'off'` none, `'read'` `note_search` + `note_read`, `'write'` all three
-   * (default). A deployment switch rather than a user setting, hence NOT
-   * volatile. `'read'` is the cautious mode: the agent may consult the notes
-   * but only a human edits them.
+   * `'off'` none (**default**), `'read'` `note_search` + `note_read`,
+   * `'write'` all three. A deployment switch rather than a user setting, hence
+   * NOT volatile.
+   *
+   * Default `'off'` is deliberate: the plugin's demonstrated value is being a
+   * document manager, and the claim that agent-usable notes improve answers was
+   * never established (docs/memory-eval.md exists to test exactly that and has
+   * not been run). Shipping agent-writable memory on by default would make
+   * users the experiment. `'off'` also suppresses the discovery notice, so a
+   * session is byte-identical to the pre-memory plugin.
    */
   readonly agentTools?: 'off' | 'read' | 'write'
 }
@@ -118,7 +124,7 @@ export const Config = s.object({
   gitAuthorName: s.string().default('').volatile(),
   gitAuthorEmail: s.string().default('').volatile(),
   checkUpdate: s.boolean().default(true),
-  agentTools: s.union([s.const('off'), s.const('read'), s.const('write')]).default('write'),
+  agentTools: s.union([s.const('off'), s.const('read'), s.const('write')]).default('off'),
 })
 
 /** Resolve one Live config field to its current plain value. */
@@ -481,7 +487,7 @@ export function apply(ctx: Context, config: Config): void {
   // The TOOL DESCRIPTION is the policy (step 2 of docs/memory.md): it is the
   // one channel that reaches the model every step for free, so the "when to
   // consult" guidance lives there rather than in a per-step injected message.
-  const agentTools = config.agentTools ?? 'write'
+  const agentTools = config.agentTools ?? 'off'
 
   /** Workspaces one call may touch: an explicit id/name, else every REGISTERED workspace. */
   const registeredAgentScopes = (workspaceRef: string | undefined): SearchScope[] => {

@@ -282,4 +282,22 @@ describe('note discovery notice', () => {
     const off = register('off')
     expect(await run(off, cwd, claimed, decision)).toBe(decision)
   })
+
+  it('defaults to off — no notice unless the deployment opts in (docs/memory-eval.md)', async () => {
+    // The agent-accessible surface ships OFF: its benefit was never established,
+    // so a default install must behave exactly like the pre-memory plugin. This
+    // registers with NO options, exercising the module's own default.
+    const { cwd } = await workspaceWithNote('a.md', 'A')
+    let captured!: Captured['handler']
+    const fakeCtx = {
+      on(event: string, handler: Captured['handler']): () => void {
+        if (event === 'agent/pre-step') captured = handler
+        return () => {}
+      },
+    } as unknown as Context
+    registerNoteContextInjection(fakeCtx)
+    const claimed = [msg('hi')]
+    const decision = { kind: 'enter', messages: [...claimed] } as unknown as PreStepDecision
+    expect(await run({ handler: captured }, cwd, claimed, decision)).toBe(decision)
+  })
 })

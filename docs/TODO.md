@@ -153,26 +153,34 @@
     无条件占用**（`DesktopUpdateBadge`，「有新版本」角标）。想拿它显示「未推送变更数」会
     抛错或顶掉 dsh 自身的更新角标。根治条件：dsh 把该席位改为 list（与 corner 同一诉求）。
 
-## 0.9 笔记作为 agent 的记忆（路线一，2026-09-24 起）
+## 0.9 笔记作为 agent 的记忆（路线一）—— **已按「暂不采用」收尾（2026-09-24）**
 
-**动机（已写死在文档里的判断）**：旧设计里笔记进入模型视野只有「人用 `@` 贴上去」一条路，
-杠杆点是**人的记性**——天花板就是「人别忘了」。而它的每条承重机制都有一等方对应物
-（`@` 路径引用 / `AGENTS.md` / `session_search`），所以它不太可能提升问答效果。这不是实现
-质量问题，是结构问题。详见 [memory.md](memory.md)。
+**决定**：作者在读完评测设计后决定**不再投入**，所以这条线**暂停**，结论写作
+**「暂不采用（未验证）」**——不是「已证伪」。相应地：
+
+- `Config.agentTools` **默认 `off`**：默认安装 = **纯文档管理器**，会话与加记忆之前逐字节
+  一致（连发现通知都不注入）。想试的人显式开 `'read'` / `'write'`。
+- 代码与工具**保留**（有测试、默认不生效、可一行开启），评测工具
+  `scripts/memory-eval.mjs` 与 [memory-eval.md](memory-eval.md) **原样保留**：判决线是看数
+  之前定的，将来重开这条线时直接跑即可，不必重新商量。
+- README 增补「已知局限」一节，把「默认关闭 + 价值未验证 + 无头不支持 + 图片不同步」写明。
+
+**动机（留档）**：旧设计里笔记进入模型视野只有「人用 `@` 贴上去」一条路，杠杆点是**人的
+记性**——天花板就是「人别忘了」。而它的每条承重机制都有一等方对应物（`@` 路径引用 /
+`AGENTS.md` / `session_search`），所以它不太可能提升问答效果。这不是实现质量问题，是结构
+问题。详见 [memory.md](memory.md)。
 
 - ✅ **已落地**：三个 agent 工具 `note_search` / `note_read` / `note_write`（写路径**只追加、
-  绝不覆盖**，歧义返回候选不猜）；每会话一条记忆发现通知（按 `Config.agentTools` 档位措辞，
-  `off` 静默）；档位开关 `agentTools: 'off' | 'read' | 'write'`。
-- ⏳ **必须做的一步：跑评测并填表**（[memory-eval.md](memory-eval.md)）。判决线**已在看数之前
-  定好**：treatment ≥ 5/6 且 delta ≥ +4 → 继续投入；delta ≤ +1 → **判定伪需求，停止加功能**，
-  降级为文档管理器（`agentTools: 'off'`）或归档。**这条预先承诺不许在看到数字后修改。**
-  - 评测固定成本：2 次 dsh web 重启（两臂都要 host 侧重载 `agentTools`）。fixture 由
-    `npm run memory-eval -- prepare` 生成，且**不必注册成工作区**也能被工具正确解析
-    （会话 cwd 自己带 `.dsh-notes` 即算一个作用域，见上一笔修复）。
-  - 评测自动化（SDK 无头跑两臂）**当前被阻塞**：插件 `inject` 依赖 `webServer`，而它只由
-    web-app bundle 挂载，`dsh-sdk-app` / `dsh-base` 都没有 → 无头 profile 里插件起不来。
-    解锁条件见下条。
-- **若判定 adopt，下一步按价值排序**：
+  绝不覆盖**，歧义返回候选不猜）；每会话一条记忆发现通知（按档位措辞，`off` 静默）；
+  档位开关 `agentTools: 'off'（默认）/ 'read' / 'write'`。
+- ⏸ **未执行：评测**（[memory-eval.md](memory-eval.md)）。判决线已定死（treatment ≥ 5/6 且
+  delta ≥ +4 → 继续投入；delta ≤ +1 → 伪需求，停止加功能），**将来重开时不许在看到数字后改**。
+  - 执行成本：2 次 dsh web 重启（两臂都要 host 侧重载 `agentTools`）；fixture 由
+    `npm run memory-eval -- prepare` 生成，**不必注册成工作区**也能被工具正确解析
+    （会话 cwd 自己带 `.dsh-notes` 即算一个作用域）。
+  - 自动化（SDK 无头跑两臂）**被阻塞**：插件 `inject` 依赖 `webServer`，而它只由 web-app
+    bundle 挂载，`dsh-sdk-app` / `dsh-base` 都没有 → 无头 profile 里插件起不来。解锁条件见下。
+- **若将来判定 adopt，下一步按价值排序**：
   1. **策展 / provenance**（最该补的一块）：`meta.json` 记录写入者与来源会话
      （`writtenBy: 'agent' | 'user'`、`sessionId`、`at`），管理器加「agent 写入 / 待审阅」
      标记与一键回滚/删除。现在 agent 写进去的内容直接生效、只能事后手改——这是与

@@ -150,7 +150,7 @@ dsh-md-notes/
   [memory.md](memory.md) §2.2。
 - **agent 笔记工具（host）**：`note_search` / `note_read` / `note_write` 经
   `ctx.tools.register(defineTool(...))` 注册，档位由 `Config.agentTools`
-  （`off`/`read`/`write`，非 volatile 的部署开关）决定；纯逻辑在 `host/note-tools.ts`，
+  （`off`/`read`/`write`，非 volatile 的部署开关，**默认 `off`**）决定；纯逻辑在 `host/note-tools.ts`，
   文件写入复用 `notes.ts`（`appendNote` 只追加、`createNote` 仅用于 `mode:'create'`），
   并经既有 `KeyedLock` 与 UI 写入互斥。设计与安全取舍见 [memory.md](memory.md) §2.1。
 - **图片资源（host）**：`host/notes.ts` 的 `saveAsset(dir, data, ext)` 把编辑器粘贴/拖入的

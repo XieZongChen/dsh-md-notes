@@ -266,7 +266,8 @@ CI（GitHub Actions）在每次 push 时跑同一套测试。**护栏不绿不�
 
 ## 12. agent 自己用笔记（记忆，dsh 侧工具）
 
-前置：工作区里至少有一篇笔记，且 `agentTools` 为默认 `write`（`read`/`off` 见下）。
+前置：本功能**默认关闭**——先在 profile 补丁里设 `agentTools: 'write'` 并重启 dsh web，再验下表
+（`read`/`off` 的差异见最后两行；**验完请把该行改回或删掉**，别让默认安装停在实验态）。
 
 | 步骤 | 预期 |
 |---|---|
