@@ -46,14 +46,6 @@
   `![](assets/图片名.png)`；预览内联显示、点击放大。支持 PNG / JPG / GIF / WebP /
   BMP / AVIF（单张上限 8 MB），不支持的格式会提示原因且不插入无效引用。图片目前
   只存在本机，Git 同步仍只镜像 `.md`（详见[使用文档](docs/usage.zh.md#插入图片)）。
-- **笔记可作为 agent 的记忆（默认关闭，实验性）**：新增三个 agent 工具——`note_search`
-  按关键词跨工作区搜笔记（不传关键词时列出最近的笔记）、`note_read` 读全文、
-  `note_write` 追加持久事实（**只追加、绝不覆盖**；只有新文件才允许 `create`）。打开后
-  每个会话开头会注入一条短提示告诉模型笔记库存在，于是**不再需要用户先用 `@` 把笔记贴上去**。
-  `Config.agentTools` 可切档：**`off`（默认，纯文档管理器）** / `read`（agent 只查不写）/
-  `write`（agent 可查可写）。**默认关闭是刻意的**：这条「能提升问答效果」的主张尚未验证，
-  默认开启等于让用户当实验；设计与证伪方法见 [docs/memory.md](docs/memory.md) 与
-  [docs/memory-eval.md](docs/memory-eval.md)。
 
 ## [0.13.0] - 2026-09-11
 

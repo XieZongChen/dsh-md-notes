@@ -30,7 +30,6 @@ A note-taking plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deeps
 - **Assistant-message action** (next to copy) → pick or create a note and append that conversation (user question + answer) to it **instantly** — the text is captured from the conversation itself, so there's no waiting; section labels are localized (reasoning is not captured — only the final answer).
 - **Reference notes in chat (`@`)**: type `@` to pick notes (cross-workspace included, plugin-logo-led candidate rows); clicking an inserted chip previews the note in the right sidebar; on send the plugin's backend injects each note's content into the model context, so the model can cite it without being asked to read files. Reference lines carry relative paths only, never local absolute paths.
 - **Git sync** (optional, URL-driven): **shared repo** mode (one repo for all workspaces, per-workspace folders) or **own repos** mode (per workspace: URL + branch + subpath). Push = mirror-sync (deletions included), Update = pull with three-way conflict confirmation, auto-pull on open, merge-remote-and-retry. Each workspace shows a **Git sync card** in the manager: "Synced" / "N unpushed" status, plus a hint when the remote has new commits.
-- **Agent memory (experimental, off by default)**: with `agentTools` enabled the model may call `note_search` / `note_read` / `note_write` to consult and grow the notes itself (writes are **append-only**). **Off by default** because the "it improves answers" claim is unverified — see [Known limitations](#known-limitations).
 - **Note write mutex**: writes to the same note are locked across sessions — the sidebar entry, picker and manager stay in sync until the write finishes.
 - **Settings panel** (dsh Settings → MD Notes): mode, repo URL/branch/subpath, auto-pull, commit author — with dsh-styled form controls.
 - **Theme & i18n**: token-based colors (light/dark), UI copy follows dsh's language (Chinese / English), error messages localized.
@@ -127,18 +126,11 @@ The HTTP API prefix is fixed at `/plugins/md-notes` (the browser frontend hardco
 | `gitMode` | `'off'` | Git sync mode: `'off'` off / `'shared'` shared repo / `'own'` per-workspace repos. |
 | `gitAutoPull` | `true` | Pull the remote before opening a note. |
 | `checkUpdate` | `true` | Let the backend query registry.npmjs.org for a newer plugin version; `false` keeps it fully offline. |
-| `agentTools` | `'off'` | Whether the model may consult/append notes itself: `'off'` (default) / `'read'` (look only) / `'write'` (look and write). **Off by default** — whether this improves answers is unverified; see [Known limitations](#known-limitations). |
 
 There are **no environment variables and no secrets** in this plugin's configuration.
 
 ## Known limitations
 
-- **Agent memory is off by default and its value is unverified**: `agentTools` exposes an
-  experimental surface where the model consults and appends notes on its own. The claim that it
-  improves answers has **no measurement behind it** (the design and the pre-declared decision
-  line live in [docs/memory-eval.md](docs/memory-eval.md); it has not been run). Hence the
-  default `'off'` — a default install behaves byte-for-byte like the plugin before this
-  capability. Turn it on explicitly, and judge for yourself whether it earns its keep.
 - **Not supported in headless / SDK / ACP deployments**: the plugin requires the `webServer`
   service, which only dsh's **web-app** bundle provides, so profiles like `dsh --profile sdk`
   never load it (neither notes nor memory are available there). Unlock conditions:

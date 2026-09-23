@@ -56,13 +56,12 @@ dsh-md-notes/
     ├── index.ts          # host 插件入口（name/inject/Config/apply，纯装配）
     ├── contract.ts       # host/client 共享 wire 契约（纯类型：实体 + 各 method 请求/响应；两个 tsc program 各自编译，见 §5）
     ├── host/
-    │   ├── notes.ts      # 笔记领域逻辑（目录/元数据/各操作方法，含 appendNote/noteExists/saveAsset）
-    │   ├── note-tools.ts # agent 笔记工具的纯逻辑（引用解析/结果整形/最近列表，可单测）
+    │   ├── notes.ts      # 笔记领域逻辑（目录/元数据/各操作方法，含图片资源 saveAsset）
     │   ├── git.ts        # Git 领域逻辑（runGit/仓库解析/同步/冲突检测/隔离 + FetchDedup）
     │   ├── keyed-lock.ts # 通用键控并发：KeyedLock（笔记写互斥）+ KeyedMutex（git 按 repo 串行）
     │   ├── settings.ts   # settings 模型 + dsh 0.1.7 SettingsForms 两向适配器
     │   ├── update.ts     # npm 版本检测（compareVersions + createUpdateChecker，I/O 全注入）
-    │   ├── context-inject.ts # agent/pre-step 注入：笔记内容折叠 + 每会话一条记忆发现通知
+    │   ├── context-inject.ts # agent/pre-step 笔记内容注入（模型请求前折叠笔记内容）
     │   └── http.ts       # HTTP 工具 + 路由 handler 组装（notes + git 分发）
     └── client/
         ├── index.ts     # 入口（组装层，无 JSX）：apply + slot 注册 + NotesOverlay
@@ -144,15 +143,7 @@ dsh-md-notes/
   dsh 0.1.7 / Session V4 移除了共享 `plugin` wrapper，各 producer 自声明 kind，且
   V3→V4 迁移把历史 `{kind:'plugin', plugin:'md-notes', …}` 改写成同一 kind，新旧记录
   共用身份、去重连续；更早的裸 `md-notes` 记录也识别）折叠进模型请求——引用可靠生效，
-  不依赖模型自觉 `read`。同一监听器还负责**记忆发现通知**：当 `agentTools !== 'off'` 且
-  工作区确有笔记时，每个会话注入**一条**「笔记库存在、何时该查」的短提示（按会话用
-  `Set<sessionId>` 去重，不每步注入）；「何时该查」的完整策略写在工具描述里，见
-  [memory.md](memory.md) §2.2。
-- **agent 笔记工具（host）**：`note_search` / `note_read` / `note_write` 经
-  `ctx.tools.register(defineTool(...))` 注册，档位由 `Config.agentTools`
-  （`off`/`read`/`write`，非 volatile 的部署开关，**默认 `off`**）决定；纯逻辑在 `host/note-tools.ts`，
-  文件写入复用 `notes.ts`（`appendNote` 只追加、`createNote` 仅用于 `mode:'create'`），
-  并经既有 `KeyedLock` 与 UI 写入互斥。设计与安全取舍见 [memory.md](memory.md) §2.1。
+  不依赖模型自觉 `read`。
 - **图片资源（host）**：`host/notes.ts` 的 `saveAsset(dir, data, ext)` 把编辑器粘贴/拖入的
   图片写入 `<notesDir>/assets/`（扩展名白名单 + 字节魔数校验、解码后 8 MB 上限、文件名由
   代码生成并用 `wx` 防覆盖；请求值不进路径）。客户端插入相对引用 `assets/<name>`，预览经
