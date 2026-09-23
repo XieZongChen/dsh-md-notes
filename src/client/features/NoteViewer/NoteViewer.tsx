@@ -17,6 +17,7 @@ import type { ReactNode } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import {
   IconRefreshOutlineMedium,
+  MarkdownDelegateProvider,
   MarkdownText,
   type MarkdownFileMentions,
   type MarkdownLabels,
@@ -25,7 +26,7 @@ import { absoluteFileAddress, parseFileAddress } from '@deepseek-ai/dsh-util-wor
 import { api, type WorkspaceNotes } from '../api.ts'
 import { noteTargetOf, sessionRootOf, type NoteTarget } from './address.ts'
 import { preprocessNoteLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
-import { createNotePathImages } from '../path-images.ts'
+import { createNoteFileImages, createNotePathImages } from '../path-images.ts'
 import css from './note-viewer.module.css'
 
 /** The owner-provided navigation face (registered `inject` in `client/index.ts`). */
@@ -130,12 +131,25 @@ export function NoteViewer({ useTabInfo, openResource, t }: NoteViewerProps): Re
   )
 
   // Local images resolve against the note's own directory (same vocabulary as
-  // the manager preview).
+  // the manager preview). The delegate face additionally unlocks dsh 0.1.7's
+  // image chrome: contained preview, click-to-open lightbox, failure labels.
   const pathImages = React.useMemo(
     () => ready === undefined
       ? undefined
       : createNotePathImages(window.location.protocol, window.location.origin, ready.target.notesDir),
     [ready],
+  )
+  const fileImages = React.useMemo(
+    () => ready === undefined
+      ? undefined
+      : createNoteFileImages(window.location.protocol, window.location.origin, ready.target.notesDir, {
+        dialog: t('image.dialog'),
+        close: t('image.close'),
+        open: t('image.open'),
+        loading: t('image.loading'),
+        failed: t('image.failed'),
+      }),
+    [ready, t],
   )
 
   if (ready === undefined) {
@@ -173,7 +187,9 @@ export function NoteViewer({ useTabInfo, openResource, t }: NoteViewerProps): Re
         </button>
       </div>
       <div className={css.body} data-note-viewer-body>
-        <MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} pathImages={pathImages} />
+        <MarkdownDelegateProvider fileImages={fileImages}>
+          <MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} pathImages={pathImages} />
+        </MarkdownDelegateProvider>
       </div>
     </div>
   )

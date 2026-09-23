@@ -11,14 +11,14 @@
  */
 
 import * as React from 'react'
-import { IconCloseOutlineMedium, IconSearchOutlineMedium, IconSettingsOutlineMedium, MarkdownText, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutlineMedium, IconSearchOutlineMedium, IconSettingsOutlineMedium, MarkdownDelegateProvider, MarkdownText, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
 import { ICON_URL } from '../api.ts'
 import { preprocessNoteLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
 import { noteFileAddress } from '../NoteViewer/address.ts'
-import { createNotePathImages } from '../path-images.ts'
+import { createNoteFileImages, createNotePathImages } from '../path-images.ts'
 import { useUpdateAvailable } from '../update.ts'
 import shared from '../styles.module.css'
 import styles from './components/notes-manager.module.css'
@@ -86,12 +86,26 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
 
   // Local images in the preview (`![](img.png)`) resolve against the selected
   // note's own directory; without a selected workspace there is no rewrite.
+  // The delegate face additionally unlocks dsh 0.1.7's image chrome
+  // (contained preview, lightbox, failure labels) in the manager preview.
   const selectedNotesDir = workspaces.find((w) => w.workspaceId === selectedWsId)?.notesDir
   const pathImages = React.useMemo(
     () => selectedNotesDir === undefined
       ? undefined
       : createNotePathImages(window.location.protocol, window.location.origin, selectedNotesDir),
     [selectedNotesDir],
+  )
+  const fileImages = React.useMemo(
+    () => selectedNotesDir === undefined
+      ? undefined
+      : createNoteFileImages(window.location.protocol, window.location.origin, selectedNotesDir, {
+        dialog: t('image.dialog'),
+        close: t('image.close'),
+        open: t('image.open'),
+        loading: t('image.loading'),
+        failed: t('image.failed'),
+      }),
+    [selectedNotesDir, t],
   )
 
   // Search box (docs/search.md §2): a non-empty query swaps the left pane for
@@ -240,7 +254,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     ? <div className={styles.editorLoading}><LoadingIndicator label={t('git.loading')} /></div>
                     : mode === 'edit'
                       ? <textarea ref={editorRef} className={styles.textarea} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
-                      : <div className={`${styles.preview} ${shared.scrollWide}`}><MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} pathImages={pathImages} /></div>}
+                      : <div className={`${styles.preview} ${shared.scrollWide}`}><MarkdownDelegateProvider fileImages={fileImages}><MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} pathImages={pathImages} /></MarkdownDelegateProvider></div>}
                 </>
               )}
           </div>

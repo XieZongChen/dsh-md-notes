@@ -288,6 +288,9 @@ export function apply(ctx: ClientContext): void {
     // `/.dsh-notes/<name>.md`; `extension` priority beats the builtin text
     // viewer for note files.
       patterns: ['dsh-resource://file/**/.dsh-notes/*.md'],
+      // dsh 0.1.7: keep a visited viewer mounted through hiding, Session
+      // changes, and docking — scroll position and reload state survive.
+      keepMounted: true,
       canOpen: canOpenNoteAddress,
       title: noteTitleOf,
     }), 'dsh-md-notes: note viewer type')
