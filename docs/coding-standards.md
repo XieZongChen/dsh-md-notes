@@ -347,6 +347,7 @@
 | 20 | ✅ `tsdown.config.ts` + `package.json` | client 运行时 import 非 client 包（`dsh-util-workspace-path`）声明为 external：浏览器模块表只有 client 包 row → 启动 `missed the module table` 失败；typecheck/测试发现不了（纯 boot 期问题） | 高 | 已修：按 dsh `INLINE_SAFE` 约定改内联打包（去掉 external 声明与 tsdown external 项）；见 architecture §查看器 |
 | 21 | ✅ `client/index.ts` 可选服务注册 | `ctx.get('inputTriggers')` 在 apply 期一次判定：cordis 服务启动与模块到达时序交错时会永久错过（@ 菜单空白，重启复现）；typecheck/测试不可见（纯浏览器时序） | 高 | 已修：get→else `ctx.inject([...])` 晚到激活（dsh client-modules webServer 同款），viewer 注册同步加固；探针实例实测菜单恢复（commit e21968a） |
 | 22 | ✅ `ContextSource.openReference` | 在 Lexical chip 命令内同步调用可抛异常的外部服务（sidebar claim）：异常穿透打坏编辑器（#20 连锁、chip 不可删）；且 picomatch `**` 不匹配 `..` 段，点状会话地址不可认领 | 高 | 已修：跨工作区 ref 经快照解析为绝对地址 + try/catch 安全拒绝（见 paths.ts noteRefAddress 注释）；教训：编辑器命令回调里的一切外部调用必须自吞异常 |
+| 23 | ✅ agent 工具输出 schema（`host/note-tools.ts`） | **dsh 在运行期按声明的 schema 校验工具返回值，类型不符会让整个工具调用失败**（不是降级、不是截断）。`note_search` 原样返回 `listNotes` 的 `updatedAt`，而该值在 meta 缓存缺失时来自 `stat().mtimeMs`（**浮点**），schema 却声明 `integer` → 工具直接报 `"value.results[0].updatedAt" must be an integer`，在新建笔记（meta 尚未写入）上完全不可用。typecheck 与单测都发现不了——单测 fixture 恰好用的是整数 | 高 | 已修：在工具边界归一 `Math.trunc(Number(x)) \|\| 0` + 浮点回归测试（真机会话实测暴露）。教训：对外暴露的数值字段要按 schema 类型**显式归一**，别相信上游「看起来是整数」；写 schema 时先问源头的真实类型 |
 
 > 本节是活的：修掉一条就把该行标 ✅ 并注明 commit；新增隐患随时补。目标是在功能继续增长前
 > 把「高/中」级别清空。

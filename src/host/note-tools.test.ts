@@ -23,6 +23,19 @@ describe('agentRefs', () => {
     const refs = agentRefs(WS_A, [{ name: 'a.md', title: 'A', updatedAt: 5 }])
     expect(refs).toEqual([{ workspaceId: 'w-a', workspaceName: 'Alpha', name: 'a.md', title: 'A', updatedAt: 5 }])
   })
+
+  it('truncates a float updatedAt — tool output is schema-validated as an integer', () => {
+    // Regression: `listNotes` fills a missing cache entry from `stat().mtimeMs`
+    // (a float) and dsh REJECTS the whole tool result with
+    // `"value.results[0].updatedAt" must be an integer`, so note_search could not
+    // be used at all on freshly created notes.
+    const refs = agentRefs(WS_A, [{ name: 'a.md', title: 'A', updatedAt: 1790184686202.8145 }])
+    expect(refs[0]!.updatedAt).toBe(1790184686202)
+  })
+
+  it('maps a missing/NaN updatedAt to 0', () => {
+    expect(agentRefs(WS_A, [{ name: 'a.md', title: 'A', updatedAt: Number.NaN }])[0]!.updatedAt).toBe(0)
+  })
 })
 
 describe('pickAgentNote', () => {

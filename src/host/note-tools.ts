@@ -64,7 +64,11 @@ export function agentRefs(
     workspaceName: workspace.workspaceName,
     name: note.name,
     title: note.title,
-    updatedAt: note.updatedAt,
+    // `listNotes` fills a missing cache entry from `stat().mtimeMs`, which is a
+    // FLOAT — and dsh validates tool output against the declared schema, so an
+    // integer-typed field rejects it outright ("must be an integer"). Truncate
+    // at this boundary; NaN (absent mtime) becomes 0.
+    updatedAt: Math.trunc(Number(note.updatedAt)) || 0,
   }))
 }
 
