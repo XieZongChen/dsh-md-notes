@@ -14,6 +14,7 @@
  */
 
 import type { NoteHits, NoteSummary } from '../contract.ts'
+import type { SearchScope } from './notes.ts'
 
 /** One note the agent tools can address. */
 export interface AgentNoteRef {
@@ -136,4 +137,40 @@ export function shapeAgentSearch(
  */
 export function recentAgentNotes(refs: readonly AgentNoteRef[], limit: number): AgentNoteRef[] {
   return [...refs].sort((left, right) => right.updatedAt - left.updatedAt).slice(0, Math.max(0, limit))
+}
+
+/**
+ * Workspaces a SEARCH covers: the session's own directory first (the agent
+ * usually means "this project"), then every registered workspace. `local` is
+ * the cwd's notes dir when the session runs OUTSIDE the workspace registry —
+ * an SDK/automation run, or a directory opened ad hoc. Without it those runs
+ * would silently search somewhere else entirely.
+ * @param registered - the registered workspace scopes.
+ * @param local - the session cwd's own notes scope, when it has one.
+ * @returns search scopes, local first, without duplicates.
+ */
+export function searchScopes(
+  registered: readonly SearchScope[],
+  local: SearchScope | undefined,
+): SearchScope[] {
+  if (local === undefined) return [...registered]
+  return [local, ...registered.filter((scope) => scope.dir !== local.dir)]
+}
+
+/**
+ * The one workspace a WRITE defaults to. Deliberately NEVER falls back to "the
+ * only registered workspace": a session running outside the registry must not
+ * append to somebody else's notes. It either has its own notes dir (returned as
+ * `local`) or the call fails and the model is told to pass `workspace`.
+ * @param registered - the registered workspace scopes.
+ * @param sessionWorkspaceId - the calling session's registered workspace, if any.
+ * @param local - the session cwd's own notes scope, when it has one.
+ * @returns the write target, or `undefined` when nothing may be written.
+ */
+export function writeScope(
+  registered: readonly SearchScope[],
+  sessionWorkspaceId: string | undefined,
+  local: SearchScope | undefined,
+): SearchScope | undefined {
+  return registered.find((scope) => scope.workspaceId === sessionWorkspaceId) ?? local
 }

@@ -11,6 +11,7 @@
  */
 
 import { fileURLToPath } from 'node:url'
+import { stat } from 'node:fs/promises'
 import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { ApiResult, SessionRepairReport } from './contract.ts'
@@ -36,7 +37,7 @@ import {
   appendNote, createNote, listNotes, noteExists, readNote, sanitizeName, searchNotes, type SearchScope,
 } from './host/notes.ts'
 import {
-  agentRefs, pickAgentNote, recentAgentNotes, shapeAgentSearch, type AgentNoteRef,
+  agentRefs, pickAgentNote, recentAgentNotes, searchScopes, shapeAgentSearch, writeScope, type AgentNoteRef,
 } from './host/note-tools.ts'
 import { createKeyedLock, createKeyedMutex } from './host/keyed-lock.ts'
 import {
@@ -482,14 +483,38 @@ export function apply(ctx: Context, config: Config): void {
   // consult" guidance lives there rather than in a per-step injected message.
   const agentTools = config.agentTools ?? 'write'
 
-  /** Workspaces one call may touch: an explicit id/name, else every workspace. */
-  const noteToolScopes = (workspaceRef: string | undefined): SearchScope[] => {
+  /** Workspaces one call may touch: an explicit id/name, else every REGISTERED workspace. */
+  const registeredAgentScopes = (workspaceRef: string | undefined): SearchScope[] => {
     const all = listWorkspaces()
     const needle = (workspaceRef ?? '').trim().toLowerCase()
     const selected = needle === ''
       ? all
       : all.filter((ws) => ws.workspaceId.toLowerCase() === needle || ws.name.trim().toLowerCase() === needle)
     return selected.map((ws) => ({ workspaceId: ws.workspaceId, workspaceName: ws.name, dir: ws.notesDir }))
+  }
+
+  /** The session's working directory — the notes dir is always `<cwd>/.dsh-notes`. */
+  const cwdOf = (exec: unknown): string | undefined => {
+    const cwd = (exec as { agent?: { session?: { header?: { cwd?: unknown } } } })
+      .agent?.session?.header?.cwd
+    return typeof cwd === 'string' && cwd !== '' ? cwd : undefined
+  }
+
+  /**
+   * The session cwd's OWN notes scope, when that directory is not a registered
+   * workspace. Headless/SDK runs and ad-hoc directories land here; without it
+   * those sessions would silently read or write somebody else's notes. The
+   * existence check means a read path never creates a `.dsh-notes` dir.
+   */
+  const localAgentScope = async (cwd: string | undefined): Promise<SearchScope | undefined> => {
+    if (cwd === undefined) return undefined
+    const dir = path.join(cwd, '.dsh-notes')
+    try {
+      await stat(dir)
+    } catch {
+      return undefined
+    }
+    return { workspaceId: `cwd:${cwd}`, workspaceName: path.basename(cwd) || cwd, dir }
   }
 
   /** Every addressable note across the given scopes (one `listNotes` pass each). */
@@ -505,14 +530,6 @@ export function apply(ctx: Context, config: Config): void {
   /** The session's own session id (undefined outside an agent turn). */
   const sessionIdOf = (exec: { agent?: { id: unknown } }): string | undefined =>
     exec.agent === undefined ? undefined : String(exec.agent.id)
-
-  /** The one workspace a read/write defaults to: the session's, or the only one. */
-  const defaultScope = (sessionId: string | undefined, workspaceRef: string | undefined): SearchScope | undefined => {
-    const scopes = noteToolScopes(workspaceRef)
-    if ((workspaceRef ?? '').trim() !== '') return scopes[0]
-    const own = workspaceIdForSession(sessionId)
-    return scopes.find((scope) => scope.workspaceId === own) ?? (scopes.length === 1 ? scopes[0] : undefined)
-  }
 
   if (agentTools !== 'off') {
     ctx.effect(() => ctx.tools.register(defineTool({
@@ -546,8 +563,9 @@ export function apply(ctx: Context, config: Config): void {
             : `Note search failed${value.code ? ` (${value.code})` : ''}: ${value.error ?? 'unknown error'}`,
         }],
       },
-      async execute(args) {
-        const scopes = noteToolScopes(args.workspace)
+      async execute(args, exec) {
+        const local = (args.workspace ?? '').trim() === '' ? await localAgentScope(cwdOf(exec)) : undefined
+        const scopes = searchScopes(registeredAgentScopes(args.workspace), local)
         if (scopes.length === 0) {
           return { ok: false, code: 'no-workspace', error: `No workspace matches "${args.workspace ?? ''}".` }
         }
@@ -604,11 +622,14 @@ export function apply(ctx: Context, config: Config): void {
         }],
       },
       async execute(args, exec) {
-        const scopes = noteToolScopes(args.workspace)
+        const sessionId = sessionIdOf(exec)
+        const local = (args.workspace ?? '').trim() === '' ? await localAgentScope(cwdOf(exec)) : undefined
+        const scopes = searchScopes(registeredAgentScopes(args.workspace), local)
         if (scopes.length === 0) {
           return { ok: false, code: 'no-workspace', error: `No workspace matches "${args.workspace ?? ''}".` }
         }
-        const picked = pickAgentNote(await collectAgentRefs(scopes), args.name, workspaceIdForSession(sessionIdOf(exec)))
+        const preferred = workspaceIdForSession(sessionId) ?? local?.workspaceId
+        const picked = pickAgentNote(await collectAgentRefs(scopes), args.name, preferred)
         if (!picked.ok) {
           return picked.candidates.length === 0
             ? { ok: false, code: 'not-found', error: `No note matches "${args.name}".` }
@@ -669,8 +690,16 @@ export function apply(ctx: Context, config: Config): void {
         }],
       },
       async execute(args, exec) {
-        const scope = defaultScope(sessionIdOf(exec), args.workspace)
+        const explicit = (args.workspace ?? '').trim() !== ''
+        const registered = registeredAgentScopes(args.workspace)
+        if (explicit && registered.length === 0) {
+          return { ok: false, code: 'no-workspace', error: `No workspace matches "${args.workspace ?? ''}".` }
+        }
+        const local = explicit ? undefined : await localAgentScope(cwdOf(exec))
+        const scope = writeScope(registered, workspaceIdForSession(sessionIdOf(exec)), local)
         if (scope === undefined) {
+          // No silent fallback to "some other workspace": appending a durable
+          // fact into the wrong project's notes is worse than asking.
           return { ok: false, code: 'no-workspace', error: 'No workspace resolved for this session — pass `workspace`.' }
         }
         const name = sanitizeName(args.name)

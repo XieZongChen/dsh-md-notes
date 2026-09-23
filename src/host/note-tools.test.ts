@@ -7,8 +7,10 @@
 import { describe, expect, it } from 'vitest'
 import type { NoteHits } from '../contract.ts'
 import {
-  agentRefs, pickAgentNote, recentAgentNotes, shapeAgentSearch, type AgentNoteRef,
+  agentRefs, pickAgentNote, recentAgentNotes, searchScopes, shapeAgentSearch, writeScope,
+  type AgentNoteRef,
 } from './note-tools.ts'
+import type { SearchScope } from './notes.ts'
 
 const WS_A = { workspaceId: 'w-a', workspaceName: 'Alpha' }
 
@@ -99,5 +101,36 @@ describe('recentAgentNotes', () => {
     const refs = [ref({ name: 'a.md', updatedAt: 1 }), ref({ name: 'b.md', updatedAt: 2 })]
     recentAgentNotes(refs, 2)
     expect(refs.map((r) => r.name)).toEqual(['a.md', 'b.md'])
+  })
+})
+
+describe('searchScopes / writeScope (sessions outside the workspace registry)', () => {
+  const alpha: SearchScope = { workspaceId: 'w-a', workspaceName: 'Alpha', dir: '/ws/a/.dsh-notes' }
+  const beta: SearchScope = { workspaceId: 'w-b', workspaceName: 'Beta', dir: '/ws/b/.dsh-notes' }
+  const local: SearchScope = { workspaceId: 'cwd:/tmp/fixture', workspaceName: 'fixture', dir: '/tmp/fixture/.dsh-notes' }
+
+  it('search puts the session directory first, then the registered workspaces', () => {
+    expect(searchScopes([alpha, beta], local).map((s) => s.workspaceName)).toEqual(['fixture', 'Alpha', 'Beta'])
+  })
+
+  it('search without a local dir is just the registered workspaces', () => {
+    expect(searchScopes([alpha, beta], undefined)).toEqual([alpha, beta])
+    expect(searchScopes([], undefined)).toEqual([])
+  })
+
+  it('search does not duplicate a local dir that is also registered', () => {
+    expect(searchScopes([alpha], { ...local, dir: alpha.dir })).toEqual([{ ...local, dir: alpha.dir }])
+  })
+
+  it('write prefers the session workspace, then its own cwd — never another workspace', () => {
+    expect(writeScope([alpha, beta], 'w-b', local)).toEqual(beta)
+    expect(writeScope([alpha, beta], undefined, local)).toEqual(local)
+  })
+
+  it('write refuses rather than falling back to the only registered workspace', () => {
+    // The regression this guards: an SDK/automation session in /tmp/fixture must
+    // NOT append into the user's real (and only) registered workspace.
+    expect(writeScope([alpha], undefined, undefined)).toBeUndefined()
+    expect(writeScope([alpha], 'unknown-workspace', undefined)).toBeUndefined()
   })
 })
