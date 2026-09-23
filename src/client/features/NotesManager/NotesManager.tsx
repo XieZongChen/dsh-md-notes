@@ -52,6 +52,13 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
   // supported image is intercepted — a normal text paste (or a drag of text)
   // falls through to the browser's default handling untouched. `Array.from`
   // (not spread) because `DataTransferItemList` is only array-like.
+  //
+  // Drags are detected via `types` (`'Files'`), NOT via `getAsFile()`: during
+  // `dragover` browsers may not materialize the File yet, and a drop we mark
+  // droppable but then don't cancel would make the browser navigate to the
+  // dropped file. So: any file drag is accepted and cancelled on drop, but only
+  // supported images are stored.
+  const carriesFiles = (dt: DataTransfer): boolean => Array.from(dt.types).includes('Files')
   const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>): void => {
     const files = imageFilesFrom(Array.from(e.clipboardData.items))
     if (files.length === 0) return
@@ -59,14 +66,13 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     insertImages(files)
   }
   const onDragOver = (e: React.DragEvent<HTMLTextAreaElement>): void => {
-    if (imageFilesFrom(Array.from(e.dataTransfer.items)).length === 0) return
-    e.preventDefault() // signal "droppable" so the drop event fires
+    if (carriesFiles(e.dataTransfer)) e.preventDefault() // mark droppable
   }
   const onDrop = (e: React.DragEvent<HTMLTextAreaElement>): void => {
+    if (!carriesFiles(e.dataTransfer)) return
+    e.preventDefault() // never let the browser open/navigate to the dropped file
     const files = imageFilesFrom(Array.from(e.dataTransfer.items))
-    if (files.length === 0) return
-    e.preventDefault()
-    insertImages(files)
+    if (files.length > 0) insertImages(files)
   }
 
   // Localized Markdown chrome (code-fence copy + footnotes), memoized per
