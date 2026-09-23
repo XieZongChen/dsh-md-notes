@@ -26,6 +26,7 @@ export const en: { [K in keyof typeof zh]: string } = {
   'manager.deleteConfirm': 'Delete note {name}? This cannot be undone.',
   'manager.editorEmpty': '← Select a note on the left, or create one',
   'manager.tabEdit': 'Edit',
+  'manager.modeLabel': 'Editor mode',
   'manager.tabPreview': 'Preview',
   'manager.save': 'Save',
   'manager.saved': 'Saved',

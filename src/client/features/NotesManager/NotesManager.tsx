@@ -11,7 +11,7 @@
  */
 
 import * as React from 'react'
-import { IconCloseOutlineMedium, IconSearchOutlineMedium, IconSettingsOutlineMedium, MarkdownDelegateProvider, MarkdownText, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutlineMedium, IconSearchOutlineMedium, IconSettingsOutlineMedium, MarkdownDelegateProvider, MarkdownText, Modal, SegmentedControl, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
@@ -229,17 +229,16 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
               : (
                 <>
                   <div className={styles.editorHead}>
-                    <button
-                      type="button"
-                      className={mode === 'preview' ? `${styles.tab} ${styles.tabActive}` : styles.tab}
-                      onClick={() => setMode('preview')}
-                    >{t('manager.tabPreview')}</button>
-                    <button
-                      type="button"
-                      className={mode === 'edit' ? `${styles.tab} ${styles.tabActive}` : styles.tab}
-                      disabled={writingThis}
-                      onClick={() => setMode('edit')}
-                    >{t('manager.tabEdit')}</button>
+                    <SegmentedControl
+                      id="md-notes-editor-mode"
+                      value={mode}
+                      options={[
+                        { value: 'preview', label: t('manager.tabPreview') },
+                        { value: 'edit', label: t('manager.tabEdit'), disabled: writingThis, title: writingThis ? t('manager.writingFile') : undefined },
+                      ]}
+                      onChange={setMode}
+                      label={t('manager.modeLabel')}
+                    />
                     <span className={styles.editorName}>{selected}</span>
                     <span className={styles.flash}>{flash === '' ? '' : t(flash)}</span>
                     {writingThis && <span className={styles.remoteHint}>{t('manager.writingFile')}</span>}
@@ -253,8 +252,22 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                   {contentLoading
                     ? <div className={styles.editorLoading}><LoadingIndicator label={t('git.loading')} /></div>
                     : mode === 'edit'
-                      ? <textarea ref={editorRef} className={styles.textarea} value={content} onChange={(e) => setContent(e.target.value)} spellCheck={false} />
-                      : <div className={`${styles.preview} ${shared.scrollWide}`}><MarkdownDelegateProvider fileImages={fileImages}><MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} pathImages={pathImages} /></MarkdownDelegateProvider></div>}
+                      ? <textarea
+                          ref={editorRef}
+                          className={styles.textarea}
+                          role="tabpanel"
+                          id="md-notes-editor-mode-edit-panel"
+                          aria-labelledby="md-notes-editor-mode-edit"
+                          value={content}
+                          onChange={(e) => setContent(e.target.value)}
+                          spellCheck={false}
+                        />
+                      : <div
+                          className={`${styles.preview} ${shared.scrollWide}`}
+                          role="tabpanel"
+                          id="md-notes-editor-mode-preview-panel"
+                          aria-labelledby="md-notes-editor-mode-preview"
+                        ><MarkdownDelegateProvider fileImages={fileImages}><MarkdownText text={previewText} labels={markdownLabels} fileMentions={fileMentions} pathImages={pathImages} /></MarkdownDelegateProvider></div>}
                 </>
               )}
           </div>

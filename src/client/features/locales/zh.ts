@@ -23,6 +23,7 @@ export const zh = {
   'manager.deleteConfirm': '删除笔记 {name} ？此操作不可撤销',
   'manager.editorEmpty': '← 选择左侧笔记，或新建一篇',
   'manager.tabEdit': '编辑',
+  'manager.modeLabel': '编辑模式',
   'manager.tabPreview': '预览',
   'manager.save': '保存',
   'manager.saved': '已保存',
