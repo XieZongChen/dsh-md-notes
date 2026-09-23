@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
 import type { PreStepDecision } from '@deepseek-ai/dsh-agent'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
-import { NOTE_CONTEXT_KIND, registerNoteContextInjection } from './context-inject.ts'
+import { NOTE_CONTEXT_KIND, registerNoteContextInjection, type NoteToolTier } from './context-inject.ts'
 
 vi.mock('@deepseek-ai/dsh-llm', () => ({
   createUserMessage: (init: { content: Array<{ type: string; text: string }>; source?: unknown }) =>
@@ -30,13 +30,18 @@ function msg(text: string, source?: unknown): UserMessage {
 /** The captured pre-step handler + the fake ctx that captured it. */
 interface Captured {
   handler: (payload: {
-    agent: { session: { header: { cwd?: string } } }
+    agent: { id?: string; session: { header: { cwd?: string } } }
     messages: UserMessage[]
     signal: AbortSignal
   }, next: () => Promise<PreStepDecision>) => Promise<PreStepDecision>
 }
 
-function register(): Captured {
+/**
+ * Register with a tool tier. The default is `'off'` so the reference-injection
+ * cases below isolate their own behavior; the discovery notice has its own
+ * describe block.
+ */
+function register(tools: NoteToolTier = 'off'): Captured {
   let captured!: Captured['handler']
   const fakeCtx = {
     on(event: string, handler: Captured['handler']): () => void {
@@ -44,7 +49,7 @@ function register(): Captured {
       return () => {}
     },
   } as unknown as Context
-  registerNoteContextInjection(fakeCtx)
+  registerNoteContextInjection(fakeCtx, { tools })
   return { handler: captured }
 }
 
@@ -57,9 +62,10 @@ async function run(
   messages: UserMessage[],
   decision: PreStepDecision = { ...ENTER, messages: [...messages] } as PreStepDecision,
   signal: AbortSignal = new AbortController().signal,
+  agentId = 'session-1',
 ): Promise<PreStepDecision> {
   return captured.handler(
-    { agent: { session: { header: { cwd } } }, messages, signal },
+    { agent: { id: agentId, session: { header: { cwd } } }, messages, signal },
     () => Promise.resolve(decision),
   )
 }
@@ -204,5 +210,76 @@ describe('note context injection', () => {
     const ac = new AbortController()
     ac.abort()
     await expect(run(captured, cwd, claimed, decision, ac.signal)).rejects.toThrow()
+  })
+})
+
+/**
+ * The discovery notice (docs/memory.md step 2). Its job is that a model which
+ * never reads the tool list still learns the note library exists — so its
+ * contract is: once per session, only when notes exist, and only naming tools
+ * this deployment actually registered.
+ */
+describe('note discovery notice', () => {
+  it('injects the notice once, before any referenced content', async () => {
+    const { cwd, path } = await workspaceWithNote('plan.md', '# Plan\nSecret details')
+    const captured = register('write')
+    const claimed = [msg('引用笔记「plan」：.dsh-notes/plan.md')]
+    const decision = { kind: 'enter', messages: [...claimed] } as unknown as PreStepDecision
+
+    const result = await run(captured, cwd, claimed, decision)
+    if (result.kind !== 'enter') throw new Error('expected enter')
+    expect(result.messages).toHaveLength(3)
+    const notice = injectedText(result.messages[1] as UserMessage)
+    expect(notice).toContain('[笔记库 / Notes]')
+    expect(notice).toContain('1 note(s)')
+    expect(notice).toContain('note_search')
+    expect(notice).toContain('note_write')
+    expect((result.messages[1] as UserMessage).source).toEqual({ kind: NOTE_CONTEXT_KIND })
+    // The referenced note still lands AFTER the notice.
+    expect(injectedText(result.messages[2] as UserMessage)).toContain('Secret details')
+    expect((result.messages[2] as UserMessage).source).toEqual({ kind: NOTE_CONTEXT_KIND, path })
+  })
+
+  it('injects the notice even when the step references nothing', async () => {
+    const { cwd } = await workspaceWithNote('a.md', 'A')
+    const captured = register('read')
+    const claimed = [msg('no reference here')]
+    const decision = { kind: 'enter', messages: [...claimed] } as unknown as PreStepDecision
+
+    const result = await run(captured, cwd, claimed, decision)
+    if (result.kind !== 'enter') throw new Error('expected enter')
+    expect(result.messages).toHaveLength(2)
+    const notice = injectedText(result.messages[1] as UserMessage)
+    expect(notice).toContain('note_read')
+    // The read tier must not advertise a tool that was never registered.
+    expect(notice).not.toContain('note_write')
+    expect(notice).toContain('只读笔记')
+  })
+
+  it('sends the notice at most once per session', async () => {
+    const { cwd } = await workspaceWithNote('a.md', 'A')
+    const captured = register('write')
+    const claimed = [msg('first')]
+    const decision = { kind: 'enter', messages: [...claimed] } as unknown as PreStepDecision
+
+    const first = await run(captured, cwd, claimed, decision, undefined, 'session-a')
+    expect(first.kind === 'enter' && first.messages).toHaveLength(2)
+    const second = await run(captured, cwd, claimed, decision, undefined, 'session-a')
+    expect(second).toBe(decision)
+    // A different session gets its own notice.
+    const other = await run(captured, cwd, claimed, decision, undefined, 'session-b')
+    expect(other.kind === 'enter' && other.messages).toHaveLength(2)
+  })
+
+  it('stays silent for an empty workspace and for the off tier', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'md-notes-inject-'))
+    const captured = register('write')
+    const claimed = [msg('hi')]
+    const decision = { kind: 'enter', messages: [...claimed] } as unknown as PreStepDecision
+    expect(await run(captured, tempDir, claimed, decision)).toBe(decision)
+
+    const { cwd } = await workspaceWithNote('a.md', 'A')
+    const off = register('off')
+    expect(await run(off, cwd, claimed, decision)).toBe(decision)
   })
 })

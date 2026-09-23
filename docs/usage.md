@@ -64,6 +64,25 @@ On create the note **opens directly in Edit mode**.
 - **Edit** tab: write markdown source.
 - **Save**: writes to the local `.md` file and refreshes the list.
 
+### Letting the agent consult and grow your notes
+
+Notes no longer wait for you to attach them with `@`: the model has three note
+tools it can decide to use on its own.
+
+- At the start of each session, if the workspace has notes, the model gets one
+  short notice (that the library exists and when to consult it) — **you do not
+  have to attach anything first**.
+- **`note_search`** — keyword search across workspaces; with no query it lists
+  the most recent notes.
+- **`note_read`** — full text of one note by file name or title. A name shared
+  by several workspaces comes back as candidates to choose from, not a guess.
+- **`note_write`** — appends **durable** facts (preferences, conventions,
+  environment details, decisions) so a later session can find them. It only
+  ever appends; your existing content is never overwritten.
+- To keep the agent read-only, or out of the notes entirely, set
+  `agentTools: 'read'` / `'off'` in the profile patch (default `'write'`).
+  Design and tradeoffs: [memory.md](memory.md).
+
 ### Inserting images
 
 **Paste a screenshot** into the editor (or drag an image file onto it): the

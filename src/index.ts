@@ -761,5 +761,5 @@ export function apply(ctx: Context, config: Config): void {
   }), 'dsh-md-notes: icon route')
   // Note-content injection: fold referenced notes into the model request at
   // every agent pre-step (reliable references without relying on `read`).
-  ctx.effect(() => registerNoteContextInjection(ctx), 'dsh-md-notes: context injection')
+  ctx.effect(() => registerNoteContextInjection(ctx, { tools: agentTools }), 'dsh-md-notes: context injection')
 }

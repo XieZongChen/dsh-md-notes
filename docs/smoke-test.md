@@ -23,7 +23,8 @@ CI（GitHub Actions）在每次 push 时跑同一套测试。**护栏不绿不�
 | 文档预览动作（`NoteExcerpt/`、`createFromFile`） | 重启 dsh web + 硬刷新（需 dsh ≥ 0.1.7-rc） | §11 |
 | 后端笔记域（`host/notes.ts`、`http.ts`） | 重启 dsh web | §2 + §3 |
 | 图片粘贴 / 落盘（`features/assets.ts`、编辑器、`saveAsset`） | 重启 dsh web + 硬刷新 | §2.5 |
-| 后端注入（`host/context-inject.ts`） | 重启 dsh web | §4（重点 4.3 注入行为） |
+| 后端注入（`host/context-inject.ts`） | 重启 dsh web | §4（重点 4.3 注入行为）+ §12 |
+| agent 笔记工具（`note_search`/`note_read`/`note_write`、`Config.agentTools`） | 重启 dsh web | §12 |
 | 后端 Git 域（`host/git.ts`、GitApi 装配） | 重启 dsh web | §6（git 集成测试已覆盖逻辑，人验仅界面项） |
 | 设置（`host/settings.ts`、`Settings/`） | 重启 + 硬刷新 | §8 |
 | 契约 / 构建 / 清单（`contract.ts`、tsdown、tsconfig、`dsh.client`、exports） | 重启 + 硬刷新 | **全量**（协议面无单测覆盖） |
@@ -260,6 +261,25 @@ CI（GitHub Actions）在每次 push 时跑同一套测试。**护栏不绿不�
 | 在查看器里滚到中段 → 切到别的 tab 再切回 / 切换会话再回来（dsh ≥ 0.1.7） | 滚动位置与已加载内容保持（`keepMounted`），不重新读取 |
 | 打开任意文档预览（dsh ≥ 0.1.7），点工具栏「存为笔记」 | 新建笔记（正文为该文件文本、标题为文件名）并在笔记查看器打开；工作区外的文件 / > 512 KB / 不可读时按钮 tooltip 报错且不创建 |
 | 旧 dsh（无右侧 Sidebar）构建加载插件 | 其余功能正常，console 仅一条 sidebarRight 不可用 warn，无报错 |
+
+---
+
+## 12. agent 自己用笔记（记忆，dsh 侧工具）
+
+前置：工作区里至少有一篇笔记，且 `agentTools` 为默认 `write`（`read`/`off` 见下）。
+
+| 步骤 | 预期 |
+|---|---|
+| 新开一个会话（不 `@` 任何笔记） | 对话里出现**一条**「笔记库 / Notes」注入行（不是每步一条）；内容含笔记篇数 + `note_search`/`note_read` 提示 |
+| 同一会话继续追问若干轮 | 不再重复出现该通知 |
+| 问一个「答案只在笔记里、仓库里推不出来」的问题（如笔记里写的约定/环境事实） | 模型**自己调用** `note_search`（必要时 `note_read`）后作答；答案与笔记一致 |
+| 问一个仓库里就能查到的问题 | 不强行翻笔记（工具调用不是每问必发） |
+| 让模型记住一条长期偏好（「以后报告都用 UTC+8」） | 调用 `note_write`；管理器里能看到该笔记新增一段，**原内容没被截断** |
+| 让模型往一篇**已存在**且内容较多的笔记写 | 追加在末尾，原有内容完整保留 |
+| 把某篇笔记重命名/删除后再问相关问题 | `note_read` 报找不到（或返回候选），模型据此说明而不是编造 |
+| 让模型读一个跨工作区重名的笔记 | 要么用会话所在工作区的那篇，要么返回候选并询问——**不猜** |
+| 临时把 `agentTools` 设为 `'read'`（profile 补丁）后重启 | 新会话通知里**不再提** `note_write`；模型只查不写；即便它尝试写也无此工具 |
+| 临时把 `agentTools` 设为 `'off'` 后重启 | 新会话不再出现通知；`note_search`/`note_read`/`note_write` 都不在工具列表里，其余功能不回归 |
 
 ---
 
