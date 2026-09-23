@@ -6,6 +6,23 @@
 > **完全完结**的条目：实现后移入 [CHANGELOG.md](../CHANGELOG.md)（只记用户可见的功能性改动），
 > 并从本文删除；**部分落地**的条目保留，标注已完成部分与剩余工作。
 
+## dsh 兼容性（dsh 0.1.5-rc.2 → 0.1.7-rc.1，2026-09-23）
+
+**判定：有影响** —— dsh 移除 `MessageSourceMap` 的泛型 `plugin` source kind（转向 producer-owned kind + Session V4 基线），`@` 引用注入的类型面断裂；`*16` 系列图标改名 `*Medium`，client 10 处 import 断裂。适配完成前，`0.1.7-rc.1`（及途经的 `0.1.5-rc.3`）不入 [compatibility.zh.md](compatibility.zh.md) 对照表。本轮区间 +3305 提交（含 upstream 合并历史），途经 `0.1.5-rc.3` / `0.1.6-alpha.1-2` / `0.1.7-alpha.1-2`；0.1.6 线无 rc 被 0.1.7 收口，按 §0 以最新 rc（`0.1.7-rc.1`，2026-09-23 发布）为目标一次覆盖。插件 `0.13.0` 已定版（无 NEXT_VERSION），因判定有影响，本次不入表。
+
+- **受影响功能与影响范围**：
+  - **`@` 引用笔记的上下文注入**（`src/host/context-inject.ts`）：dsh `0.1.7-rc.1` 把持久消息 source 改为 producer-owned kind 词汇——`MessageSourceMap` 只剩 `user`/`model`/`tool`/`system-prompt`，类型注释明示「there is no shared catch-all `plugin` kind」（`fb79a944f5` separate durable producer sources from request inputs；`71d50b4a84` ui-chat 导出改名 `ContextProvenanceView` → `ContextProducerView`；Session V4 基线 `0112eaf3a8`/`669b724a78`，V3 replay 保留）。插件 `NoteContextSource = MessageSourceMap['plugin'] & { path? }` 与 `{ kind: 'plugin', plugin, path }` 写入双双失效——对 rc.1 checkout 实测 typecheck：TS2339 ×2（`MessageSourceMap` 无 `'plugin'` 键；`MessageSource` 无 `path` 字段）。llm/session 源码中 `kind: 'plugin'` 零残留；V3→V4 迁移把外部 source 身份前缀化为 `plugin:plugin:`（`bf29247fad`，历史记录路径），新写入的官方形态是各 producer 自声明 kind（模块扩充 `MessageSourceMap`）。
+  - **笔记管理 UI 图标**（`src/client/features/NotesManager/`、`NoteViewer/` 等多文件）：`4937343a5e` feat(web): unify the client visual language 把 `*16` 图标族改名/收敛为 `*Medium` 变体。实测 typecheck：TS2305/TS2724 ×10——`IconCloseOutline16`/`IconSearchOutline16`/`IconSettingsOutline16`/`IconRefreshOutline16`/`IconPanelLeftOutline16`（改名 `*Medium`）、`IconSendOutline16`/`IconFolderClose16`/`IconFolderOpen16`/`IconPlusOutline16`（改名 `IconSendOutlineMedium`/`IconFolderCloseMedium`/`IconFolderOpenMedium`/`IconPlusOutlineMedium`）。全部有直接替代，无功能损失。
+  - **实测证据**：对 rc.1 checkout（master == `dsh-v0.1.7-rc.1`）重建 `build:lib` 类型产物后 `link-deps`——host typecheck 2 错 + client typecheck 10 错；266 单测全绿（但 `createUserMessage` 在注入测试中被 mock、图标不经渲染——测试绿不代表兼容，以 typecheck 为准）。
+- **不受影响面**（区间内逐项核对）：新增的 peer 兼容强制校验（`#4980`/`#5061`）**不拒绝本插件**——判定读 `peerDependencies` 中 `@deepseek-ai/dsh`/`dsh-*`（本插件全 `"*"`，`semver.satisfies(..., { includePrerelease: true })` 匹配 rc；`engines.dsh` 不参与判定）；`agent/pre-step`/`PreStepDecision` 零变动；`defineTool`、`absoluteFileAddress`/`parseFileAddress`/`sessionFileAddress`、`createSnapshotStore` 零变动；ui-slots 类型仅增量（新增 component factories / `PropsRenderFactories`，`InjectFace`/`PropsRuntime`/`TranslateNS` 保留）；input-trigger/@ 触发、四个插件 slot、`dsh plugin add/update`（新增 `allow-version` 等为增量）无 breaking。
+- **需要的动作**：
+  1. host 适配：为注入 source 声明插件自有 producer-owned kind（模块扩充 `MessageSourceMap`，如 `'md-notes'` 变体带 `plugin`/`path` 字段——V4 词汇正是为此设计），改 `NoteContextSource`/`isNoteContextSource`；验证 V4 admission 接受插件声明 kind，及 ui-chat（`ContextProducerView` 模型）对其的标签渲染。
+  2. client 适配：10 处图标 import 按上表改 `*Medium`。
+  3. `engines.dsh` 声明（`>=0.1.5-rc.2 <0.1.6`）随适配发版更新指向新 rc。
+  4. 历史会话：0.13.0 写入的 `kind: 'plugin'` 事件在 V4 迁移走 `plugin:plugin:` 前缀化（声称保留可读），真机确认旧会话可打开。
+- **阻塞项 / 待验证**：ui-chat 对插件声明 kind 的渲染标签；旧会话经 V4 迁移后 `@` 注入行去重可能失配（source 身份被前缀化，`isNoteContextSource` 匹配不到旧记录——最坏为重复注入一次，不致命）。
+- **验收标准**：适配后对 `0.1.7-rc.1` typecheck/测试/构建全绿 + 真机冒烟（`@` 注入/渲染/跨步去重、NotesManager 图标、旧会话打开）→ 发版 → 重跑 `dsh 兼容性校验` 入表。
+
 ## dsh 兼容性（dsh 0.1.5-alpha.1 → 0.1.5-rc.2，2026-09-10）
 
 **判定：无新增影响（对未发版适配代码）；既有影响不变。** 本轮检查 dsh 推进到 `0.1.5-rc.2`（区间 +422 提交，途经 alpha.2 / rc.1）。插件 CHANGELOG 顶部有 `NEXT_VERSION`（source 适配 + 侧栏查看器等均未发版）——按 skill §5.0 **本次结果不入对照表**，待发版后再跑一次校验入表。
