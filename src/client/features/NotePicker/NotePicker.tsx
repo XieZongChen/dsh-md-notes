@@ -10,7 +10,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconCloseOutline16, IconFolderClose16, IconFolderOpen16, IconPlusOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutlineMedium, IconFolderCloseMedium, IconFolderOpenMedium, IconPlusOutlineMedium, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { WorkspaceNotes } from '../api.ts'
 import { gitErrorText, api, ICON_URL } from '../api.ts'
 import type { NotesUiStore } from '../store.ts'
@@ -160,7 +160,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
         <img src={ICON_URL} width={16} height={16} alt="" className={styles.dialogIcon} />
         <span className={styles.dialogTitle}>{t('picker.title')}</span>
         <button type="button" className={shared.closeBtn} aria-label={t('picker.close')} onClick={close}>
-          <IconCloseOutline16 size={14} />
+          <IconCloseOutlineMedium size={14} />
         </button>
       </div>
       <div className={`${styles.dialogBody} ${shared.scrollNarrow}`}>
@@ -181,7 +181,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
                   aria-expanded={!collapsed[ws.workspaceId]}
                 >
                   <span className={styles.wsFolder}>
-                    {collapsed[ws.workspaceId] ? <IconFolderClose16 /> : <IconFolderOpen16 />}
+                    {collapsed[ws.workspaceId] ? <IconFolderCloseMedium /> : <IconFolderOpenMedium />}
                   </span>
                   <span className={styles.wsGroupTitle}>{ws.name}</span>
                   <button
@@ -190,7 +190,7 @@ export function NotePicker(props: NotePickerProps): React.ReactElement {
                     title={t('manager.new')}
                     onClick={(e) => { e.stopPropagation(); createIn(ws.workspaceId) }}
                   >
-                    <IconPlusOutline16 />
+                    <IconPlusOutlineMedium />
                   </button>
                 </div>
                 {!collapsed[ws.workspaceId] && (

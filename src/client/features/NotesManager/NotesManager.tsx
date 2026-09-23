@@ -11,7 +11,7 @@
  */
 
 import * as React from 'react'
-import { IconCloseOutline16, IconSearchOutline16, IconSettingsOutline16, MarkdownText, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutlineMedium, IconSearchOutlineMedium, IconSettingsOutlineMedium, MarkdownText, Modal, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
@@ -136,7 +136,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
           <span className={styles.headTitle}>
             <span className={styles.managerTitle}>{t('manager.title')}</span>
             <button type="button" className={shared.iconBtn} onClick={openDshSettings} title={t('manager.settings')}>
-              <IconSettingsOutline16 />
+              <IconSettingsOutlineMedium />
             </button>
           {updateInfo !== null && (
             <span className={styles.updateTag} title={t('sidebar.updateTitle', { latest: updateInfo.latest })}>
@@ -145,7 +145,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
           )}
           </span>
           <div className={searchStyles.searchBox}>
-            <IconSearchOutline16 />
+            <IconSearchOutlineMedium />
             <input
               className={searchStyles.searchInput}
               value={query}
@@ -162,12 +162,12 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                 title={t('search.clear')}
                 onClick={() => setQuery('')}
               >
-                <IconCloseOutline16 size={12} />
+                <IconCloseOutlineMedium size={12} />
               </button>
             )}
           </div>
           <button type="button" className={shared.closeBtn} aria-label={t('manager.close')} onClick={close}>
-            <IconCloseOutline16 size={14} />
+            <IconCloseOutlineMedium size={14} />
           </button>
         </div>
         <div className={styles.managerBody}>

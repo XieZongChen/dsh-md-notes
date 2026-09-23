@@ -7,7 +7,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconCloseOutline16, IconSendOutline16, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconCloseOutlineMedium, IconSendOutlineMedium, Tooltip } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData } from '../../api.ts'
 import shared from '../../styles.module.css'
@@ -77,10 +77,10 @@ export function GitSyncCard({ status, busy, updating, pushing, pushOpen, pushMsg
               onKeyDown={(e) => { if (e.key === 'Enter') onConfirmPush() }}
             />
             <button type="button" className={styles.gitCardPushBtn} disabled={busy} onClick={onConfirmPush} title={t('git.confirmPush')}>
-              {pushing ? <LoadingIndicator size={14} /> : <IconSendOutline16 />}
+              {pushing ? <LoadingIndicator size={14} /> : <IconSendOutlineMedium />}
             </button>
             <button type="button" className={styles.gitCardPushBtn} disabled={busy} onClick={onCancelPush} title={t('git.cancel')}>
-              <IconCloseOutline16 />
+              <IconCloseOutlineMedium />
             </button>
           </div>
         )

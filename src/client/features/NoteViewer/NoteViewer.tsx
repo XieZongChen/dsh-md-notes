@@ -16,7 +16,7 @@ import * as React from 'react'
 import type { ReactNode } from 'react'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import {
-  IconRefreshOutline16,
+  IconRefreshOutlineMedium,
   MarkdownText,
   type MarkdownFileMentions,
   type MarkdownLabels,
@@ -169,7 +169,7 @@ export function NoteViewer({ useTabInfo, openResource, t }: NoteViewerProps): Re
           data-note-viewer-reload
           onClick={() => { setRevision((n) => n + 1) }}
         >
-          <IconRefreshOutline16 />
+          <IconRefreshOutlineMedium />
         </button>
       </div>
       <div className={css.body} data-note-viewer-body>

@@ -8,7 +8,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconFolderOpen16, IconPanelLeftOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconFolderOpenMedium, IconPanelLeftOutlineMedium } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { NoteHits, SearchHit } from '../../api.ts'
 import type { SearchPhase } from '../hooks/useNoteSearch.ts'
 import { highlightSegments } from '../search.ts'
@@ -53,7 +53,7 @@ export function SearchResults({ phase, results, truncated, t, onOpenNote, onView
               : groups.map((group) => (
                 <div key={group.wsId} className={styles.group}>
                   <div className={styles.groupHead} title={group.name}>
-                    <span className={styles.groupFolder}><IconFolderOpen16 /></span>
+                    <span className={styles.groupFolder}><IconFolderOpenMedium /></span>
                     <span className={styles.groupTitle}>{group.name}</span>
                     <span className={styles.groupCount}>{group.notes.length}</span>
                   </div>
@@ -77,7 +77,7 @@ export function SearchResults({ phase, results, truncated, t, onOpenNote, onView
                                 onViewInSidebar(note.workspaceId, note.name)
                               }}
                             >
-                              <IconPanelLeftOutline16 />
+                              <IconPanelLeftOutlineMedium />
                             </button>
                           )}
                         </div>

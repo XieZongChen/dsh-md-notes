@@ -6,7 +6,7 @@
 
 import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
-import { IconFolderClose16, IconFolderOpen16, IconPlusOutline16 } from '@deepseek-ai/dsh-client-ui-primitives'
+import { IconFolderCloseMedium, IconFolderOpenMedium, IconPlusOutlineMedium } from '@deepseek-ai/dsh-client-ui-primitives'
 import { LoadingIndicator } from '../../components/LoadingIndicator/LoadingIndicator.tsx'
 import type { GitStatusData, WorkspaceNotes } from '../../api.ts'
 import { noteKey, type BusyTracker } from '../../busy.ts'
@@ -73,7 +73,7 @@ export function WorkspaceList(props: WorkspaceListProps): React.ReactElement {
                       aria-expanded={!collapsed[ws.workspaceId]}
                     >
                       <span className={selectedWsId === ws.workspaceId ? `${styles.wsFolder} ${styles.wsFolderActive}` : styles.wsFolder}>
-                        {collapsed[ws.workspaceId] ? <IconFolderClose16 /> : <IconFolderOpen16 />}
+                        {collapsed[ws.workspaceId] ? <IconFolderCloseMedium /> : <IconFolderOpenMedium />}
                       </span>
                       <span className={styles.wsGroupTitle}>{ws.name}</span>
                       <span className={styles.wsCount}>{ws.notes.length}</span>
@@ -84,7 +84,7 @@ export function WorkspaceList(props: WorkspaceListProps): React.ReactElement {
                         onToggle={() => onToggleGit(ws.workspaceId)}
                       />
                       <span className={styles.wsNewBtn} role="button" title={t('manager.new')} onClick={(e) => { e.stopPropagation(); onCreate(ws.workspaceId) }}>
-                        <IconPlusOutline16 />
+                        <IconPlusOutlineMedium />
                       </span>
                     </div>
                   )}
