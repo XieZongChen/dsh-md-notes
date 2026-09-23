@@ -16,6 +16,7 @@ import type { MarkdownFileMentions, MarkdownLabels } from '@deepseek-ai/dsh-clie
 import { LoadingIndicator } from '../components/LoadingIndicator/LoadingIndicator.tsx'
 import { CreateNoteDialog } from '../components/CreateNoteDialog/CreateNoteDialog.tsx'
 import { ICON_URL } from '../api.ts'
+import { imageFilesFrom } from '../assets.ts'
 import { preprocessNoteLinks, resolveNoteLink, titleMatchCount } from '../note-links.ts'
 import { noteFileAddress } from '../NoteViewer/address.ts'
 import { createNoteFileImages, createNotePathImages } from '../path-images.ts'
@@ -44,7 +45,29 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
     currentWsId, toggleWorkspace, toggleGit, open, save, createIn, submitCreate, cancelCreate, remove,
     updateClick, pushForWs, doPush, resolveAndRetry, setPushMsg, setPushTargetWsId, setMode,
     setContent, setConfirmState, close, openDshSettings, createWsId, createBusy, editorRef,
+    insertImages, uploadingImages,
   } = useNotesManager({ store, tracker, t, sessions })
+
+  // Pasted / dropped images (TODO §3.6): only a payload that actually carries a
+  // supported image is intercepted — a normal text paste (or a drag of text)
+  // falls through to the browser's default handling untouched. `Array.from`
+  // (not spread) because `DataTransferItemList` is only array-like.
+  const onPaste = (e: React.ClipboardEvent<HTMLTextAreaElement>): void => {
+    const files = imageFilesFrom(Array.from(e.clipboardData.items))
+    if (files.length === 0) return
+    e.preventDefault()
+    insertImages(files)
+  }
+  const onDragOver = (e: React.DragEvent<HTMLTextAreaElement>): void => {
+    if (imageFilesFrom(Array.from(e.dataTransfer.items)).length === 0) return
+    e.preventDefault() // signal "droppable" so the drop event fires
+  }
+  const onDrop = (e: React.DragEvent<HTMLTextAreaElement>): void => {
+    const files = imageFilesFrom(Array.from(e.dataTransfer.items))
+    if (files.length === 0) return
+    e.preventDefault()
+    insertImages(files)
+  }
 
   // Localized Markdown chrome (code-fence copy + footnotes), memoized per
   // locale revision so the preview does not rebuild MarkdownText's cached
@@ -242,6 +265,7 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                     <span className={styles.editorName}>{selected}</span>
                     <span className={styles.flash}>{flash === '' ? '' : t(flash)}</span>
                     {writingThis && <span className={styles.remoteHint}>{t('manager.writingFile')}</span>}
+                    {uploadingImages > 0 && <span className={styles.remoteHint}>{t('manager.imageUploading')}</span>}
                     {dirty && <span className={styles.dirtyPill}>{t('manager.unsaved')}</span>}
                     {mode === 'edit' && (
                       <button type="button" className={styles.saveBtn} disabled={busy} onClick={save}>
@@ -260,6 +284,9 @@ export function NotesManager(props: NotesManagerProps): React.ReactElement {
                           aria-labelledby="md-notes-editor-mode-edit"
                           value={content}
                           onChange={(e) => setContent(e.target.value)}
+                          onPaste={onPaste}
+                          onDragOver={onDragOver}
+                          onDrop={onDrop}
                           spellCheck={false}
                         />
                       : <div

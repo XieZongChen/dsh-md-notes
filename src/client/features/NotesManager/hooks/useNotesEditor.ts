@@ -7,6 +7,7 @@ import * as React from 'react'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import type { WorkspaceNotes } from '../../api.ts'
 import { api, gitPullApi } from '../../api.ts'
+import { assetErrorKey, insertImageRefs, storeImages } from '../../assets.ts'
 import { noteKey, type BusyTracker } from '../../busy.ts'
 import type { MdNotesKey } from '../../locales/index.ts'
 import { locateOffsets, locateScrollTop, type LocateTarget } from '../search.ts'
@@ -45,6 +46,8 @@ export function useNotesEditor(deps: {
   const [gitOpen, setGitOpen] = React.useState<Record<string, boolean>>({})
   const [createWsId, setCreateWsId] = React.useState<string | null>(null)
   const [createBusy, setCreateBusy] = React.useState(false)
+  /** In-flight pasted-image uploads; > 0 shows the editor hint and blocks save. */
+  const [uploadingImages, setUploadingImages] = React.useState(0)
   /**
    * The current selection plus its read generation. Every `readInto` takes the
    * next ticket; a response applies only when it is still the NEWEST read of
@@ -214,6 +217,43 @@ export function useNotesEditor(deps: {
     }).finally(() => setSaving(false))
   }
 
+  /**
+   * Store pasted / dropped images and splice their references into the note at
+   * the caret (TODO §3.6). The textarea's live value is read at insertion time,
+   * so typing during the (async) upload is not overwritten; a refusal flashes a
+   * localized message rather than inserting a reference to an image that was
+   * never written. If the selection moved while the upload ran, the file stays
+   * on disk but is not spliced into the note the user has since opened.
+   */
+  const insertImages = (files: readonly File[]): void => {
+    const wsId = selectedWsId
+    if (selected === null || wsId === null || files.length === 0) return
+    const targetWsId = wsId
+    const targetName = selected
+    const el = textareaRef.current
+    const start = el?.selectionStart ?? content.length
+    const end = el?.selectionEnd ?? start
+    setUploadingImages((n) => n + 1)
+    void storeImages(files, targetWsId).then((res) => {
+      if (!isCurrent(targetWsId, targetName)) return
+      if (!res.ok) {
+        setFlash(assetErrorKey(res.code))
+        window.setTimeout(() => setFlash(''), 4000)
+        return
+      }
+      const next = insertImageRefs(el?.value ?? content, start, end, res.paths)
+      setContent(next.text)
+      // The textarea is controlled, so the caret can only be placed after React
+      // has committed the new value.
+      window.requestAnimationFrame(() => {
+        const node = textareaRef.current
+        if (node === null) return
+        node.focus()
+        node.setSelectionRange(next.caret, next.caret)
+      })
+    }).finally(() => setUploadingImages((n) => n - 1))
+  }
+
   const createIn = (wsId: string): void => {
     // Expand the workspace first so the freshly created note shows up in the list.
     setCollapsed((prev) => ({ ...prev, [wsId]: false }))
@@ -267,7 +307,7 @@ export function useNotesEditor(deps: {
   return {
     selectedWsId, selected, content, mode, saving, flash, contentLoading, collapsed, gitOpen, dirty,
     createWsId, createBusy, currentWsId, toggleWorkspace, toggleGit, open, save, createIn, submitCreate, cancelCreate,
-    remove, setMode, setContent,
+    remove, setMode, setContent, uploadingImages, insertImages,
     refreshAndRereadSelected, setFlash, textareaRef,
   }
 }

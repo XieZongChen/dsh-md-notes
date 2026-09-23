@@ -74,7 +74,7 @@ export function useNotesManager({ store, tracker, t, sessions }: NotesManagerPro
   const writingThis = editor.selected !== null && editor.selectedWsId !== null && tracker.isBusy(noteKey(editor.selectedWsId, editor.selected))
   const updating = git.updatingWsId !== null
   const pushing = git.pushingWsId !== null
-  const busy = updating || editor.saving || pushing || writingThis
+  const busy = updating || editor.saving || pushing || writingThis || editor.uploadingImages > 0
 
   const close = (): void => store.update((d) => { d.managerOpen = false })
 
@@ -131,6 +131,8 @@ export function useNotesManager({ store, tracker, t, sessions }: NotesManagerPro
     open: editor.open,
     editorRef: editor.textareaRef,
     save: editor.save,
+    insertImages: editor.insertImages,
+    uploadingImages: editor.uploadingImages,
     createIn: editor.createIn,
     submitCreate: editor.submitCreate,
     cancelCreate: editor.cancelCreate,
