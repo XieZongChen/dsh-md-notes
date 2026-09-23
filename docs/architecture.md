@@ -124,8 +124,17 @@ dsh-md-notes/
   `resolveSharedFolder` 固定目录名）、`syncNotes` / `changedNotes` / `remoteOnlyNotes` /
   `deleteMissingNotes`（目录镜像同步 + 冲突检测）、`gitInit`（clone）/ `gitStatus` / `gitPush` /
   `gitPull` / `gitSync`、`GitError`（带机器可读 `code`）。
-- 设置 `host/settings.ts`：`MD_NOTES_NS`（`md-notes`）、`MdNotesSettingsSchema`（L3 wire schema）、
-  `mergeSettings`（L2 Config 与 L3 逐层合并，`gitMode:'on'` 归一化为 shared/own）。
+- 设置 `host/settings.ts`：`MD_NOTES_NS`（`md-notes`，即 Loader 条目 id）、`MdNotesSettingsSchema`
+  （写入前校验 `gitConfig` 补丁的 wire schema）、`mergeSettings`（部署 Config 与用户层逐层合并，
+  `gitMode:'on'` 归一化为 shared/own），以及 dsh 0.1.7 的两向适配器
+  `overridesFromConfig`（profile 补丁的 Config 键 → 客户端 `MdNotesSettings`）与
+  `configPatchFromSettings`（反向；`gitCentral` ⇄ `gitCentralRemote/Branch`）、
+  `mergeOverrides`（写入后即时刷新视图，不等补丁重载）。
+  用户层即 **profile 补丁**（`cordis.patch.yml` 中该条目的 `config`），经插件自身的 `Config`
+  schema（可写字段标 `volatile`）投影；`apply` 通过 `settings.update(entryId, patch)` 写入，
+  并以 `settings.configure({ auto: false })` 关掉 dsh 自动生成的配置页（本插件自带设置分区）。
+  ⚠️ 0.1.7 起 `volatile` 字段在 `apply` 里是**活引用**（`Volatile.get()`），必须经 `plainConfig()`
+  每次读取，不能当普通值用。
 - HTTP 层 `host/http.ts`：`readBody`（有界 JSON 读取）、`sendJson`、`notesApiHandler`（method 分发：
   notes 域 + git 域）、`iconHandler`（GET 返回打包的 SVG 图标）。
 - 上下文注入 `host/context-inject.ts`：监听 `agent/pre-step`，扫描已认领消息中的笔记路径

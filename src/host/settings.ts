@@ -1,8 +1,18 @@
 /**
- * dsh-md-notes settings namespace (`md-notes`): the durable user-level layer
- * (L3) of the plugin's three-layer configuration model. Registered host-side
- * via `ctx.settings`, written by the settings panel, and merged over the
- * cordis Config (L2) at read time.
+ * dsh-md-notes settings: the plugin's configuration model and the adapter
+ * between the client's wire shape and the host's stored shape.
+ *
+ * dsh 0.1.7 (SettingsForms) removed `settings.register(ns, schema)`. The
+ * editable fields are now the plugin's OWN `Config` schema — the `volatile`
+ * ones — the user overrides live in the profile patch, and writes go through
+ * `settings.update(entryId, patch)`. This module owns the two directions of that
+ * translation: {@link overridesFromConfig} (stored Config keys → the client's
+ * `MdNotesSettings`) and {@link configPatchFromSettings} (a client `gitConfig`
+ * patch → Config keys). {@link MdNotesSettingsSchema} validates a patch before
+ * it is written, so a malformed value can never reach the patch — a poisoned
+ * patch would not merely fail one save, it would fail the plugin LOAD on the
+ * next start. {@link mergeSettings} still folds the deployment Config under the
+ * user layer for read time.
  *
  * Model (v4): notes ALWAYS live at `<workspace>/.dsh-notes` locally; the git
  * repo is identified by its **URL only** — the plugin manages a local clone
@@ -22,15 +32,16 @@ import type { CentralSettings, GitMode, MdNotesSettings, RepoSettings } from '..
 export type { CentralSettings, GitMode, MdNotesSettings, RepoSettings }
 
 /**
- * The plugin's settings namespace id (L3). A plain string literal: since
- * dsh `0.1.2-alpha.2` the `settingsNamespace()` helper was removed from
- * `@deepseek-ai/dsh-settings` — namespaces are now branded-string-typed and
- * validated inside `settings.register()` (`parseSettingsNamespace`, pattern
- * `[a-z][a-z0-9-]*`), which `'md-notes'` satisfies.
+ * The plugin's settings section id. Since dsh 0.1.7 this is the **Loader entry
+ * id** (the profile's `id: md-notes` row) — `settings.update` writes the entry
+ * whose `options.id` matches, and the plugin's `name` export supplies it.
  */
 export const MD_NOTES_NS = 'md-notes'
 
-/** Wire schema; also the envelope the browser scope validates against. */
+/** The accepted `gitMode` values (shared with the schema's union). */
+const GIT_MODES: readonly string[] = ['off', 'on', 'shared', 'own']
+
+/** Wire schema; validates a `gitConfig` patch before the host persists it. */
 export const MdNotesSettingsSchema: s<MdNotesSettings> = s.object({
   gitMode: s.union([s.const('off'), s.const('on'), s.const('shared'), s.const('own')]).required(false),
   gitCentral: s.object({
@@ -82,4 +93,86 @@ export function mergeSettings(
     gitAuthorName: user.gitAuthorName ?? config.gitAuthorName ?? '',
     gitAuthorEmail: user.gitAuthorEmail ?? config.gitAuthorEmail ?? '',
   }
+}
+
+// ---- dsh 0.1.7 user-override adapter (SettingsForms) ----
+//
+// dsh 0.1.7 removed `settings.register(ns, schema)`: the editable fields are now
+// the plugin's OWN Config schema and user overrides live in the profile patch,
+// projected through that schema as `gitCentralRemote` / `gitCentralBranch`. The
+// client contract still speaks `MdNotesSettings` (`gitCentral.remote`), so the
+// two shapes meet here — one translation point, exercised by unit tests.
+
+/**
+ * Read the user-override layer out of a dsh 0.1.7 `SettingsForms` descriptor
+ * (`describe()[].user`, already projected through the Config schema) and map it
+ * into the client-facing {@link MdNotesSettings} shape. Returns `undefined` for
+ * a non-object input (no overrides stored yet).
+ */
+export function overridesFromConfig(raw: unknown): MdNotesSettings | undefined {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const cfg = raw as Record<string, unknown>
+  const str = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined)
+  const remote = str(cfg.gitCentralRemote)
+  const branch = str(cfg.gitCentralBranch)
+  return {
+    gitMode: typeof cfg.gitMode === 'string' && GIT_MODES.includes(cfg.gitMode) ? cfg.gitMode as GitMode : undefined,
+    gitCentral: remote === undefined && branch === undefined ? undefined : { remote, branch },
+    gitRepos: cfg.gitRepos !== null && typeof cfg.gitRepos === 'object' && !Array.isArray(cfg.gitRepos)
+      ? cfg.gitRepos as Record<string, RepoSettings>
+      : undefined,
+    gitAutoPull: typeof cfg.gitAutoPull === 'boolean' ? cfg.gitAutoPull : undefined,
+    gitAuthorName: str(cfg.gitAuthorName),
+    gitAuthorEmail: str(cfg.gitAuthorEmail),
+  }
+}
+
+/**
+ * Translate a client `gitConfig` patch into the plugin Config keys the profile
+ * patch stores (the reverse of {@link overridesFromConfig}). Only whitelisted
+ * keys survive, so a write can never introduce a field the Config schema — and
+ * therefore dsh's `volatile` validation — does not know.
+ */
+export function configPatchFromSettings(patch: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(patch)) {
+    if (key === 'gitCentral') {
+      const central = value as { remote?: unknown; branch?: unknown } | null | undefined
+      if (central !== null && typeof central === 'object') {
+        if (typeof central.remote === 'string') out.gitCentralRemote = central.remote
+        if (typeof central.branch === 'string') out.gitCentralBranch = central.branch
+      }
+      continue
+    }
+    if (key === 'gitMode' || key === 'gitRepos' || key === 'gitAutoPull'
+      || key === 'gitAuthorName' || key === 'gitAuthorEmail') {
+      out[key] = value
+    }
+  }
+  return out
+}
+
+/**
+ * Merge a just-written patch into the cached override view, so reads in the
+ * SAME apply instance see the new values immediately. The profile patch reload
+ * (which re-applies this plugin with fresh config) lands asynchronously, and a
+ * client that reads right after a write must not observe stale settings.
+ */
+export function mergeOverrides(current: MdNotesSettings | undefined, patch: Record<string, unknown>): MdNotesSettings {
+  const next: MdNotesSettings = { ...current }
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) continue
+    if (key === 'gitCentral') {
+      next.gitCentral = { ...current?.gitCentral, ...(value as CentralSettings) }
+      continue
+    }
+    if (key === 'gitRepos') {
+      next.gitRepos = { ...current?.gitRepos, ...(value as Record<string, RepoSettings>) }
+      continue
+    }
+    if (key === 'gitMode' || key === 'gitAutoPull' || key === 'gitAuthorName' || key === 'gitAuthorEmail') {
+      (next as Record<string, unknown>)[key] = value
+    }
+  }
+  return next
 }

@@ -15,6 +15,7 @@ const checkout = resolve(process.env.DSH_CHECKOUT ?? join(root, '..', '..', 'dee
 
 const targets = [
   'vendor/cordis',
+  'vendor/cosmokit',
   'vendor/schemastery',
   'packages/client/store',
   'packages/client/ui-slots',

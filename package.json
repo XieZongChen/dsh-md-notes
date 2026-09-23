@@ -70,6 +70,7 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/cosmokit": "*",
     "@deepseek-ai/dsh-agent": "*",
     "@deepseek-ai/dsh-client-locale": "*",
     "@deepseek-ai/dsh-client-store": "*",
@@ -102,6 +103,9 @@
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
+      "optional": true
+    },
+    "@deepseek-ai/cosmokit": {
       "optional": true
     },
     "@deepseek-ai/dsh-client-locale": {

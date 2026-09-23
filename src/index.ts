@@ -14,7 +14,8 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { ApiResult, SessionRepairReport } from './contract.ts'
-import type { Context } from '@deepseek-ai/cordis'
+import type { Context, Volatile } from '@deepseek-ai/cordis'
+import { isVolatile } from '@deepseek-ai/cosmokit'
 import s from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 // Declaration-merge triggers so ctx.webServer / ctx.sessions / ctx.settings /
@@ -32,10 +33,21 @@ import {
 } from './host/git.ts'
 import { iconHandler, notesApiHandler, type GitApi, type NotesApiDeps, type WorkspaceEntry } from './host/http.ts'
 import { createKeyedLock, createKeyedMutex } from './host/keyed-lock.ts'
-import { MdNotesSettingsSchema, mergeSettings, MD_NOTES_NS, type MdNotesSettings } from './host/settings.ts'
+import {
+  configPatchFromSettings, MdNotesSettingsSchema, mergeOverrides, mergeSettings, MD_NOTES_NS,
+  overridesFromConfig, type MdNotesSettings,
+} from './host/settings.ts'
 import { registerNoteContextInjection } from './host/context-inject.ts'
 import { dshSessionsRoot, scanAndRepairSessions } from './host/sessions-repair.ts'
 import { createUpdateChecker } from './host/update.ts'
+
+/**
+ * One Config field as it actually arrives in `apply`: dsh 0.1.7 delivers a
+ * `volatile()` field as a LIVE REFERENCE (`.get()` per read) so a profile-patch
+ * edit applies without re-running `apply`. The union keeps older loaders that
+ * hand over plain values working.
+ */
+type Live<T> = Volatile<T> | T
 
 /** Plugin row config. */
 export interface Config {
@@ -46,19 +58,19 @@ export interface Config {
    * `/plugins/md-notes`, so a host-side override would silently sever the
    * client↔host link. The route is a fixed constant on both halves.)
    */
-  readonly gitMode?: 'off' | 'on' | 'shared' | 'own'
+  readonly gitMode?: Live<'off' | 'on' | 'shared' | 'own'>
   /** Shared repo remote URL — the deployment default for `gitCentral.remote`. */
-  readonly gitCentralRemote?: string
+  readonly gitCentralRemote?: Live<string>
   /** Shared repo branch — the deployment default for `gitCentral.branch`. */
-  readonly gitCentralBranch?: string
+  readonly gitCentralBranch?: Live<string>
   /** Per-workspace repos (L2 defaults, keyed by workspace id); L3 overrides per key. */
-  readonly gitRepos?: Record<string, import('./host/settings.ts').RepoSettings>
+  readonly gitRepos?: Live<Record<string, import('./host/settings.ts').RepoSettings>>
   /** Pull remote before opening a note (default true). */
-  readonly gitAutoPull?: boolean
+  readonly gitAutoPull?: Live<boolean>
   /** Commit author name; empty uses git's global config. */
-  readonly gitAuthorName?: string
+  readonly gitAuthorName?: Live<string>
   /** Commit author email; empty uses git's global config. */
-  readonly gitAuthorEmail?: string
+  readonly gitAuthorEmail?: Live<string>
   /**
    * Whether the npm update check may run (default true). When false the host
    * never contacts registry.npmjs.org — for offline / managed deployments.
@@ -69,21 +81,60 @@ export interface Config {
 export const name = 'md-notes'
 // 'tools' backs the push_notes agent tool (AI conflict resolution,
 // docs/ai-conflict.md); 'approval' powers its two-level native approval gate.
+// 'settings' is the dsh 0.1.7 SettingsForms service: the user-editable fields
+// live in the profile patch (see `apply`), so it must be present.
 export const inject = ['webServer', 'settings', 'tools', 'approval']
-export const Config: s<Config> = s.object({
-  gitMode: s.union([s.const('off'), s.const('on'), s.const('shared'), s.const('own')]).default('off'),
-  gitCentralRemote: s.string().default(''),
-  gitCentralBranch: s.string().default(''),
+// Writable fields are `volatile`: that is how dsh 0.1.7 marks a Config field as
+// user-editable through `settings.update` (and how the value keeps updating
+// live without re-running `apply` — read it via `plainConfig`/`.get()`, never
+// as a plain value). `checkUpdate` stays non-volatile: a deployment switch, not
+// user config. No `s<Config>` annotation: volatile fields make the schema's
+// inferred config type the Live-typed interface above.
+export const Config = s.object({
+  gitMode: s.union([s.const('off'), s.const('on'), s.const('shared'), s.const('own')]).default('off').volatile(),
+  gitCentralRemote: s.string().default('').volatile(),
+  gitCentralBranch: s.string().default('').volatile(),
   gitRepos: s.dict(s.object({
     remote: s.string().required(false),
     branch: s.string().required(false),
     subpath: s.string().required(false),
-  })).default({}),
-  gitAutoPull: s.boolean().default(true),
-  gitAuthorName: s.string().default(''),
-  gitAuthorEmail: s.string().default(''),
+  })).default({}).volatile(),
+  gitAutoPull: s.boolean().default(true).volatile(),
+  gitAuthorName: s.string().default('').volatile(),
+  gitAuthorEmail: s.string().default('').volatile(),
   checkUpdate: s.boolean().default(true),
 })
+
+/** Resolve one Live config field to its current plain value. */
+function liveValue<T>(value: Live<T> | undefined): T | undefined {
+  if (value === undefined) return undefined
+  return isVolatile(value) ? (value.get() as T | undefined) : (value as T | undefined)
+}
+
+/**
+ * Snapshot the volatile Config fields into the plain shape `mergeSettings`
+ * expects. Called per read (never cached): that is what makes a profile-patch
+ * edit take effect immediately.
+ */
+function plainConfig(config: Config): {
+  gitMode?: 'off' | 'on' | 'shared' | 'own'
+  gitCentralRemote?: string
+  gitCentralBranch?: string
+  gitRepos?: Record<string, import('./host/settings.ts').RepoSettings>
+  gitAutoPull?: boolean
+  gitAuthorName?: string
+  gitAuthorEmail?: string
+} {
+  return {
+    gitMode: liveValue(config.gitMode),
+    gitCentralRemote: liveValue(config.gitCentralRemote),
+    gitCentralBranch: liveValue(config.gitCentralBranch),
+    gitRepos: liveValue(config.gitRepos),
+    gitAutoPull: liveValue(config.gitAutoPull),
+    gitAuthorName: liveValue(config.gitAuthorName),
+    gitAuthorEmail: liveValue(config.gitAuthorEmail),
+  }
+}
 
 /** Minimal shape of the webServer route registration used here. */
 interface WebServerLike {
@@ -94,13 +145,26 @@ interface WebServerLike {
   }): () => void
 }
 
-/** Minimal settings-service face (register → scope with get/update). */
+/**
+ * Minimal settings-service faces. dsh ≤0.1.6 exposed `settings.register(ns,
+ * schema)` → a scoped get/update pair; dsh 0.1.7 replaced that with
+ * `SettingsForms` — the editable fields are the plugin's OWN Config schema,
+ * user overrides live in the profile patch, and writes go through
+ * `settings.update(entryId, patch)` (volatile fields only). Both shapes are
+ * detected at load so one build serves either dsh line.
+ */
 interface SettingsScopeLike {
   get(): MdNotesSettings | undefined
   update(patch: object): Promise<void>
 }
-interface SettingsServiceLike {
-  register(ns: unknown, schema: unknown): SettingsScopeLike
+interface SettingsFormsLike {
+  describe(): Array<{ ns: string; user?: unknown }>
+  update(ns: string, patch: object, expectedRevision?: number): Promise<void>
+  /** Suppress the auto-generated config page (this plugin ships its own). */
+  configure(presentation: { auto?: boolean }, owner?: unknown): () => void
+}
+interface SettingsServiceLike extends Partial<SettingsFormsLike> {
+  register?(ns: unknown, schema: unknown): SettingsScopeLike
 }
 
 /** Minimal workspace-registry face. */
@@ -126,10 +190,55 @@ export function apply(ctx: Context, config: Config): void {
   const web = ctx.get('webServer') as WebServerLike | undefined
   if (web === undefined) return
 
-  // --- settings namespace (L3) ---
-  const settingsService = ctx.get('settings') as SettingsServiceLike | undefined
-  const scope = settingsService?.register(MD_NOTES_NS, MdNotesSettingsSchema)
-  const readSettings = (): MdNotesSettings => mergeSettings(config, scope?.get())
+  // --- settings: L2 Config + user overrides ---
+  // dsh 0.1.7 (SettingsForms) removed `settings.register(ns, schema)`: the
+  // editable fields are this plugin's OWN Config schema (the `volatile` ones),
+  // user overrides live in the profile patch, and writes go through
+  // `settings.update(entryId, patch, revision?)`. `MD_NOTES_NS` is both our
+  // namespace and our Loader entry id, so the section is addressed the same way.
+  const settings = ctx.get('settings') as SettingsServiceLike | undefined
+  /** Cached user-override view; refreshed on write (see `mergeOverrides`). */
+  let overridesCache: MdNotesSettings | undefined
+
+  /**
+   * This plugin's user overrides — the profile patch, projected through the
+   * Config schema (`describe()[].user`). Read lazily and cached: `describe()`
+   * only lists entries whose fiber is already ACTIVE, which our own fiber may
+   * not be while `apply` still runs.
+   */
+  const userOverrides = (): MdNotesSettings => {
+    if (overridesCache !== undefined) return overridesCache
+    let raw: unknown
+    try {
+      raw = settings?.describe?.().find((descriptor) => descriptor.ns === MD_NOTES_NS)?.user
+    } catch {
+      return {}
+    }
+    const parsed = overridesFromConfig(raw)
+    if (parsed !== undefined) overridesCache = parsed
+    return parsed ?? {}
+  }
+  // Read through the volatile references every time — that is what makes a
+  // profile-patch edit visible without a reload.
+  const readSettings = (): MdNotesSettings => mergeSettings(plainConfig(config), userOverrides())
+
+  // dsh 0.1.7 would otherwise auto-generate a config page from the volatile
+  // fields; this plugin ships its own settings section. Guarded: `configure`
+  // throws if the fiber already has a policy, and throwing here would fail the
+  // whole plugin load.
+  const configureSettings = settings?.configure
+  if (typeof configureSettings === 'function' && settings !== undefined) {
+    const owner = settings
+    ctx.effect(() => {
+      try {
+        const dispose = configureSettings.call(owner, { auto: false }, ctx.fiber)
+        return () => { dispose() }
+      } catch (error: unknown) {
+        console.warn('[dsh-md-notes] settings presentation not configured:', error)
+        return () => {}
+      }
+    }, 'dsh-md-notes: settings presentation')
+  }
 
   // --- workspace resolution ---
   const workspaces = (): WorkspaceRegistryLike | undefined => ctx.get('workspaceRegistry') as WorkspaceRegistryLike | undefined
@@ -184,9 +293,27 @@ export function apply(ctx: Context, config: Config): void {
     return ws?.id
   }
 
+  /**
+   * Persist user settings into the profile patch (`settings.update`, 0.1.7).
+   * Only volatile Config paths are accepted — the whole writable set is marked
+   * volatile above. The cached override view is updated in place so a read in
+   * the same request cycle already sees the write (the patch reload that
+   * re-applies this plugin lands asynchronously).
+   */
   const updateSettings = async (patch: Record<string, unknown>): Promise<void> => {
-    if (scope === undefined) throw new Error('settings service unavailable')
-    await scope.update(patch)
+    if (typeof settings?.update !== 'function') throw new Error('settings service unavailable')
+    // Validate BEFORE writing: the profile patch is re-validated on every boot,
+    // so a malformed value would not merely fail this save — it would break the
+    // plugin load on the next start. A partial patch is fine (every field is
+    // optional), and validation also strips anything the wire schema disowns.
+    let validated: MdNotesSettings
+    try {
+      validated = MdNotesSettingsSchema(patch)
+    } catch (error: unknown) {
+      throw new Error(`invalid settings: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    await settings.update(MD_NOTES_NS, configPatchFromSettings(validated as Record<string, unknown>))
+    overridesCache = mergeOverrides(userOverrides(), validated as Record<string, unknown>)
   }
 
   // Serialize all git operations per clone directory. git.ts runs
@@ -314,7 +441,7 @@ export function apply(ctx: Context, config: Config): void {
     listWorkspaces,
     workspaceIdForSession,
     updateSettings,
-    readSettings: () => (scope?.get() ?? {}) as Record<string, unknown>,
+    readSettings: () => userOverrides() as Record<string, unknown>,
     hasWorkspaces: () => {
       const registry = workspaces()
       return registry !== undefined && registry.list().length > 0

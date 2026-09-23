@@ -35,6 +35,12 @@
   跨步骤去重保持连续（含插件 ≤0.12.0 时期 `md-notes` 裸 kind 记录的兼容识别）；
   注入上下文行的来源标签相应由 `md-notes` 变为 `plugin:md-notes`。笔记管理界面
   图标随 ui-primitives「视觉语言统一」改用 `*Medium` 命名（视觉随 dsh 新版）。
+  另适配 dsh 0.1.7 的 **`SettingsForms` 设置层**：dsh 移除了 `ctx.settings.register()`
+  （沿用旧接口会让 host 侧在加载时抛错、整个插件不可用），用户设置改为存放在 profile
+  补丁、经插件自身的 `Config` schema（可写字段标 `volatile`）投影，写入走
+  `settings.update(条目 id, 补丁)` 且在写入前用 wire schema 校验；本插件自带设置分区，
+  故以 `configure({ auto: false })` 关掉 dsh 自动生成的配置页。**本插件自此要求
+  dsh ≥ `0.1.7-rc.1`**（`volatile` schema 能力随该版本引入）。
 - **编辑器支持粘贴 / 拖入图片**：在笔记编辑框里粘贴截图（或把图片文件拖进来），
   图片存入工作区的 `.dsh-notes/assets/`，并在光标处插入相对引用
   `![](assets/图片名.png)`；预览内联显示、点击放大。支持 PNG / JPG / GIF / WebP /

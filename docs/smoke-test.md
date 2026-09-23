@@ -38,6 +38,9 @@ CI（GitHub Actions）在每次 push 时跑同一套测试。**护栏不绿不�
 - [ ] 已**重启 dsh web**（host 侧改动必须重启；纯前端改动可跳过）
 - [ ] 浏览器**强制刷新**页面（client 侧改动）
 - [ ] dsh 侧边栏已存在至少一个工作区
+- [ ] **host 插件确已加载**（0.1.7 换过设置 API，加载期抛错会让整个插件静默失效）：
+      浏览器能打开 `/plugins/md-notes/icon.svg`（返回图片而非 404），或 `curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3080/plugins/md-notes/icon.svg` 得 `401`/`200`。
+      若为 `404`：**先重启 dsh web**；仍 404 则看启动日志里 `name: 'md-notes', type: 'error'` 那条（host `apply` 抛错 ⇒ 侧栏笔记图标缺失 + 笔记列表为空）。
 
 ---
 

@@ -45,6 +45,15 @@ Only user-visible functional changes are recorded (no documentation, code refact
   injected-context row's source label changes from `md-notes` to
   `plugin:md-notes`. Notes-manager icons follow ui-primitives' "unified client
   visual language" rename to the `*Medium` family (visuals track the new dsh).
+  Also adapted to dsh 0.1.7's **`SettingsForms` settings layer**: dsh removed
+  `ctx.settings.register()` (keeping the old call made the host half throw at
+  load, taking the whole plugin down), so user settings now live in the profile
+  patch, projected through this plugin's own `Config` schema (writable fields
+  marked `volatile`), and are written with `settings.update(entryId, patch)`
+  after wire-schema validation. The plugin ships its own settings section, so
+  `configure({ auto: false })` suppresses dsh's auto-generated config page.
+  **The plugin now requires dsh ≥ `0.1.7-rc.1`** (the `volatile` schema
+  capability arrives with that version).
 - **Paste or drop images into the editor**: pasting a screenshot (or dropping an
   image file) into a note's editor stores it under the workspace's
   `.dsh-notes/assets/` and inserts a relative reference
