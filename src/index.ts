@@ -503,12 +503,17 @@ export function apply(ctx: Context, config: Config): void {
   /**
    * The session cwd's OWN notes scope, when that directory is not a registered
    * workspace. Headless/SDK runs and ad-hoc directories land here; without it
-   * those sessions would silently read or write somebody else's notes. The
-   * existence check means a read path never creates a `.dsh-notes` dir.
+   * those sessions would silently read or write somebody else's notes. An
+   * already-registered directory returns `undefined` so the registered scope
+   * (with its real workspace title) stays the one that answers. The existence
+   * check means a read path never creates a `.dsh-notes` dir.
    */
   const localAgentScope = async (cwd: string | undefined): Promise<SearchScope | undefined> => {
     if (cwd === undefined) return undefined
     const dir = path.join(cwd, '.dsh-notes')
+    if (registeredAgentScopes(undefined).some((scope) => path.resolve(scope.dir) === path.resolve(dir))) {
+      return undefined
+    }
     try {
       await stat(dir)
     } catch {
