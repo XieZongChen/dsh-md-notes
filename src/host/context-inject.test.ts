@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Context } from '@deepseek-ai/cordis'
 import type { PreStepDecision } from '@deepseek-ai/dsh-agent'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
-import { NOTE_CONTEXT_PLUGIN, registerNoteContextInjection } from './context-inject.ts'
+import { NOTE_CONTEXT_KIND, registerNoteContextInjection } from './context-inject.ts'
 
 vi.mock('@deepseek-ai/dsh-llm', () => ({
   createUserMessage: (init: { content: Array<{ type: string; text: string }>; source?: unknown }) =>
@@ -101,7 +101,7 @@ describe('note context injection', () => {
     // since the claimed message is the array's last element at index 1).
     expect(result.messages[1]).toBe(claimed[0])
     expect(injectedText(result.messages[2] as UserMessage)).toContain('Secret details')
-    expect((result.messages[2] as UserMessage).source).toEqual({ kind: 'plugin', plugin: NOTE_CONTEXT_PLUGIN, path })
+    expect((result.messages[2] as UserMessage).source).toEqual({ kind: NOTE_CONTEXT_KIND, path })
   })
 
   it('injects AFTER trailing history: content lands behind the last claimed message', async () => {
@@ -173,9 +173,23 @@ describe('note context injection', () => {
     const { cwd, path } = await workspaceWithNote('dup.md', 'D')
     const captured = register()
     // The claimed batch already carries an injected message for this path
-    // (official `plugin` source variant, labeled by the plugin name).
-    const alreadyInjected = msg('injected earlier', { kind: 'plugin', plugin: NOTE_CONTEXT_PLUGIN, path })
+    // (our producer-owned kind; V3→V4-migrated history reads back the same).
+    const alreadyInjected = msg('injected earlier', { kind: NOTE_CONTEXT_KIND, path })
     const claimed = [msg('ref .dsh-notes/dup.md'), alreadyInjected]
+    const decision = { kind: 'enter', messages: [...claimed] } as unknown as PreStepDecision
+
+    const result = await run(captured, cwd, claimed, decision)
+    expect(result).toBe(decision)
+  })
+
+  it('does not re-inject over a legacy bare-md-notes record from plugin ≤0.12.0', async () => {
+    const { cwd, path } = await workspaceWithNote('legacy.md', 'L')
+    const captured = register()
+    // V3-native logs written by plugin ≤0.12.0 carry the bare kind; V4's
+    // direct-kind retention passes them through unchanged, so the dedupe
+    // guard must still recognize them.
+    const legacyInjected = msg('injected long ago', { kind: 'md-notes', path })
+    const claimed = [msg('ref .dsh-notes/legacy.md'), legacyInjected]
     const decision = { kind: 'enter', messages: [...claimed] } as unknown as PreStepDecision
 
     const result = await run(captured, cwd, claimed, decision)

@@ -4,9 +4,11 @@
  * ≤0.12.0 on dsh ≤0.1.3 injected note context as `user/message` events with
  * `source: { kind: 'md-notes', path }`, and the V0→V3 session-log migration
  * whitelists `source.kind` — `md-notes` is not on the list, so the WHOLE log
- * is rejected. New plugin versions write the official `{ kind: 'plugin',
- * plugin: 'md-notes', path }` form; this sweep rewrites the legacy form in
- * old logs to the same official shape.
+ * is rejected. New plugin versions write their own producer-owned
+ * `plugin:md-notes` kind (dsh ≥0.1.7 / Session V4); this sweep rewrites the
+ * legacy form in old logs to the official `plugin`-wrapper shape the V0→V3
+ * migration chain accepts — dsh's V3→V4 step then maps that wrapper to
+ * `plugin:md-notes` on read, so repaired logs and new writes converge.
  *
  * The rewrite target is the MINIMAL official form `{ kind: 'plugin',
  * plugin: 'md-notes' }` — the v0→v1 migration validates a plugin source's

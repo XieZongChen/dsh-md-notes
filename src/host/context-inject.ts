@@ -21,27 +21,48 @@ import { readFile } from 'node:fs/promises'
 import { resolve as resolvePath } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type { PreStepDecision } from '@deepseek-ai/dsh-agent'
-import { createUserMessage, type MessageSourceMap } from '@deepseek-ai/dsh-llm'
+import { createUserMessage } from '@deepseek-ai/dsh-llm'
 import type { UserMessage } from '@deepseek-ai/dsh-session'
 
 /**
- * Durable source of the injected note context: the OFFICIAL `plugin` variant —
- * dsh's V2→V3 session-log migration (0.1.5-alpha.1) whitelists `source.kind`
- * and refuses whole logs over unclassified kinds, so a custom `'md-notes'` kind
- * would make every session that used a `@` reference unreadable. ui-chat's
- * contextProvenance labels `plugin` sources by their `plugin` field, so the
- * injected-context row keeps its `md-notes` label. `path` rides along as the
- * cross-step dedupe key (extra keys are valid on the `plugin` variant).
+ * Durable source of the injected note context: this plugin's own
+ * producer-owned kind. dsh 0.1.7 (Session V4) removed the shared `plugin`
+ * wrapper kind — every producer now declares its own `MessageSourceMap` key —
+ * and the V3→V4 log migration rewrites historical
+ * `{ kind: 'plugin', plugin: 'md-notes', … }` events to exactly this
+ * `plugin:`-prefixed kind (every other field, the dedupe `path` included, is
+ * preserved), so new writes and migrated history share one identity. ui-chat
+ * renders a non-`user` source as an injected-context row labeled by the bare
+ * kind. The `plugin:` prefix is the V4 convention for third-party producers
+ * and keeps our kind from colliding with dsh's first-party vocabulary.
  */
-export const NOTE_CONTEXT_PLUGIN = 'md-notes'
+export const NOTE_CONTEXT_KIND = 'plugin:md-notes'
 
-/** What the injection writes: a `plugin` source plus the dedupe key. */
-type NoteContextSource = MessageSourceMap['plugin'] & { readonly path?: string }
+/** What the injection writes: our producer kind plus the dedupe key. */
+export interface NoteContextSource {
+  readonly kind: typeof NOTE_CONTEXT_KIND
+  /** Workspace-absolute note path; the cross-step dedupe key. */
+  readonly path?: string
+}
+
+declare module '@deepseek-ai/dsh-llm' {
+  interface MessageSourceMap {
+    'plugin:md-notes': NoteContextSource
+  }
+}
+
+/**
+ * Any durable record the injection may have written, current or legacy:
+ * `plugin:md-notes` covers new writes and V3→V4-migrated history; bare
+ * `md-notes` covers plugin ≤0.12.0 records that V4's direct-kind retention
+ * passes through unchanged (V3-native logs).
+ */
+type NoteContextRecord = NoteContextSource | { readonly kind: 'md-notes'; readonly path?: string }
 
 /** Whether a message source is one of our injected note-context rows. */
-function isNoteContextSource(source: unknown): source is NoteContextSource {
-  const s = source as { kind?: string; plugin?: string } | undefined
-  return s?.kind === 'plugin' && s.plugin === NOTE_CONTEXT_PLUGIN
+function isNoteContextSource(source: unknown): source is NoteContextRecord {
+  const s = source as { kind?: string } | undefined
+  return s?.kind === NOTE_CONTEXT_KIND || s?.kind === 'md-notes'
 }
 
 /**
@@ -117,7 +138,7 @@ export function registerNoteContextInjection(ctx: Context): () => void {
     // citations any renderer can recognize. Instructions are best-effort
     // guidance, not a guarantee.
     const injected = fresh.map(note => {
-      const source: NoteContextSource = { kind: 'plugin', plugin: NOTE_CONTEXT_PLUGIN, path: note.path }
+      const source: NoteContextSource = { kind: NOTE_CONTEXT_KIND, path: note.path }
       return createUserMessage({
         content: [{
           type: 'text',
