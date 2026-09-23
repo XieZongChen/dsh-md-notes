@@ -153,6 +153,49 @@ export async function createNote(dir: string, rawTitle: string, rawName?: string
   return { ok: true, name }
 }
 
+/** Whether one note file exists (name normalized through {@link sanitizeName}). */
+export async function noteExists(dir: string, rawName: string): Promise<boolean> {
+  try {
+    await stat(join(dir, sanitizeName(rawName)))
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Append a block to one note, creating it (with a `# title` heading) when it
+ * does not exist. Never truncates: this is the agent-facing write path
+ * (`note_write`), where destroying a human's note is the failure that matters
+ * most. `rawTitle` names the heading of a note created this way.
+ */
+export async function appendNote(
+  dir: string,
+  rawName: string,
+  rawTitle: string,
+  content: string,
+): Promise<{ ok: true; name: string; created: boolean }> {
+  const name = sanitizeName(rawName)
+  await mkdir(dir, { recursive: true })
+  let existing = ''
+  try {
+    existing = await readFile(join(dir, name), 'utf8')
+  } catch {
+    /* new note */
+  }
+  const created = existing === ''
+  const title = String(rawTitle ?? '').trim() || name.replace(/\.md$/i, '')
+  const body = String(content ?? '')
+  const next = created
+    ? `# ${title}\n\n${body}\n`
+    : `${existing.replace(/\s*$/, '')}\n\n${body}\n`
+  await writeFile(join(dir, name), next, 'utf8')
+  const meta = await readMeta(dir)
+  meta[name] = { title: titleOf(next, name.replace(/\.md$/i, '')), updatedAt: Date.now() }
+  await writeMeta(dir, meta)
+  return { ok: true, name, created }
+}
+
 /** Remove one note file. */
 export async function deleteNote(dir: string, rawName: string): Promise<{ ok: true; name: string }> {
   const name = sanitizeName(rawName)

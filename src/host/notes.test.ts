@@ -3,7 +3,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
-  appendConversation, ASSET_MAX_BYTES, createNote, deleteNote, listNotes, readNote, sanitizeName, saveAsset, searchNotes, titleOf, writeNote,
+  appendConversation, appendNote, ASSET_MAX_BYTES, createNote, deleteNote, listNotes, noteExists,
+  readNote, sanitizeName, saveAsset, searchNotes, titleOf, writeNote,
 } from './notes.ts'
 
 const tempDirs: string[] = []
@@ -209,6 +210,46 @@ describe('saveAsset (pasted images, TODO §3.6)', () => {
     const res = await saveAsset(dir, huge.toString('base64'), 'png')
     if (res.ok) throw new Error('expected refusal')
     expect(res.code).toBe('asset-too-large')
+  })
+})
+
+describe('noteExists / appendNote (agent write path, docs/memory.md)', () => {
+  it('noteExists is false for a missing note and true after a write', async () => {
+    const dir = await tempDir()
+    expect(await noteExists(dir, 'deploy.md')).toBe(false)
+    await writeNote(dir, 'deploy.md', '# Deploy')
+    expect(await noteExists(dir, 'deploy.md')).toBe(true)
+    expect(await noteExists(dir, 'deploy')).toBe(true) // suffix optional, like every note API
+  })
+
+  it('creates a missing note under its title heading', async () => {
+    const dir = await tempDir()
+    const res = await appendNote(dir, 'deploy.md', 'Deploy', 'Token rotation: every Monday.')
+    expect(res).toEqual({ ok: true, name: 'deploy.md', created: true })
+    expect((await readNote(dir, 'deploy.md')).content).toBe('# Deploy\n\nToken rotation: every Monday.\n')
+  })
+
+  it('appends to an existing note without truncating it', async () => {
+    const dir = await tempDir()
+    await writeNote(dir, 'deploy.md', '# Deploy\n\nfirst fact')
+    const res = await appendNote(dir, 'deploy.md', 'ignored', 'second fact')
+    expect(res.created).toBe(false)
+    const content = (await readNote(dir, 'deploy.md')).content
+    expect(content).toBe('# Deploy\n\nfirst fact\n\nsecond fact\n')
+  })
+
+  it('sanitizes the name (path traversal stays inside the notes dir)', async () => {
+    const dir = await tempDir()
+    const res = await appendNote(dir, '../../escape.md', 'Escape', 'x')
+    expect(res.name).not.toContain('/')
+    expect((await listNotes(dir)).notes.some((n) => n.name === res.name)).toBe(true)
+  })
+
+  it('refreshes the meta title from the appended content', async () => {
+    const dir = await tempDir()
+    await appendNote(dir, 'x.md', 'First Title', 'body')
+    const listed = await listNotes(dir)
+    expect(listed.notes.find((n) => n.name === 'x.md')?.title).toBe('First Title')
   })
 })
 

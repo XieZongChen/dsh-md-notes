@@ -32,6 +32,12 @@ import {
   type ResolvedRepo, type WorkspaceInfo,
 } from './host/git.ts'
 import { iconHandler, notesApiHandler, type GitApi, type NotesApiDeps, type WorkspaceEntry } from './host/http.ts'
+import {
+  appendNote, createNote, listNotes, noteExists, readNote, sanitizeName, searchNotes, type SearchScope,
+} from './host/notes.ts'
+import {
+  agentRefs, pickAgentNote, recentAgentNotes, shapeAgentSearch, type AgentNoteRef,
+} from './host/note-tools.ts'
 import { createKeyedLock, createKeyedMutex } from './host/keyed-lock.ts'
 import {
   configPatchFromSettings, MdNotesSettingsSchema, mergeOverrides, mergeSettings, MD_NOTES_NS,
@@ -76,6 +82,14 @@ export interface Config {
    * never contacts registry.npmjs.org — for offline / managed deployments.
    */
   readonly checkUpdate?: boolean
+  /**
+   * Which agent-facing note tools the model may call (docs/memory.md):
+   * `'off'` none, `'read'` `note_search` + `note_read`, `'write'` all three
+   * (default). A deployment switch rather than a user setting, hence NOT
+   * volatile. `'read'` is the cautious mode: the agent may consult the notes
+   * but only a human edits them.
+   */
+  readonly agentTools?: 'off' | 'read' | 'write'
 }
 
 export const name = 'md-notes'
@@ -103,6 +117,7 @@ export const Config = s.object({
   gitAuthorName: s.string().default('').volatile(),
   gitAuthorEmail: s.string().default('').volatile(),
   checkUpdate: s.boolean().default(true),
+  agentTools: s.union([s.const('off'), s.const('read'), s.const('write')]).default('write'),
 })
 
 /** Resolve one Live config field to its current plain value. */
@@ -184,6 +199,47 @@ interface WorkspaceRegistryLike {
 interface ConnectionLike {
   requestRejection(request: { headers: IncomingMessage['headers'] }): 401 | 403 | undefined
 }
+
+/**
+ * Output-schema fragments for the agent note tools. Spelled out (rather than an
+ * open `additionalProperties: true` object) so the inferred tool-result type
+ * stays exact and the model gets real field names — see `AgentSearchRow`.
+ */
+const NOTE_HITS_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    line: { type: 'integer', required: true },
+    text: { type: 'string', required: true },
+  },
+} as const
+
+/** One note-search row (mirrors `AgentSearchRow`). */
+const NOTE_SEARCH_ROW_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    workspaceId: { type: 'string', required: true },
+    workspaceName: { type: 'string', required: true },
+    name: { type: 'string', required: true },
+    title: { type: 'string', required: true },
+    updatedAt: { type: 'integer', required: true },
+    titleMatch: { type: 'boolean', required: true },
+    totalHits: { type: 'integer', required: true },
+    hits: { type: 'array', required: true, items: NOTE_HITS_SCHEMA },
+  },
+} as const
+
+/** One ambiguous-reference candidate (mirrors the `note_read` return). */
+const NOTE_CANDIDATE_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    workspace: { type: 'string', required: true },
+    name: { type: 'string', required: true },
+    title: { type: 'string', required: true },
+  },
+} as const
 
 /** Plugin body. */
 export function apply(ctx: Context, config: Config): void {
@@ -413,6 +469,237 @@ export function apply(ctx: Context, config: Config): void {
     },
     presentCall: (args) => ({ card: 'generic', title: `Push notes (${args.workspaceId})`, kind: 'other' as const, rawInput: args }),
   })), 'dsh-md-notes: push_notes tool')
+
+  // --- agent-facing note tools (docs/memory.md) ---
+  // The pivot from "a human attaches a note with `@`" to "the model decides to
+  // look". A model cannot browse the manager UI, so these tools are the only
+  // way notes can improve an answer on their own initiative. Gated by
+  // `agentTools` (a deployment switch): `off` for a pure document manager,
+  // `read` for consult-but-do-not-write, `write` (default) for memory.
+  //
+  // The TOOL DESCRIPTION is the policy (step 2 of docs/memory.md): it is the
+  // one channel that reaches the model every step for free, so the "when to
+  // consult" guidance lives there rather than in a per-step injected message.
+  const agentTools = config.agentTools ?? 'write'
+
+  /** Workspaces one call may touch: an explicit id/name, else every workspace. */
+  const noteToolScopes = (workspaceRef: string | undefined): SearchScope[] => {
+    const all = listWorkspaces()
+    const needle = (workspaceRef ?? '').trim().toLowerCase()
+    const selected = needle === ''
+      ? all
+      : all.filter((ws) => ws.workspaceId.toLowerCase() === needle || ws.name.trim().toLowerCase() === needle)
+    return selected.map((ws) => ({ workspaceId: ws.workspaceId, workspaceName: ws.name, dir: ws.notesDir }))
+  }
+
+  /** Every addressable note across the given scopes (one `listNotes` pass each). */
+  const collectAgentRefs = async (scopes: readonly SearchScope[]): Promise<AgentNoteRef[]> => {
+    const refs: AgentNoteRef[] = []
+    for (const scope of scopes) {
+      const listed = await listNotes(scope.dir)
+      if (listed.ok) refs.push(...agentRefs({ workspaceId: scope.workspaceId, workspaceName: scope.workspaceName }, listed.notes))
+    }
+    return refs
+  }
+
+  /** The session's own session id (undefined outside an agent turn). */
+  const sessionIdOf = (exec: { agent?: { id: unknown } }): string | undefined =>
+    exec.agent === undefined ? undefined : String(exec.agent.id)
+
+  /** The one workspace a read/write defaults to: the session's, or the only one. */
+  const defaultScope = (sessionId: string | undefined, workspaceRef: string | undefined): SearchScope | undefined => {
+    const scopes = noteToolScopes(workspaceRef)
+    if ((workspaceRef ?? '').trim() !== '') return scopes[0]
+    const own = workspaceIdForSession(sessionId)
+    return scopes.find((scope) => scope.workspaceId === own) ?? (scopes.length === 1 ? scopes[0] : undefined)
+  }
+
+  if (agentTools !== 'off') {
+    ctx.effect(() => ctx.tools.register(defineTool({
+      name: 'note_search',
+      description: 'Search the user\'s dsh notes — a durable, human-curated knowledge base kept per workspace under `.dsh-notes`. '
+        + 'Consult it BEFORE answering when the task depends on project background, conventions, past decisions, environment facts, or stated user preferences that the repository does not spell out. '
+        + 'Omit `query` to list the most recently updated notes when you do not yet know what the library holds. '
+        + 'Follow up with note_read for full text — never claim a note lacks something you have not read.',
+      parameters: {
+        query: { type: 'string', description: 'Whitespace-separated keywords (all must match). Omit to list recent notes.' },
+        workspace: { type: 'string', description: 'Workspace id or name. Defaults to every workspace.' },
+        limit: { type: 'number', description: 'Maximum notes to return (default 8, max 25).' },
+      },
+      output: {
+        schema: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean', required: true },
+            listed: { type: 'boolean' },
+            truncated: { type: 'boolean' },
+            results: { type: 'array', items: NOTE_SEARCH_ROW_SCHEMA },
+            code: { type: 'string' },
+            error: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        render: (_args, value) => [{
+          type: 'text',
+          text: value.ok
+            ? `${value.listed ? 'Notes (most recent)' : 'Note search'}: ${String((value.results ?? []).length)} result(s)${value.truncated ? ' (truncated)' : ''}.`
+            : `Note search failed${value.code ? ` (${value.code})` : ''}: ${value.error ?? 'unknown error'}`,
+        }],
+      },
+      async execute(args) {
+        const scopes = noteToolScopes(args.workspace)
+        if (scopes.length === 0) {
+          return { ok: false, code: 'no-workspace', error: `No workspace matches "${args.workspace ?? ''}".` }
+        }
+        const limit = Math.min(Math.max(1, Math.trunc(args.limit ?? 8)), 25)
+        const query = (args.query ?? '').trim()
+        if (query === '') {
+          const refs = await collectAgentRefs(scopes)
+          const recent = recentAgentNotes(refs, limit)
+          return {
+            ok: true,
+            listed: true,
+            truncated: refs.length > recent.length,
+            results: recent.map((ref) => ({ ...ref, titleMatch: false, totalHits: 0, hits: [] })),
+          }
+        }
+        const found = await searchNotes(scopes, query)
+        const shaped = shapeAgentSearch(found.results, limit)
+        return { ok: true, listed: false, truncated: shaped.truncated || found.truncated, results: shaped.results }
+      },
+      presentCall: (args) => ({
+        card: 'generic', title: `Search notes: ${args.query ?? '(recent)'}`, kind: 'other' as const, rawInput: args,
+      }),
+    })), 'dsh-md-notes: note_search tool')
+
+    ctx.effect(() => ctx.tools.register(defineTool({
+      name: 'note_read',
+      description: 'Read one dsh note in full, by file name (with or without `.md`) or by its exact display title. '
+        + 'Use it after note_search returns a candidate, or when the user names a note directly. '
+        + 'A reference that matches notes in several workspaces comes back as candidates — pass `workspace` to disambiguate rather than guessing.',
+      parameters: {
+        name: { type: 'string', description: 'Note file name (e.g. a.md) or its exact display title.', required: true },
+        workspace: { type: 'string', description: 'Workspace id or name, to disambiguate.' },
+      },
+      output: {
+        schema: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean', required: true },
+            workspace: { type: 'string' },
+            name: { type: 'string' },
+            title: { type: 'string' },
+            content: { type: 'string' },
+            candidates: { type: 'array', items: NOTE_CANDIDATE_SCHEMA },
+            code: { type: 'string' },
+            error: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        render: (_args, value) => [{
+          type: 'text',
+          text: value.ok
+            ? `Note ${value.workspace ?? ''}/${value.name ?? ''} (${String((value.content ?? '').length)} chars).`
+            : `Note read failed${value.code ? ` (${value.code})` : ''}: ${value.error ?? 'unknown error'}`,
+        }],
+      },
+      async execute(args, exec) {
+        const scopes = noteToolScopes(args.workspace)
+        if (scopes.length === 0) {
+          return { ok: false, code: 'no-workspace', error: `No workspace matches "${args.workspace ?? ''}".` }
+        }
+        const picked = pickAgentNote(await collectAgentRefs(scopes), args.name, workspaceIdForSession(sessionIdOf(exec)))
+        if (!picked.ok) {
+          return picked.candidates.length === 0
+            ? { ok: false, code: 'not-found', error: `No note matches "${args.name}".` }
+            : {
+                ok: false,
+                code: 'ambiguous',
+                error: `Several notes match "${args.name}" — pass workspace to choose one.`,
+                candidates: picked.candidates.map((ref) => ({ workspace: ref.workspaceName, name: ref.name, title: ref.title })),
+              }
+        }
+        const scope = scopes.find((candidate) => candidate.workspaceId === picked.note.workspaceId)
+        if (scope === undefined) return { ok: false, code: 'not-found', error: `No note matches "${args.name}".` }
+        const read = await readNote(scope.dir, picked.note.name)
+        return {
+          ok: true,
+          workspace: picked.note.workspaceName,
+          name: read.name,
+          title: picked.note.title,
+          content: read.content,
+        }
+      },
+      presentCall: (args) => ({ card: 'generic', title: `Read note ${args.name}`, kind: 'other' as const, rawInput: args }),
+    })), 'dsh-md-notes: note_read tool')
+  }
+
+  if (agentTools === 'write') {
+    ctx.effect(() => ctx.tools.register(defineTool({
+      name: 'note_write',
+      description: 'Record a durable fact in the user\'s dsh notes so a FUTURE session can find it. '
+        + 'Use it when the user states a lasting preference, convention, environment fact, or decision — not for transient task state, and not for anything the repository already states. '
+        + 'APPEND-ONLY: an existing note is extended, never overwritten (`mode: "create"` refuses to touch an existing file). '
+        + 'Keep one entry short, self-contained, and attributable in prose; prefer extending a topic note found via note_search over creating a near-duplicate.',
+      parameters: {
+        name: { type: 'string', description: 'Note file name (.md optional) or the title of a new note.', required: true },
+        content: { type: 'string', description: 'The markdown block to record (one short entry).', required: true },
+        title: { type: 'string', description: 'Title for a newly created note. Defaults to the file name.' },
+        mode: { type: 'string', enum: ['append', 'create'], description: 'append (default) extends or creates; create refuses an existing note.' },
+        workspace: { type: 'string', description: 'Workspace id or name. Defaults to the calling session\'s workspace.' },
+      },
+      output: {
+        schema: {
+          type: 'object',
+          properties: {
+            ok: { type: 'boolean', required: true },
+            workspace: { type: 'string' },
+            name: { type: 'string' },
+            created: { type: 'boolean' },
+            code: { type: 'string' },
+            error: { type: 'string' },
+          },
+          additionalProperties: false,
+        },
+        render: (_args, value) => [{
+          type: 'text',
+          text: value.ok
+            ? `Note ${value.workspace ?? ''}/${value.name ?? ''} ${value.created === true ? 'created' : 'extended'}.`
+            : `Note write failed${value.code ? ` (${value.code})` : ''}: ${value.error ?? 'unknown error'}`,
+        }],
+      },
+      async execute(args, exec) {
+        const scope = defaultScope(sessionIdOf(exec), args.workspace)
+        if (scope === undefined) {
+          return { ok: false, code: 'no-workspace', error: 'No workspace resolved for this session — pass `workspace`.' }
+        }
+        const name = sanitizeName(args.name)
+        const mode = args.mode ?? 'append'
+        if (mode === 'create' && await noteExists(scope.dir, name)) {
+          return { ok: false, code: 'note-exists', error: `Note ${name} already exists — append instead of overwriting it.` }
+        }
+        const lock = await deps.lock.with(`${scope.workspaceId}/${name}`, async () => {
+          // Both branches report one shape so the tool result stays uniform.
+          if (mode === 'create') {
+            const made = await createNote(
+              scope.dir,
+              args.title !== undefined && args.title.trim() !== '' ? args.title : name,
+              name,
+              args.content,
+            )
+            return { name: made.name, created: true }
+          }
+          const appended = await appendNote(scope.dir, name, args.title ?? '', args.content)
+          return { name: appended.name, created: appended.created }
+        })
+        if (!lock.acquired) {
+          return { ok: false, code: 'note-writing', error: 'The note is being written, try again later.' }
+        }
+        return { ok: true, workspace: scope.workspaceName, name: lock.value.name, created: lock.value.created }
+      },
+      presentCall: (args) => ({ card: 'generic', title: `Write note ${args.name}`, kind: 'other' as const, rawInput: args }),
+    })), 'dsh-md-notes: note_write tool')
+  }
 
   // --- update check: latest npm version vs the installed one (cached 10 min;
   // checkUpdate:false keeps it fully offline — host/update.ts owns the logic) ---
