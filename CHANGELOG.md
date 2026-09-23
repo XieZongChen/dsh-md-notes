@@ -31,6 +31,21 @@ Only user-visible functional changes are recorded (no documentation, code refact
   change lands, check whether a `NEXT_VERSION` block exists — if not, add one, then record the
   change under it.
 
+## NEXT_VERSION
+
+### Added
+
+- **Adapt to deepseek-harness `0.1.7-rc.1` (Session V4)**: dsh removed the
+  shared `plugin` source wrapper (every producer now declares its own kind);
+  `@` note-reference context injection now writes this plugin's own
+  **`plugin:md-notes`** kind — exactly what dsh's V3→V4 log migration rewrites
+  third-party producer records to, so injected rows from history and new
+  writes share one identity and cross-step dedup stays continuous (legacy
+  bare-`md-notes` records from plugin ≤0.12.0 are recognized as well). The
+  injected-context row's source label changes from `md-notes` to
+  `plugin:md-notes`. Notes-manager icons follow ui-primitives' "unified client
+  visual language" rename to the `*Medium` family (visuals track the new dsh).
+
 ## [0.13.0] - 2026-09-11
 
 ### Breaking

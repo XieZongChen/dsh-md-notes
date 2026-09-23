@@ -24,6 +24,18 @@
   **不新增** `NEXT_VERSION`（开发空窗期不留空块）。写入改动时先检查是否存在 `NEXT_VERSION`
   块——没有就先添加一个，再在块下记录新改动。
 
+## NEXT_VERSION
+
+### Added
+
+- **适配 deepseek-harness `0.1.7-rc.1`（Session V4）**：dsh 移除了共享的 `plugin`
+  source wrapper（各 producer 改为自声明 kind），`@` 引用注入的上下文消息改用插件
+  自声明的 **`plugin:md-notes`** kind——与 dsh V3→V4 日志迁移对第三方 producer 的
+  改写结果完全一致，历史会话升级 dsh 后读出的旧注入记录与新写入共用同一 kind，
+  跨步骤去重保持连续（含插件 ≤0.12.0 时期 `md-notes` 裸 kind 记录的兼容识别）；
+  注入上下文行的来源标签相应由 `md-notes` 变为 `plugin:md-notes`。笔记管理界面
+  图标随 ui-primitives「视觉语言统一」改用 `*Medium` 命名（视觉随 dsh 新版）。
+
 ## [0.13.0] - 2026-09-11
 
 ### Breaking
