@@ -178,6 +178,18 @@ export interface ApiContract {
     req: { path: string; workspaceId: string; title?: string }
     res: ApiResult<{ name: string }>
   }
+  /**
+   * Store one pasted image under `<notesDir>/assets/` (TODO §3.6). `data` is
+   * bare base64 (`host/notes.ts` also tolerates a `data:` prefix) and `ext`
+   * names the claimed format; the host validates size + magic bytes and
+   * generates the basename itself — no request value reaches the filesystem as
+   * a path. The result `path` is relative to the notes dir, i.e. exactly the
+   * markdown destination (`assets/<name>`) the preview resolves.
+   */
+  saveAsset: {
+    req: { data: string; ext: string; workspaceId?: string; sessionId?: string }
+    res: ApiResult<{ path: string }>
+  }
   delete: {
     req: { name: string; workspaceId?: string }
     res: ApiResult<{ name: string }>

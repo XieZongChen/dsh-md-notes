@@ -11,12 +11,20 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { basename, dirname, resolve, sep } from 'node:path'
 import type { ApiResult, SessionRepairReport, UpdateInfo, WorkspaceNotes } from '../contract.ts'
 import {
-  appendConversation, createNote, deleteNote, listNotes, readNote, sanitizeName, searchNotes, writeNote,
+  appendConversation, ASSET_MAX_BYTES, createNote, deleteNote, listNotes, readNote, sanitizeName, saveAsset, searchNotes, writeNote,
 } from './notes.ts'
 import {
   GitError, type GitStatusView, type ResolvedRepo,
 } from './git.ts'
 import type { KeyedLock } from './keyed-lock.ts'
+
+/**
+ * Body cap for one API request. Sized from the asset ceiling: a pasted image
+ * arrives as base64 (~4/3 of the decoded bytes) inside a JSON envelope, so the
+ * cap must clear that plus a small margin for the other fields. Notes remain
+ * small; the asset ceiling is what forces this above the old 2 MiB.
+ */
+const BODY_MAX_BYTES = Math.ceil(ASSET_MAX_BYTES * 4 / 3) + 64 * 1024
 
 /** Read a JSON request body (bounded). */
 export async function readBody(req: IncomingMessage): Promise<unknown> {
@@ -25,7 +33,7 @@ export async function readBody(req: IncomingMessage): Promise<unknown> {
   for await (const chunk of req) {
     const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk))
     size += buf.length
-    if (size > 2 * 1024 * 1024) throw new Error('body too large')
+    if (size > BODY_MAX_BYTES) throw new Error('body too large')
     chunks.push(buf)
   }
   if (chunks.length === 0) return {}
@@ -194,6 +202,16 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       return lock.acquired
         ? lock.value
         : { ok: false, code: 'note-writing', error: 'The note is being written, try again later' }
+    }
+    case 'saveAsset': {
+      // Pasted-image storage (TODO §3.6): resolve the target notes dir from the
+      // workspace (or the session's workspace, same fallback as the notes
+      // methods), then let the domain validate + generate the name. The image
+      // lands in `<notesDir>/assets/`; the returned path is the markdown
+      // destination the editor inserts.
+      const dir = deps.resolveDir(workspaceId)
+      if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
+      return saveAsset(dir, String(req.data ?? ''), String(req.ext ?? ''))
     }
     case 'delete': {
       const dir = deps.resolveDir(workspaceId)

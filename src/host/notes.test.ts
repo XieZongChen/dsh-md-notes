@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
-  appendConversation, createNote, deleteNote, listNotes, readNote, sanitizeName, searchNotes, titleOf, writeNote,
+  appendConversation, ASSET_MAX_BYTES, createNote, deleteNote, listNotes, readNote, sanitizeName, saveAsset, searchNotes, titleOf, writeNote,
 } from './notes.ts'
 
 const tempDirs: string[] = []
@@ -141,6 +141,74 @@ describe('notes file ops', () => {
     // The file is written inside `dir` under a sanitized basename, not escaped.
     const listed = await listNotes(dir)
     expect(listed.notes.some((n) => n.name === '..-..-escape.md')).toBe(true)
+  })
+})
+
+describe('saveAsset (pasted images, TODO §3.6)', () => {
+  /** Signature-only payloads: `saveAsset` validates the head, not the body. */
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01])
+  const GIF = Buffer.from('GIF89a....', 'latin1')
+  const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10])
+  const WEBP = Buffer.concat([Buffer.from('RIFF', 'latin1'), Buffer.from([0, 0, 0, 0]), Buffer.from('WEBP', 'latin1')])
+
+  it('stores a png under assets/ and returns the notes-dir-relative reference', async () => {
+    const dir = await tempDir()
+    const res = await saveAsset(dir, PNG.toString('base64'), 'png')
+    if (!res.ok) throw new Error(`expected success, got ${res.code}`)
+    expect(res.path).toMatch(/^assets\/img-[a-z0-9]+-[0-9a-f]{6}\.png$/)
+    expect([...await readFile(join(dir, res.path))]).toEqual([...PNG])
+  })
+
+  it('generates the basename itself — the request cannot influence the path', async () => {
+    const dir = await tempDir()
+    // A traversal-shaped ext is not in the signature table, so it is refused
+    // outright rather than reaching any join().
+    const traversal = await saveAsset(dir, PNG.toString('base64'), '../../evil')
+    if (traversal.ok) throw new Error('expected refusal')
+    expect(traversal.code).toBe('asset-type')
+    // The accepted call's name is fully generated; nothing from the request.
+    const ok = await saveAsset(dir, PNG.toString('base64'), 'PNG')
+    if (!ok.ok) throw new Error('expected success')
+    expect(ok.path).not.toContain('..')
+  })
+
+  it('accepts the other whitelisted signatures (gif / jpeg / webp)', async () => {
+    const dir = await tempDir()
+    for (const [ext, bytes] of [['gif', GIF], ['jpg', JPEG], ['jpeg', JPEG], ['webp', WEBP]] as const) {
+      const res = await saveAsset(dir, bytes.toString('base64'), ext)
+      if (!res.ok) throw new Error(`expected ${ext} to be accepted, got ${res.code}`)
+      expect(res.path.endsWith(`.${ext}`)).toBe(true)
+    }
+  })
+
+  it('tolerates a data-URL prefix from the clipboard', async () => {
+    const dir = await tempDir()
+    const res = await saveAsset(dir, `data:image/png;base64,${PNG.toString('base64')}`, 'png')
+    expect(res.ok).toBe(true)
+  })
+
+  it('refuses bytes that do not match the claimed format', async () => {
+    const dir = await tempDir()
+    const res = await saveAsset(dir, Buffer.from('<script>alert(1)</script>').toString('base64'), 'png')
+    if (res.ok) throw new Error('expected refusal')
+    expect(res.code).toBe('asset-type')
+  })
+
+  it('refuses an empty or non-base64 payload', async () => {
+    const dir = await tempDir()
+    for (const data of ['', '   ', 'not base64 !!!']) {
+      const res = await saveAsset(dir, data, 'png')
+      if (res.ok) throw new Error(`expected refusal for ${JSON.stringify(data)}`)
+      expect(res.code).toBe('asset-empty')
+    }
+  })
+
+  it('refuses a payload past the byte ceiling', async () => {
+    const dir = await tempDir()
+    const huge = Buffer.concat([PNG, Buffer.alloc(ASSET_MAX_BYTES + 1)])
+    const res = await saveAsset(dir, huge.toString('base64'), 'png')
+    if (res.ok) throw new Error('expected refusal')
+    expect(res.code).toBe('asset-too-large')
   })
 })
 

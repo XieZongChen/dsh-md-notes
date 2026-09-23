@@ -6,6 +6,7 @@
  */
 
 import { mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
 import type { NoteHits, NoteSummary, SearchHit } from '../contract.ts'
 
@@ -213,6 +214,116 @@ export async function appendConversation(
   meta[name] = { title: titleOf(content + section, name.replace(/\.md$/i, '')), updatedAt: Date.now() }
   await writeMeta(dir, meta)
   return { ok: true, name: name }
+}
+
+// ---- pasted-image assets (TODO §3.6; editor paste/drop) ----
+
+/**
+ * Subdirectory of the notes dir holding pasted images. Markdown references it
+ * as `assets/<name>`, which the preview resolves against the note's own dir
+ * (relative path, so the reference survives a workspace move as long as the
+ * whole `.dsh-notes` tree moves with it). Git sync copies top-level `.md`
+ * only, so assets stay local until that scope is extended (TODO §3.6).
+ */
+export const ASSETS_DIR = 'assets'
+
+/**
+ * Decoded-byte cap for one pasted image. Also bounds the request body: the
+ * HTTP layer sizes its read limit from this value (`ASSETS_DIR` uploads are
+ * base64, ~4/3 the decoded size), and the `/api/file` serving route refuses
+ * anything past the harness's own image limit anyway.
+ */
+export const ASSET_MAX_BYTES = 8 * 1024 * 1024
+
+/** Whether the first bytes match `signature` (a short prefix comparison). */
+function startsWith(bytes: Buffer, signature: readonly number[]): boolean {
+  return bytes.length >= signature.length && signature.every((b, i) => bytes[i] === b)
+}
+
+/** ASCII bytes of a literal, for signatures that are text (`GIF89a`, `RIFF`…). */
+function ascii(text: string): number[] {
+  return [...text].map((c) => c.charCodeAt(0))
+}
+
+/**
+ * Accepted image formats by extension, each with the signature its bytes must
+ * carry. The check keeps a mislabeled payload (script, archive) out of a file
+ * the preview will later serve as an image; the set is deliberately raster +
+ * conservative (no SVG, whose markup is not a fixed signature).
+ */
+const ASSET_SIGNATURES: Readonly<Record<string, (bytes: Buffer) => boolean>> = {
+  png: (b) => startsWith(b, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  jpg: (b) => startsWith(b, [0xff, 0xd8, 0xff]),
+  jpeg: (b) => startsWith(b, [0xff, 0xd8, 0xff]),
+  gif: (b) => startsWith(b, ascii('GIF87a')) || startsWith(b, ascii('GIF89a')),
+  webp: (b) => startsWith(b, ascii('RIFF')) && b.length >= 12 && b.subarray(8, 12).toString('latin1') === 'WEBP',
+  bmp: (b) => startsWith(b, ascii('BM')),
+  avif: (b) => b.length >= 12 && b.subarray(4, 8).toString('latin1') === 'ftyp'
+    && ['avif', 'avis'].includes(b.subarray(8, 12).toString('latin1')),
+}
+
+/** The formats the paste handler may store, for client-side pre-filtering. */
+export const ASSET_EXTS: readonly string[] = Object.keys(ASSET_SIGNATURES)
+
+/** A generated, collision-resistant asset basename — never client-supplied. */
+function assetName(ext: string): string {
+  return `img-${Date.now().toString(36)}-${randomBytes(3).toString('hex')}.${ext}`
+}
+
+/**
+ * Store one pasted image under `<dir>/assets/` and return its path relative to
+ * the notes dir (the markdown reference the previews resolve). `data` is bare
+ * base64 (a `data:<mime>;base64,` prefix is tolerated); `ext` names the format
+ * and is checked against {@link ASSET_SIGNATURES}, so a payload whose bytes do
+ * not match its claimed format is refused rather than stored. The basename is
+ * generated here (a timestamp + random suffix), so no request value reaches the
+ * filesystem as a path — traversal and overwrite are structurally impossible.
+ * @param dir - absolute notes dir.
+ * @param data - base64 image bytes.
+ * @param ext - claimed extension (`png`, `jpg`, …).
+ * @returns the relative `assets/<name>` reference, or a coded refusal.
+ */
+export async function saveAsset(
+  dir: string,
+  data: string,
+  ext: string,
+): Promise<{ ok: true; path: string } | { ok: false; code: string; error: string }> {
+  const normalizedExt = String(ext ?? '').trim().toLowerCase().replace(/^\./, '')
+  const signature = ASSET_SIGNATURES[normalizedExt]
+  if (signature === undefined) {
+    return { ok: false, code: 'asset-type', error: `Unsupported image format: ${normalizedExt || '(none)'}` }
+  }
+  // Bare base64 only; strip the data-URL prefix a browser may hand us.
+  const payload = String(data ?? '').replace(/^data:[^,]*;base64,/i, '')
+  if (payload === '' || !/^[A-Za-z0-9+/=\s]+$/.test(payload)) {
+    return { ok: false, code: 'asset-empty', error: 'Image payload is empty or not base64' }
+  }
+  const bytes = Buffer.from(payload, 'base64')
+  if (bytes.length === 0) {
+    return { ok: false, code: 'asset-empty', error: 'Image payload is empty' }
+  }
+  if (bytes.length > ASSET_MAX_BYTES) {
+    return { ok: false, code: 'asset-too-large', error: `Image exceeds the ${ASSET_MAX_BYTES} byte limit` }
+  }
+  if (!signature(bytes)) {
+    return { ok: false, code: 'asset-type', error: `Image bytes do not match the claimed ${normalizedExt} format` }
+  }
+  const assetDir = join(dir, ASSETS_DIR)
+  await mkdir(assetDir, { recursive: true })
+  // `wx` refuses an existing name, so a (vanishingly unlikely) collision
+  // retries with a fresh suffix instead of overwriting another image.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const name = assetName(normalizedExt)
+    try {
+      await writeFile(join(assetDir, name), bytes, { flag: 'wx' })
+      return { ok: true, path: `${ASSETS_DIR}/${name}` }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+        return { ok: false, code: 'asset-write', error: 'Could not write the image file' }
+      }
+    }
+  }
+  return { ok: false, code: 'asset-write', error: 'Could not allocate a unique image name' }
 }
 
 // ---- full-text search (manager search box, docs/search.md §3–§4) ----

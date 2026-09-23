@@ -326,6 +326,47 @@ describe('notesApiHandler — createFromFile (document excerpt)', () => {
   })
 })
 
+describe('notesApiHandler — saveAsset (pasted images)', () => {
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00])
+
+  it('writes the image under the resolved notes dir and returns a relative path', async () => {
+    const deps = makeDeps()
+    const res = await call(notesApiHandler(deps), 'POST', {
+      method: 'saveAsset', workspaceId: 'w1', ext: 'png', data: PNG.toString('base64'),
+    })
+    expect(res.json['ok']).toBe(true)
+    const path = String(res.json['path'])
+    expect(path.startsWith('assets/')).toBe(true)
+    expect(readFileSync(join(deps.resolveDir() ?? '', path))).toEqual(PNG)
+  })
+
+  it('resolves a session-scoped caller through its workspace', async () => {
+    const deps = makeDeps({ workspaceIdForSession: (id) => (id === 's1' ? 'w1' : undefined) })
+    const res = await call(notesApiHandler(deps), 'POST', {
+      method: 'saveAsset', sessionId: 's1', ext: 'png', data: PNG.toString('base64'),
+    })
+    expect(res.json['ok']).toBe(true)
+  })
+
+  it('refuses when no workspace resolves (coded for the client to localize)', async () => {
+    const deps = makeDeps({ resolveDir: () => undefined })
+    const res = await call(notesApiHandler(deps), 'POST', {
+      method: 'saveAsset', ext: 'png', data: PNG.toString('base64'),
+    })
+    expect(res.json['ok']).toBe(false)
+    expect(res.json['code']).toBe('no-workspace')
+  })
+
+  it('surfaces the domain refusal codes (unsupported format)', async () => {
+    const deps = makeDeps()
+    const res = await call(notesApiHandler(deps), 'POST', {
+      method: 'saveAsset', workspaceId: 'w1', ext: 'exe', data: PNG.toString('base64'),
+    })
+    expect(res.json['ok']).toBe(false)
+    expect(res.json['code']).toBe('asset-type')
+  })
+})
+
 describe('iconHandler', () => {
   it('answers the fence rejection before touching the file', async () => {
     const handler = iconHandler('/nonexistent/icon.svg', () => 403)
