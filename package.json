@@ -59,6 +59,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "link-deps": "node scripts/link-deps.mjs",
+    "memory-eval": "node scripts/memory-eval.mjs",
     "bundle": "tsdown",
     "changelog:release": "node scripts/release-changelog.mjs",
     "prepublishOnly": "npm run build"
