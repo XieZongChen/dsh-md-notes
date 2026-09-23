@@ -45,6 +45,14 @@ Only user-visible functional changes are recorded (no documentation, code refact
   injected-context row's source label changes from `md-notes` to
   `plugin:md-notes`. Notes-manager icons follow ui-primitives' "unified client
   visual language" rename to the `*Medium` family (visuals track the new dsh).
+- **Paste or drop images into the editor**: pasting a screenshot (or dropping an
+  image file) into a note's editor stores it under the workspace's
+  `.dsh-notes/assets/` and inserts a relative reference
+  `![](assets/name.png)` at the caret; previews show it inline and enlarge it on
+  click. PNG / JPG / GIF / WebP / BMP / AVIF up to 8 MB each; an unsupported
+  format reports why and inserts nothing. Images stay local for now — Git sync
+  still mirrors `.md` only (see the
+  [user guide](docs/usage.md#inserting-images)).
 
 ## [0.13.0] - 2026-09-11
 

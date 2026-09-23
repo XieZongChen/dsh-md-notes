@@ -132,7 +132,7 @@
   并在 chip 前置插件 logo；
 - 发送后的消息行：`引用笔记 [标题](.dsh-notes/xxx.md)`（标准 markdown 链接语法，标题与路径
   结构化绑定；dsh 用户气泡是纯文本渲染，暂不可点击）；
-- 注入上下文行：通用「上下文注入」DisclosureRow（来源标 `md-notes`，内容头部带一行
+- 注入上下文行：通用「上下文注入」DisclosureRow（来源标 `plugin:md-notes`，内容头部带一行
   「引用约定：回答中引用用 markdown 链接」），无笔记专属外观。
 
 **设想**（各受 dsh 渲染机制约束，见 context.md §2.1/§3.3/§3.7）：
@@ -145,13 +145,13 @@
    - 受限点：chip 尺寸 4em 固定、无锚点不可合规注入（见上面平台问题最后一条），曾用
      `DshChipCell` 字体覆盖放大（6em/10em）已按规范移除——更大标签区需平台开放 chip 扩展点。
 2. **注入上下文行**：
-   - 来源标签显示**笔记标题**而非 `md-notes`（`contextProvenance` 对 `plugin` source 取
-     `plugin` 字段做标签，需在 source 里携带标题字段并期待上游支持，或改用 dsh 已有
-     form/provenance 通道）；
+   - 来源标签显示**笔记标题**而非裸 kind `plugin:md-notes`（`contextProvenance` 对非
+     `user` source 取 kind 名做标签，需在 source 里携带标题字段并期待上游支持，或改用
+     dsh 已有 form/provenance 通道）；
    - 行内摘要（标题 + 前 N 字）与更贴合的图标/配色（当前走通用 `OpaqueBody`）；
    - **手动删除持久化**：注入的笔记内容会一直留在会话历史里（直到 compaction）。在注入
      上下文行上加「删除」按钮：host 新增 API（如 `contextRemove(sessionId, path)`），按
-     source 为插件注入（`kind: 'plugin'` + `plugin: 'md-notes'`）+ `path` 定位该消息，用
+     source 为插件注入（`kind: 'plugin:md-notes'`）+ `path` 定位该消息，用
      surface `{ op: 'replace', start, end }`
      把它从模型可见历史中移除（compaction 同款机制）；只删注入内容、不动用户自己的消息；
      删除后不会复活（pre-step 只扫描新提交消息找引用）。
@@ -233,10 +233,15 @@
   （探索 dsh 快捷键注册扩展点；无扩展点则仅插件内监听）。
   验收：编辑不丢改动、字数可见。
 
-- **3.6 图片支持**（中）：拖拽 / 粘贴图片存入笔记同目录（或 `.dsh-notes/assets/`），
-  markdown 以相对路径引用并预览（MarkdownText 原生支持图片语法）。注意：Git 同步当前只
-  同步 `.md`（「Only `.md` files sync」），图片入库需扩展同步范围，需一并评估。
-  验收：截图可直接贴入并预览；若扩展同步则图片随笔记推送。
+- **3.6 图片支持**（中）：🚧 **部分落地（2026-09-24）**——粘贴 / 拖入图片存入
+  `<notesDir>/assets/`（host `saveAsset`：代码生成文件名 + 大小/魔数校验），编辑器在光标处
+  插入 `![](assets/…)`，预览内联显示并可点击放大（dsh 0.1.7 的
+  `MarkdownDelegateProvider.fileImages` 自带灯箱与失败标签）。**剩余**：Git 同步仍只镜像
+  `.md`——`git.ts` 的 `syncNotes` / `readNoteMap` / `deleteMissingNotes` / `unpushedCount`
+  全是文本语义（内容 diff、三方合并），二进制不能直接套用；扩展同步需先定「二进制冲突如何
+  呈现、删除如何同步」的语义（与 §2 可视化合并同源，属独立议题）。当前图片是本机文件、跨
+  设备不同步，已在 [usage.zh.md](usage.zh.md) 与 CHANGELOG 注明。
+  验收：截图可直接贴入并预览（✅）；图片随笔记推送（待同步语义定稿）。
 
 - **3.7 导出**（低）：单篇导出 md / HTML（浏览器下载）；全部导出打包 zip（需引入打包
   依赖，或逐篇下载）。

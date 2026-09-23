@@ -64,6 +64,21 @@ On create the note **opens directly in Edit mode**.
 - **Edit** tab: write markdown source.
 - **Save**: writes to the local `.md` file and refreshes the list.
 
+### Inserting images
+
+**Paste a screenshot** into the editor (or drag an image file onto it): the
+plugin stores it under that workspace's `.dsh-notes/assets/` and inserts a
+relative reference `![](assets/name.png)` at the caret. Switch to Preview to
+see it (shown inline, click to enlarge).
+
+- Supported formats: PNG / JPG / GIF / WebP / BMP / AVIF, up to 8 MB each; an
+  unsupported or oversized file reports why and inserts nothing.
+- The reference is relative to the note's directory, so it survives moving the
+  whole `.dsh-notes` tree.
+- **Note: images stay local for now** — Git sync mirrors `.md` note files only,
+  so images are not pushed with your notes (extending the sync scope is
+  pending).
+
 ### Searching notes
 
 The search box in the manager's top bar searches **every workspace** — titles
@@ -339,6 +354,6 @@ In dsh's right dockable sidebar, note files open in the plugin's **note viewer**
 - In the notes manager's search results, each note row has a "view in sidebar"
   action: opens the note in the right sidebar and dismisses the manager.
 - Local images in notes (relative to the note's directory, or absolute paths)
-  render inline in previews.
+  render inline in previews; click one to enlarge it.
 - Requires dsh ≥ 0.1.5 (a build with the right sidebar); on older builds the
   feature disables itself and everything else keeps working.

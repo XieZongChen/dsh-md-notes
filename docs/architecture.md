@@ -130,9 +130,15 @@ dsh-md-notes/
   notes 域 + git 域）、`iconHandler`（GET 返回打包的 SVG 图标）。
 - 上下文注入 `host/context-inject.ts`：监听 `agent/pre-step`，扫描已认领消息中的笔记路径
   （`.dsh-notes/…` 正则提取，相对会话 cwd 解析），读取内容并作为注入上下文消息
-  （source 用官方 `plugin` 变体 `{kind: 'plugin', plugin: 'md-notes', path}`，dsh 0.1.5 起
-  V2→V3 日志迁移对 source.kind 白名单校验，自定义 kind 会被拒读）折叠进模型请求——
-  引用可靠生效，不依赖模型自觉 `read`。
+  （source 用插件自声明的 producer-owned kind `{kind: 'plugin:md-notes', path}`——
+  dsh 0.1.7 / Session V4 移除了共享 `plugin` wrapper，各 producer 自声明 kind，且
+  V3→V4 迁移把历史 `{kind:'plugin', plugin:'md-notes', …}` 改写成同一 kind，新旧记录
+  共用身份、去重连续；更早的裸 `md-notes` 记录也识别）折叠进模型请求——引用可靠生效，
+  不依赖模型自觉 `read`。
+- **图片资源（host）**：`host/notes.ts` 的 `saveAsset(dir, data, ext)` 把编辑器粘贴/拖入的
+  图片写入 `<notesDir>/assets/`（扩展名白名单 + 字节魔数校验、解码后 8 MB 上限、文件名由
+  代码生成并用 `wx` 防覆盖；请求值不进路径）。客户端插入相对引用 `assets/<name>`，预览经
+  `path-images.ts` 改写成同源 `/api/file?path=…` 读取，与对话内本地图片同一词汇。
 - **写锁（host）**：`host/keyed-lock.ts` 实现通用 `KeyedLock`（键 = `note/<workspaceId>/<name>`），
   `write` / `appendConversation` / `delete` 三操作写入期间跨会话互斥，冲突返回错误码
   `note-writing`；client 端用 `busy.ts` 的 `BusyTracker` 镜像（`store.busy`）联动三处 UI。
@@ -167,8 +173,11 @@ client 的 `api<M>()` 按其推导精确返回类型；下表为可读摘要）�
 | `read` | `{ workspaceId?, name }` | `{ ok, name, content }` |
 | `write` | `{ workspaceId?, name, content }` | `{ ok, name }` |
 | `create` | `{ workspaceId?, title }` | `{ ok, name }`（空标题自动用 Untitled note） |
+| `createFromFile` | `{ workspaceId, path, title? }` | `{ ok, name }`（文档预览「存为笔记」：文件须在工作区内、≤512 KB；右侧栏文档预览的 `sidebar.right.tab.document.actions` 席位动作调用） |
+| `saveAsset` | `{ workspaceId?, data, ext }` | `{ ok, path }`（编辑器粘贴的图片写入 `<notesDir>/assets/`，返回相对笔记目录的 `assets/<name>`；扩展名白名单 + 字节魔数校验、解码后 ≤8 MB、文件名由 host 生成） |
 | `delete` | `{ workspaceId?, name }` | `{ ok, name }` |
 | `appendConversation` | `{ noteName, questionText, answerText, sessionTitle? }` | `{ ok, name }`（文本由 client 从会话快照提取，host 只写文件） |
+| `search` | `{ query }` | `{ ok, results: NoteHits[], truncated }`（跨工作区全文搜索，见 [search.md](search.md)） |
 | `gitStatus` | `{ workspaceId? }` | `{ ok, status: { repoDir, subdir, branch, uncommitted, unpushed, lastCommit?, remote } }`（`unpushed` 0.7.0 新增，本地与仓库差异数；`remote` 为脱敏展示副本，不含 userinfo 凭据） |
 | `gitInit` | `{ workspaceId? }` | `{ ok }`（按 URL clone） |
 | `gitPush` | `{ workspaceId?, message, overwrite? }` | `{ ok }` 或 `{ ok:false, code, changed? }` |
