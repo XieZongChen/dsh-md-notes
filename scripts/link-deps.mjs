@@ -22,6 +22,7 @@ const targets = [
   'packages/client/ui-conversation',
   'packages/client/ui-sidebar',
   'packages/client/ui-sidebar-right',
+  'packages/client/ui-sidebar-documentpreview',
   'packages/client/ui-dockkit',
   'packages/client/resources',
   'packages/util/workspace-path',

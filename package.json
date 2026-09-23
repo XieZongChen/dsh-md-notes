@@ -97,7 +97,8 @@
     "@deepseek-ai/dsh-workspace": "*",
     "@deepseek-ai/schemastery": "*",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "@deepseek-ai/dsh-client-ui-sidebar-documentpreview": "*"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/cordis": {
@@ -182,6 +183,9 @@
       "optional": true
     },
     "react-dom": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-ui-sidebar-documentpreview": {
       "optional": true
     }
   },

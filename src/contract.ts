@@ -168,6 +168,16 @@ export interface ApiContract {
     req: { title: string; name?: string; workspaceId?: string }
     res: ApiResult<{ name: string }>
   }
+  /**
+   * Create one note seeded with a workspace file's text — the document
+   * preview's "save excerpt" action (dsh 0.1.7 `sidebar.right.tab.document.actions`).
+   * `path` must resolve inside the target workspace's root (the previewed file
+   * always is); the note title defaults to the file's basename without extension.
+   */
+  createFromFile: {
+    req: { path: string; workspaceId: string; title?: string }
+    res: ApiResult<{ name: string }>
+  }
   delete: {
     req: { name: string; workspaceId?: string }
     res: ApiResult<{ name: string }>

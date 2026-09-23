@@ -23,8 +23,11 @@ import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: pulls the SlotRegistry service merge (ctx.slots), now provided by ui-renderer.
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 // Type-only: the right-Sidebar services (ctx.sidebarRightTabs / ctx.sidebarRight)
-// and the `sidebar.right.pane.tab` keyed seat, for the note-viewer tab below.
+// and the `sidebar.right.pane.tab` keyed seat, for the note-viewer tab below;
+// ui-sidebar-documentpreview declares the document-preview seats the excerpt
+// action injects into (`sidebar.right.tab.document.actions`).
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar-right/client'
+import type {} from '@deepseek-ai/dsh-client-ui-sidebar-documentpreview/client'
 import type { InputTriggerServiceContract } from '@deepseek-ai/dsh-client-ui-input-trigger/client'
 import type { TranslateNS } from '@deepseek-ai/dsh-client-ui-slots'
 import { createNotesUiStore, type NotesUiState, type NotesUiStore } from './features/store.ts'
@@ -38,6 +41,7 @@ import { SettingsSection } from './features/Settings/SettingsSection.tsx'
 import { createNotesSource } from './features/ContextSource/ContextSource.ts'
 import { NoteViewer } from './features/NoteViewer/NoteViewer.tsx'
 import { canOpenNoteAddress, noteTitleOf } from './features/NoteViewer/address.ts'
+import { DocumentNoteAction } from './features/NoteExcerpt/DocumentNoteAction.tsx'
 import type { SessionsLike } from './features/ai-conflict.ts'
 import { ICON_URL } from './features/api.ts'
 
@@ -276,6 +280,18 @@ export function apply(ctx: ClientContext): void {
     { name: 'settings.section', id: 'md-notes', order: 10, label: () => t('git.settingsNav'), locale: 'md-notes' },
     SettingsSection,
   )), 'dsh-md-notes: settings section')
+
+  // Document-preview toolbar action (dsh 0.1.7's list seat): "save the
+  // previewed file as a note" — host reads the file (workspace-contained,
+  // size-capped) and seeds a note, then the created note opens in the viewer.
+  ctx.effect(() => ctx.slots.inject('sidebar.right.tab.document.actions', () => ctx.slots.register(
+    {
+      name: 'sidebar.right.tab.document.actions', id: 'dsh-md-notes-excerpt', order: 20,
+      label: t('excerpt.action'), locale: 'md-notes',
+      inject: () => ({ openResource: openSidebarResource }),
+    },
+    DocumentNoteAction,
+  )), 'dsh-md-notes: document excerpt action')
 
   // --- right-Sidebar note-viewer tab (dsh 0.1.5+; late activation, see @ source) ---
   const registerViewer = (): void => {

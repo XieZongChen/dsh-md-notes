@@ -7,9 +7,9 @@
  */
 
 import { Readable } from 'node:stream'
-import { mkdtempSync, rmSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { iconHandler, notesApiHandler, redactRemote, type NotesApiDeps } from './http.ts'
@@ -285,6 +285,44 @@ describe('notesApiHandler — gitConfig whitelist', () => {
     const { json } = await call(notesApiHandler(deps), 'POST', { method: 'gitConfig', gitMode: 'off' })
     expect(json.ok).toBe(false)
     expect(json.error).toBe('settings unavailable')
+  })
+})
+
+describe('notesApiHandler — createFromFile (document excerpt)', () => {
+  it('seeds a note with the file content under the title heading', async () => {
+    const deps = makeDeps()
+    const root = dirname(deps.resolveDir() ?? '')
+    const file = join(root, 'spec.md')
+    writeFileSync(file, 'excerpt body', 'utf8')
+    const res = await call(notesApiHandler(deps), 'POST', { method: 'createFromFile', path: file, workspaceId: 'w1' })
+    expect(res.json['ok']).toBe(true)
+    const name = (res.json as { name?: string }).name
+    expect(name).toBe('spec.md')
+    expect(readFileSync(join(deps.resolveDir() ?? '', name ?? ''), 'utf8')).toBe('# spec\n\nexcerpt body\n')
+  })
+
+  it('rejects a file outside the workspace root (no read at all)', async () => {
+    const deps = makeDeps()
+    const outside = join(scratchDir(), 'elsewhere.md')
+    writeFileSync(outside, 'secret', 'utf8')
+    const res = await call(notesApiHandler(deps), 'POST', { method: 'createFromFile', path: outside, workspaceId: 'w1' })
+    expect(res.json['ok']).toBe(false)
+    expect(res.json['code']).toBe('outside-workspace')
+  })
+
+  it('requires an explicit workspaceId and path', async () => {
+    const deps = makeDeps()
+    const res = await call(notesApiHandler(deps), 'POST', { method: 'createFromFile', path: '/tmp/x.md' })
+    expect(res.json['ok']).toBe(false)
+    expect(res.json['code']).toBe('bad-request')
+  })
+
+  it('reports an unreadable file without failing the route', async () => {
+    const deps = makeDeps()
+    const root = dirname(deps.resolveDir() ?? '')
+    const res = await call(notesApiHandler(deps), 'POST', { method: 'createFromFile', path: join(root, 'missing.md'), workspaceId: 'w1' })
+    expect(res.json['ok']).toBe(false)
+    expect(res.json['code']).toBe('file-unreadable')
   })
 })
 

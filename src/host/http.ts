@@ -8,6 +8,7 @@
 
 import { readFile } from 'node:fs/promises'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { basename, dirname, resolve, sep } from 'node:path'
 import type { ApiResult, SessionRepairReport, UpdateInfo, WorkspaceNotes } from '../contract.ts'
 import {
   appendConversation, createNote, deleteNote, listNotes, readNote, sanitizeName, searchNotes, writeNote,
@@ -164,6 +165,35 @@ async function handleApi(deps: NotesApiDeps, method: string, body: unknown): Pro
       const dir = deps.resolveDir(workspaceId)
       if (dir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
       return createNote(dir, String(req.title ?? ''), typeof req.name === 'string' ? req.name : undefined)
+    }
+    case 'createFromFile': {
+      // The document preview's excerpt action: seed one note with a file the
+      // preview shows. `workspaceId` is REQUIRED (no session fallback — the
+      // action names both explicitly), and the file must live inside that
+      // workspace's root; notesDir is `<root>/.dsh-notes`.
+      if (typeof req.workspaceId !== 'string' || typeof req.path !== 'string' || req.path === '') {
+        return { ok: false, code: 'bad-request', error: 'createFromFile requires workspaceId and path' }
+      }
+      const notesDir = deps.resolveDir(req.workspaceId)
+      if (notesDir === undefined) return { ok: false, code: 'no-workspace', error: 'No workspace for this session' }
+      const root = dirname(notesDir)
+      const absolute = resolve(req.path)
+      const inside = absolute === root || absolute.startsWith(root + sep)
+      if (!inside) return { ok: false, code: 'outside-workspace', error: 'File is outside the workspace' }
+      let fileBody: string
+      try {
+        const raw = await readFile(absolute)
+        if (raw.length > 512 * 1024) return { ok: false, code: 'file-too-large', error: 'File exceeds the 512 KB excerpt limit' }
+        fileBody = raw.toString('utf8')
+      } catch {
+        return { ok: false, code: 'file-unreadable', error: 'File cannot be read' }
+      }
+      const fallbackTitle = basename(absolute).replace(/\.[^.]+$/, '')
+      const title = typeof req.title === 'string' && req.title.trim() !== '' ? req.title.trim() : (fallbackTitle || 'Untitled note')
+      const lock = await deps.lock.with(`${req.workspaceId}/${sanitizeName(title)}`, () => createNote(notesDir, title, undefined, fileBody))
+      return lock.acquired
+        ? lock.value
+        : { ok: false, code: 'note-writing', error: 'The note is being written, try again later' }
     }
     case 'delete': {
       const dir = deps.resolveDir(workspaceId)

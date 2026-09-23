@@ -123,8 +123,10 @@ export async function writeNote(dir: string, rawName: string, content: string): 
  * basename defaults to a slug of the title, but an explicit `rawName` (the
  * user-chosen file name from the create dialog) wins when non-empty — so the
  * file name and the display title are chosen independently at creation time.
+ * `rawBody` (the document-preview excerpt action) seeds the note under the
+ * title heading instead of leaving the stub empty.
  */
-export async function createNote(dir: string, rawTitle: string, rawName?: string): Promise<{ ok: true; name: string }> {
+export async function createNote(dir: string, rawTitle: string, rawName?: string, rawBody?: string): Promise<{ ok: true; name: string }> {
   // Client always passes a localized title; this neutral fallback only guards
   // direct API calls without a title.
   const title = String(rawTitle ?? '').trim() || 'Untitled note'
@@ -142,7 +144,7 @@ export async function createNote(dir: string, rawTitle: string, rawName?: string
       break
     }
   }
-  const content = `# ${title}\n\n`
+  const content = rawBody === undefined ? `# ${title}\n\n` : `# ${title}\n\n${rawBody}\n`
   await writeFile(join(dir, name), content, 'utf8')
   const meta = await readMeta(dir)
   meta[name] = { title, updatedAt: Date.now() }

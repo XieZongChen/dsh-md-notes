@@ -1,0 +1,30 @@
+/* Document-preview toolbar entry: matches the preview header's quiet text
+ * buttons; the busy/disabled and failed states reuse the same shell. */
+.action {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  color: var(--dsh-alias-label-secondary, #888);
+  white-space: nowrap;
+}
+
+.action:hover {
+  background: var(--dsh-alias-bg-layer-2, rgba(128, 128, 128, 0.18));
+  color: var(--dsh-alias-label-primary, #222);
+}
+
+.action:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.action[data-note-excerpt-state='failed'] {
+  color: var(--dsh-alias-state-danger-primary, #c53030);
+}
+
+.action[data-note-excerpt-state='done'] {
+  color: var(--dsh-alias-state-success-primary, #2f855a);
+}
