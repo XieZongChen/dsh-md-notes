@@ -78,6 +78,35 @@
   样式（示范：`client/index.ts` 的 sidebar-footer 规则）；不碰 css-modules 哈希类名、不写
   任何祖先 inline 样式（历史反例见 [issue #1](https://github.com/XieZongChen/dsh-md-notes/issues/1)）。
 
+## dsh 0.1.5-rc.2 → 0.1.7-rc.1 新增能力盘点（2026-09-24，逐项对 rc.2 树核实）
+
+> 供后续升级复用：只列**确为该区间新增**且第三方插件可用的能力；已核实**不是新增**的
+> 常见误判附在后面，避免重复挖掘。
+
+**确为新增且已采用**：
+
+- `SidebarRightTabDefinition.keepMounted`（`96b2aca3`）——切走 / 换会话 / 停靠时保留挂载。
+  已用于笔记查看器 tab（滚动位置与已加载内容保持）。
+- `MarkdownDelegateProvider` + `fileImages` 面（`7fe9c06f`/`8968fede`）——markdown 图片的
+  内联容器、点击灯箱与失败标签；已用于管理器与查看器预览的本地图片。
+- `sidebar.right.tab.document.actions`（`kind: 'list'`, `scope: 'session'`，`5c409c39`）-
+  文档预览工具栏动作位；已用于「存为笔记」。
+- `ui-primitives` 新增导出：`SegmentedControl`（已用于编辑/预览切换）、`Checkbox`、
+  `PathLabel`、`ConfigField`、`CodeCard`/`CodeToolbar`、`PermissionIcon`、`ImagePreview`、
+  `ImageLightbox`（后两者经上面的 delegate 间接使用）。
+- `SlotFactoryMap`（`c094b663`，组件工厂表）、`workspace/changes` host 事件、
+  `deliverables.file.actions`（list）、`plugins.item` / `plugins.row.config` /
+  `plugins.bundle.config`（插件管理器 web 端配置 UI 席位）、Remote 结果的二进制字段
+  （`ecf6acfb`，`readBytes` 服务本体 rc.2 已有）。
+- 两个单占位席位 **已确认被 dsh 自己占用**：`conversation.header`、`sidebar.toggle.badge`
+  ——见下面平台问题一节的核实记录。
+
+**核实为「rc.2 已有」的误判（勿再当新能力）**：`SidebarRightTabDefinition.patterns`
+（本插件早已用它认领 `.dsh-notes/*.md`，0.1.5-alpha.1 起）、`SidebarRightResourceParamsMap`、
+`PinResource`、`ResourceProtocolMap`、`workspace-files` 的 `readBytes`、`agent.inject`
+（既有 API——[context.md](context.md) 已论证为何不用它、改用 `pre-step` 折叠）、
+`agent/created` 事件。
+
 ## 已知平台问题 / 未开放能力（待 dsh）
 
 格式：**问题** → 现状（含插件侧缓解）→ 根治条件。均需 dsh 上游开放，插件侧只能缓解或等待。
@@ -112,6 +141,15 @@
   （`ExpandButton`，默认优先级 0）；同一优先级的第二次注册会**抛错**（会让插件 client 整体
   加载失败），换优先级则是「遮蔽」而非共存（顶掉展开按钮）。插件如需会话头常驻控件，只能
   等 dsh 开放第二个角落位或把 corner 改为 list 席位——待跟进上游。
+- **另两个被误当机会的单占位席位（2026-09-24 核实，勿重复踩）**：
+  - `conversation.header`（`kind: 'single'`, `scope: 'session-maybe'`）**已由 ui-conversation
+    自己占用**——`ui-conversation/src/client/apply.ts` 的 `registerHeader()` 把
+    `ConversationHeader` 注册在该席位（`ConversationMainPanel.tsx` 渲染）。第三方注入与
+    corner 同险，不是「空的会话头入口」。（其子席位 `conversation.header.leading` 是
+    `single`/root，同样被 ConversationHeader 内部渲染，不是空位。）
+  - `sidebar.toggle.badge`（`kind: 'single'`, `scope: 'root'`）**已由 ui-settings-general
+    无条件占用**（`DesktopUpdateBadge`，「有新版本」角标）。想拿它显示「未推送变更数」会
+    抛错或顶掉 dsh 自身的更新角标。根治条件：dsh 把该席位改为 list（与 corner 同一诉求）。
 
 ## 1. 笔记引用进对话的细化（@ 引用已实现）
 
