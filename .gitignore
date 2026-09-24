@@ -2,6 +2,10 @@
 node_modules/
 # local npm cache (`npm install --cache ./.npm-cache` when ~/.npm is not writable)
 .npm-cache/
+# pnpm store created when the isolated dsh profile installs this plugin
+.pnpm-store/
+# Playwright lane: browsers, isolated DSH_HOME, seeded workspace, screenshots
+.e2e/
 
 # build output
 lib/
