@@ -254,6 +254,16 @@
 
 - ✅ **vitest 已引入**（`npm test` / `test:watch`，`vitest.config.ts`）。`npm test` 全绿作为
   合并前提（当前 25 文件 316 例）。
+- **Playwright 线**（`e2e/**/*.e2e.ts`，`npm run test:e2e`，**不在 `npm test`/CI 内**）：起隔离
+  `dsh web` 实例 + Chromium，验几何/像素/真实事件。约定：
+  - 一个 spec 文件一个实例（`launchWebHarness` 起、`stop()` 关），绝不指向开发者日常实例；
+  - 只通过脚手架播种（工作区在 `.e2e/documents/...`、笔记 mtime 固定），**不要**在用例里驱动
+    「选择工作区」那类需要人点目录的流程——shipped bundle 里那个目录选择槽是空的；
+  - 就绪以「插件接口报出播种工作区」为准，不要用 `networkidle`（客户端常驻长连接）；
+  - 像素基线放 `e2e/baseline/`、容忍 0.2%、`DSH_E2E_UPDATE_BASELINE=1` 重录；基线本机特定，
+    别指望换机器还能比中；
+  - **已知回归写成 `it.fails`**（用例保持绿、修好即报「expected failure passed」），别删掉断言
+    或写成 `skip`。
 - **两条线**：Node 线（`src/**/*.test.ts`，默认环境，纯领域/装配，无 jsdom/React/dsh，CI 也跑）
   与浏览器线（`src/**/*.dom.test.ts`，文件内 `// @vitest-environment jsdom`，用
   `@deepseek-ai/dsh-client-test-runtime` 的 jsdom 台架挂生产 SlotRegistry + 渲染器驱动界面）。
@@ -364,6 +374,8 @@
 | 23 | ✅ 工具输出 schema（`push_notes` 等 `defineTool`） | **dsh 在运行期按声明的 schema 校验工具返回值，类型不符会让整个工具调用失败**（不是降级、不是截断）。曾实测：`note_search` 原样返回 `listNotes` 的 `updatedAt`，而该值在 meta 缓存缺失时来自 `stat().mtimeMs`（**浮点**），schema 却声明 `integer` → 工具直接报 `"value.results[0].updatedAt" must be an integer`，在新建笔记上完全不可用。typecheck 与单测都发现不了——单测 fixture 恰好用的是整数 | 高 | 已在当时删除该工具时一并修正；**规则保留**：对外暴露的数值字段按 schema 类型**显式归一**（如 `Math.trunc(Number(x)) \|\| 0`），别相信上游「看起来是整数」；写 schema 时先问源头的真实类型 |
 
 | 24 | `vitest.config.ts` + `*.dom.test.ts` | 浏览器线护栏**本地专属**：它要 harness checkout 的源码解析（npm 上的 dsh client 插件包是 `window.__ModuleLoader__` 包装产物，Node 里加载不了），而 CI 无 checkout ⇒ 该类文件在 CI 被 exclude，前端回归在 CI 仍只有 Node 线 | 中 | 本地护栏已落地（3 文件 6 例，见 smoke-test.md「已被机器覆盖的人工项」）；根治 = 上游给出可脱离 monorepo 消费的 client 测试运行时（见 TODO 平台问题），届时删除自研解析门面并把该线并入 CI |
+
+| 25 | `client/NotesManager/hooks/useNotesManager.ts` `openDshSettings` | 找设置触发按钮的 `querySelector('button[aria-haspopup="dialog"]:not([aria-label])')` 在 dsh 0.1.7-rc.1 上**匹配数为 0**（实测该唯一触发按钮带 `aria-label="设置"`）→ 管理器「设置」快捷入口静默失效（先关了管理器，再什么都不发生）。typecheck/单测都看不见 | 中 | 已由 `e2e/settings.e2e.ts` 的 `it.fails` 钉住现场；修法二选一并保持 `:not([aria-label])` 的**本意**（区分设置触发与其它 dialog 按钮）：dsh 若提供设置导航扩展点则改用它，否则按更稳的锚点定位并在拿到扩展点后替换（见 TODO 平台问题「设置面板导航」） |
 
 > 本节是活的：修掉一条就把该行标 ✅ 并注明 commit；新增隐患随时补。目标是在功能继续增长前
 > 把「高/中」级别清空。

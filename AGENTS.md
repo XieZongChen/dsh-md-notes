@@ -54,21 +54,25 @@ npm 包 dsh-md-notes
 ## 验证命令（每个 commit 前跑）
 
 ```sh
-npm run verify      # 一条命令全护栏 = typecheck（4 program）+ vitest 全量 + build
+npm run verify      # 一条命令全护栏 = typecheck（5 program）+ vitest 全量 + build
 # 等价拆开：
-npm run typecheck   # 4 个 tsc program：后端 build / 前端 build / 两个 noEmit 测试 program
-npm test            # vitest，扫 src/**/*.test.ts（Node 环境，无需浏览器；CI 跑同一套）
+npm run typecheck   # 5 个 tsc program：后端 build / 前端 build / 两个 noEmit 测试 program / e2e noEmit
+npm test            # vitest，扫 src/**/*.test.ts（Node + jsdom 两条线；CI 跑同一套）
+npm run test:e2e    # Playwright 真浏览器线（本地专属，见下）
 npm run build       # tsc×2 + tsdown（改了前端才需要）
 ```
 
 - Node ≥ 22.19（与 harness 支持矩阵一致；老 Node 会以 ESM/语法错误崩）。
 - 首次开发：`npm install --legacy-peer-deps && npm run link-deps`（链接 harness checkout 类型，
   `DSH_CHECKOUT` 可覆盖路径）。
-- **测试两条线**：`src/**/*.test.ts` 为 Node 线（纯领域，CI 也跑）；`src/**/*.dom.test.ts`
-  为浏览器线（jsdom 台架驱动真实界面），**必须 `link-deps` 过才能跑**（要 checkout 源码解析，
-  原因见 `vitest.config.ts` 注释），没链接时整类被 exclude。改前端后本地补跑：
-  `npx vitest run 'src/client/**/*.dom.test.ts'`；文件**必须**保持 `.test.ts` 结尾
-  （build program 只 exclude `*.test.ts`，否则测试文件会进 `lib/`）。
+- **测试三条线**（前两条在 `npm test` 内，第三条独立）：
+  1. **Node 线** `src/**/*.test.ts`：纯领域，CI 也跑；
+  2. **jsdom 线** `src/**/*.dom.test.ts`：台架驱动真实界面，**必须 `link-deps`**（要 checkout
+     源码解析，原因见 `vitest.config.ts` 注释），没链接时整类被 exclude；
+  3. **Playwright 线** `e2e/**/*.e2e.ts`：起**隔离**的 `dsh web` 实例 + Chromium，验几何/像素/
+     真实事件。首次要 `npm run e2e:install`（把 Chromium 下到仓库内 `.e2e/browsers`，别下到
+     `~/Library`），然后 `npm run test:e2e`；**不要**把它指向你正在用的那个实例（会污染真实笔记）。
+  前两条的文件**必须**以 `.test.ts` 结尾（build program 只 exclude `*.test.ts`，否则测试进 `lib/`）。
 
 ## 改动后的人工验证路由（AI 必须输出）
 

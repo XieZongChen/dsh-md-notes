@@ -295,6 +295,12 @@ npm run build
   （closure 包络 / 平台 externals 对齐模块表 / CSS Modules 注入的 `data-plugin-css`
   标签约定 / 产物路径契约）及各自的 harness 源码位置与升级核对清单，见
   `tsdown.config.ts` 头部「Protocol coupling points」注释；升级 dsh 后逐条核对再重构建。
+- **测试三条线**：前两条同一个 vitest 运行（`vitest.config.ts`），第三条独立
+  （`vitest.e2e.config.ts` + `e2e/`）。第三条起隔离的真实例与真 Chromium，用于 jsdom 拿不到的
+  几何/像素/真实事件；它的世界由 `e2e/global-setup.ts` 准备（构建插件、把插件装进
+  `.e2e/home` 的隔离 profile、把 `workspace-controller.documentsDirectory` 补丁到仓库内，
+  否则默认工作区会落到 `~/Documents` 而被沙箱拒绝），`e2e/scaffold.ts` 负责起停、播种与就绪判定
+  （等插件接口报出播种工作区，避开「首次建工作区」与「打开管理器」的竞态）。
 - **测试两条线**（`vitest.config.ts`）：`*.test.ts` 默认 Node 环境，跑纯领域逻辑，无
   jsdom/React/dsh，CI（无 checkout）也跑；`*.dom.test.ts` 为浏览器线，文件内
   `// @vitest-environment jsdom`，用 `@deepseek-ai/dsh-client-test-runtime` 的 jsdom 台架

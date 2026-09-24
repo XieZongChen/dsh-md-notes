@@ -113,6 +113,15 @@
 
 格式：**问题** → 现状（含插件侧缓解）→ 根治条件。均需 dsh 上游开放，插件侧只能缓解或等待。
 
+- **npm 版 `@deepseek-ai/dsh` CLI 装不出可运行的树**：
+  - 问题：`npm i -D @deepseek-ai/dsh@<版本>`（含 `--legacy-peer-deps`）后 CLI 起不来——
+    `@deepseek-ai/dsh-app-boot` 把 bundle 伙伴（`@deepseek-ai/cordis-plugin-group` 等）声明为
+    **peerDependencies**，npm 不装 peer ⇒ `ERR_MODULE_NOT_FOUND`。pnpm 会自动装 peer，所以
+    monorepo 内与 `dsh plugin add`（内部走 pnpm）都不受影响。
+  - 现状（插件侧已缓解）：Playwright 线改用 **harness checkout 已构建的 CLI**
+    （`<checkout>/apps/cli/lib/bin.js`）——checkout 本来就是本仓库的前置（link-deps 类型 + jsdom 线源码）。
+  - 根治：dsh 把 CLI 的 bundle 伙伴从 peer 改为 dependencies（或发布自带依赖的 CLI 包），
+    外部仓库就能只靠 npm 起实例；届时 Playwright 线可去掉 checkout 依赖。
 - **第三方仓库无法直接消费 client 测试运行时**：
   - 问题：`@deepseek-ai/dsh-client-test-runtime`（jsdom slot 台架 + 整客户端 tier）已发布到 npm，
     但在 **monorepo 之外**用不了：它的 `/client` peer 依赖是 client **插件**包，其 `lib/client.js` 是

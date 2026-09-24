@@ -35,9 +35,38 @@ npm run verify   # = typecheck（4 program）+ vitest 全量 + build，一条命
 | §2.4 搜索 | 同上 | 250ms 防抖后渲染命中行号 `L3`、关键词 `<mark>`、命中计数；发出的查询与界面一致 |
 | §8 设置（读写） | `Settings/SettingsSection.dom.test.ts` | 读 host 值渲染模式/自动拉取/保存按钮；改一个标量后保存只发**改动键**的 `gitConfig` 补丁并提示已保存 |
 
-> 仍未覆盖、必须人工的部分：真实布局/几何（挤压、省略号、灯箱等，jsdom 无布局引擎）、
-> 图片粘贴与拖入（合成 paste/drop 尚未写）、`@` 引用注入与跨步去重、真实 git 远端同步、
-> 多插件共存、像素观感。
+### Playwright 线（真浏览器，本地）
+
+```sh
+npm run link-deps        # 要 harness checkout（用它已构建的 CLI 起实例）
+npm run e2e:install      # 一次性：把 Chromium 下到仓库内 .e2e/browsers
+npm run test:e2e         # 起隔离实例 + Chromium 跑 e2e/**/*.e2e.ts
+DSH_E2E_UPDATE_BASELINE=1 npm run test:e2e   # 重录像素基线
+```
+
+它起的是**自己的实例**：独立 `DSH_HOME`（`.e2e/home`）、`--port 0`（OS 分配）、`--no-open`，
+播种一个默认工作区（`.e2e/documents/deepseek-harness/默认工作区/.dsh-notes`，笔记 mtime 固定）
+并给一个占位凭据以跳过首次引导弹窗。**不要**把这条线指向你日常在用的那个实例——它会点击、输入、
+写设置，会污染真实笔记。基线是**本机特定**的（字体栅格化），所以这条线和 jsdom 线一样只在本地跑。
+
+| 人工节 | Playwright 用例 | 覆盖点 |
+|---|---|---|
+| §1 入口（几何） | `e2e/sidebar.e2e.ts` | 入口是全宽行（宽 > 200px）、footer 容器为 column（issue #2 的两入口分行）、行与祖先**无插件写入的 inline 尺寸**（issue #1 的侧栏不被拉宽契约）、折叠后仍是可访问的 rail 图标 |
+| §2.1 列表 | `e2e/manager.e2e.ts` | 真实遮罩下打开管理器、渲染播种工作区与笔记标题 |
+| §2.4 搜索 | 同上 | 防抖后命中行 `L4`、真 `<mark>` 高亮、命中计数；整屏**像素基线** |
+| §8 设置 | `e2e/settings.e2e.ts` | 从侧栏进设置、点 `MD 笔记` 导航格、渲染 git 表单与保存按钮 |
+
+> 仍未覆盖、必须人工的部分：图片粘贴与拖入（合成 paste/drop 尚未写，Playwright 可做）、
+> `@` 引用注入与跨步去重、真实 git 远端同步与冲突横幅、灯箱/长文本省略等观感细项、
+> 多插件共存、中文 IME。
+
+### 这条线刚发现的回归（`it.fails` 记录现场）
+
+管理器的「设置」快捷入口在 dsh 0.1.7-rc.1 上**已失效**：它按
+`button[aria-haspopup="dialog"]:not([aria-label])` 找设置触发按钮，而当前唯一的触发按钮带
+`aria-label="设置"`（实测匹配数 0），于是关闭管理器后什么都不发生。
+`e2e/settings.e2e.ts` 用 `it.fails` 把它钉住：修好后该用例会以「expected failure passed」
+报错，提醒把它转成普通用例。详见 coding-standards §12 #25。
 
 ## 验证范围速查（按改动面裁剪）
 
