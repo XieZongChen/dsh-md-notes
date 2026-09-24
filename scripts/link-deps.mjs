@@ -18,6 +18,7 @@ const targets = [
   'vendor/cosmokit',
   'vendor/schemastery',
   'packages/client/store',
+  'packages/client/ui-session',
   'packages/client/ui-slots',
   'packages/client/ui-chat',
   'packages/client/ui-conversation',
@@ -45,8 +46,11 @@ const targets = [
   'packages/sandbox/sandbox-policy',
   'packages/host/webserver',
   'packages/api/remotes',
+  'packages/api/gateway',
   'packages/api/session-controller',
   'packages/interaction/user-approval',
+  'packages/typert/protocol',
+  'packages/test-support/client-runtime',
 ]
 
 const scopeDir = join(root, 'node_modules', '@deepseek-ai')

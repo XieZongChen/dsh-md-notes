@@ -74,6 +74,7 @@
     "@deepseek-ai/dsh-agent": "*",
     "@deepseek-ai/dsh-client-locale": "*",
     "@deepseek-ai/dsh-client-store": "*",
+    "@deepseek-ai/dsh-client-test-runtime": "*",
     "@deepseek-ai/dsh-client-ui-chat": "*",
     "@deepseek-ai/dsh-client-ui-conversation": "*",
     "@deepseek-ai/dsh-client-ui-input-trigger": "*",
@@ -112,6 +113,9 @@
       "optional": true
     },
     "@deepseek-ai/dsh-client-store": {
+      "optional": true
+    },
+    "@deepseek-ai/dsh-client-test-runtime": {
       "optional": true
     },
     "@deepseek-ai/dsh-client-ui-chat": {
@@ -198,6 +202,7 @@
     "@types/node": "^24.0.0",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
+    "jsdom": "^30.1.1",
     "lightningcss": "^1.32.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

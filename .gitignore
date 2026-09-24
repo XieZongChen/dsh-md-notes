@@ -1,5 +1,7 @@
 # dependencies
 node_modules/
+# local npm cache (`npm install --cache ./.npm-cache` when ~/.npm is not writable)
+.npm-cache/
 
 # build output
 lib/
