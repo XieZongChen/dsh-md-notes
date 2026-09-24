@@ -10,8 +10,34 @@
 npm run verify   # = typecheck（4 program）+ vitest 全量 + build，一条命令
 ```
 
-机器能验的都在这里（领域逻辑 / HTTP 分发 / 注入 / 合并 / 路径解析等 206 例 + 类型 + 构建）；
-CI（GitHub Actions）在每次 push 时跑同一套测试。**护栏不绿不进冒烟**。
+机器能验的分两条线（同一套 vitest，见 [architecture.md](architecture.md) §5 与 `vitest.config.ts`）：
+
+- **Node 线**（`src/**/*.test.ts`）：领域逻辑 / HTTP 分发 / 注入 / 合并 / 路径解析，
+  无 jsdom/React/dsh，**hermetic**——CI（GitHub Actions，无 harness checkout）跑的就是它。
+- **浏览器线**（`src/**/*.dom.test.ts`）：jsdom 上挂生产 SlotRegistry + 渲染器驱动真实界面。
+  必须先在本地跑过 `npm run link-deps`（要 harness checkout：npm 上的 dsh client 包是
+  `window.__ModuleLoader__` 包装产物，Node 里加载不了，只能解析到 checkout 源码）；
+  没链接 checkout 时这类文件整体被 exclude，因此 **CI 只跑 Node 线**——浏览器线是本地护栏，
+  改动前端后请本地跑一次：
+
+  ```sh
+  npx vitest run 'src/client/**/*.dom.test.ts'   # 只跑浏览器线（快）
+  ```
+
+**护栏不绿不进冒烟**。
+
+### 已被机器覆盖的人工项（本地跑过浏览器线即可跳过）
+
+| 人工节 | 浏览器线用例 | 覆盖点 |
+|---|---|---|
+| §1 侧栏入口 | `client/index.dom.test.ts` | 入口注册进 `sidebar.footer.action`；宽/窄两态渲染与可访问名；`shell.overlay`/`settings.section` 座位注册 |
+| §2.1 列表 | `NotesManager/NotesManager.dom.test.ts` | 点入口打开管理器；按工作区分组渲染工作区名 + 笔记标题 |
+| §2.4 搜索 | 同上 | 250ms 防抖后渲染命中行号 `L3`、关键词 `<mark>`、命中计数；发出的查询与界面一致 |
+| §8 设置（读写） | `Settings/SettingsSection.dom.test.ts` | 读 host 值渲染模式/自动拉取/保存按钮；改一个标量后保存只发**改动键**的 `gitConfig` 补丁并提示已保存 |
+
+> 仍未覆盖、必须人工的部分：真实布局/几何（挤压、省略号、灯箱等，jsdom 无布局引擎）、
+> 图片粘贴与拖入（合成 paste/drop 尚未写）、`@` 引用注入与跨步去重、真实 git 远端同步、
+> 多插件共存、像素观感。
 
 ## 验证范围速查（按改动面裁剪）
 
@@ -30,6 +56,8 @@ CI（GitHub Actions）在每次 push 时跑同一套测试。**护栏不绿不�
 | 发布前 | 重启 + 硬刷新 | **全量**（唯一必全量的场景），含 §9/§10 |
 
 > 判断不了归哪行时，取更宽的一行；两行都沾时取并集。
+> 前端 UI / 设置两行的**机器已覆盖子集**见上表——人工部分只需验「仍未覆盖」里的项，
+> 外加本次改动特有的新交互。
 
 ## 0. 前置准备
 

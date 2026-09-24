@@ -64,6 +64,11 @@ npm run build       # tsc×2 + tsdown（改了前端才需要）
 - Node ≥ 22.19（与 harness 支持矩阵一致；老 Node 会以 ESM/语法错误崩）。
 - 首次开发：`npm install --legacy-peer-deps && npm run link-deps`（链接 harness checkout 类型，
   `DSH_CHECKOUT` 可覆盖路径）。
+- **测试两条线**：`src/**/*.test.ts` 为 Node 线（纯领域，CI 也跑）；`src/**/*.dom.test.ts`
+  为浏览器线（jsdom 台架驱动真实界面），**必须 `link-deps` 过才能跑**（要 checkout 源码解析，
+  原因见 `vitest.config.ts` 注释），没链接时整类被 exclude。改前端后本地补跑：
+  `npx vitest run 'src/client/**/*.dom.test.ts'`；文件**必须**保持 `.test.ts` 结尾
+  （build program 只 exclude `*.test.ts`，否则测试文件会进 `lib/`）。
 
 ## 改动后的人工验证路由（AI 必须输出）
 
@@ -71,6 +76,7 @@ npm run build       # tsc×2 + tsdown（改了前端才需要）
 「验证范围速查」矩阵，明确告诉用户：本次改动落在哪一行、需要人工验哪几节、要不要重启
 dsh web / 硬刷新**（例如「只改了 src/client/features/NotesManager → 硬刷新 + 验 §2.2 三项，
 无需重启」）。不要让用户自己判断验什么，也不要笼统说「建议全面冒烟」。发布前才全量。
+同一文档的「已被机器覆盖的人工项」表列出浏览器线已覆盖的节，命中即可从人工清单里划掉。
 
 ## 按场景的修改清单
 

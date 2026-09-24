@@ -113,6 +113,21 @@
 
 格式：**问题** → 现状（含插件侧缓解）→ 根治条件。均需 dsh 上游开放，插件侧只能缓解或等待。
 
+- **第三方仓库无法直接消费 client 测试运行时**：
+  - 问题：`@deepseek-ai/dsh-client-test-runtime`（jsdom slot 台架 + 整客户端 tier）已发布到 npm，
+    但在 **monorepo 之外**用不了：它的 `/client` peer 依赖是 client **插件**包，其 `lib/client.js` 是
+    `window.__ModuleLoader__.load({ id, factory })` 包装产物，Node/vitest 里 import 只得到空命名空间
+    （`Cannot read properties of undefined (reading 'load')`）；其 `exports["./src/*"]` 指向的 `src/`
+    又没随包发布（npm 包里只有 `lib/`）。harness 自己不受影响，是因为它用 `tsconfig.base.json` 的
+    paths 门面把 `@deepseek-ai/dsh-*` 全解析到 `packages/**/src`。
+  - 现状（插件侧已缓解）：`vitest.config.ts` 内实现同义的精简解析门面（按 link-deps 符号链接把
+    specifier 指到 checkout 源码）+ 反转 vitest 的 external 规则 + 把 React 钉到单实例，从而在本地
+    跑通浏览器线；代价是**依赖 harness checkout**，CI（无 checkout）只能排除该线，且解析规则属
+    手写复刻，升级 dsh 后需随 harness 的 paths/external 策略复核（见 coding-standards §12 #24）。
+  - 根治：dsh 发布可脱离 monorepo 消费的 client 测试运行时——例如把 `src/` 一并发布、
+    或提供等价入口（源码级 export / 预构建的 node 可加载入口），使外部插件能只装 npm 包就跑浏览器线；
+    届时删除自研门面并把浏览器线并入 CI。
+
 - **sidebar footer 多入口挤压**：
   - 问题：dsh 的 `.footerActions`（`sidebar.footer.action` 容器，
     `packages/client/ui-sidebar/src/client/SidebarRoot.module.css`）是 `display: flex` row+nowrap，

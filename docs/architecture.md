@@ -295,6 +295,13 @@ npm run build
   （closure 包络 / 平台 externals 对齐模块表 / CSS Modules 注入的 `data-plugin-css`
   标签约定 / 产物路径契约）及各自的 harness 源码位置与升级核对清单，见
   `tsdown.config.ts` 头部「Protocol coupling points」注释；升级 dsh 后逐条核对再重构建。
+- **测试两条线**（`vitest.config.ts`）：`*.test.ts` 默认 Node 环境，跑纯领域逻辑，无
+  jsdom/React/dsh，CI（无 checkout）也跑；`*.dom.test.ts` 为浏览器线，文件内
+  `// @vitest-environment jsdom`，用 `@deepseek-ai/dsh-client-test-runtime` 的 jsdom 台架
+  把生产 SlotRegistry + 渲染器挂到真实 fiber 上驱动界面。浏览器线需要
+  `npm run link-deps` 的 checkout（缺则整类文件被 exclude，CI 保持 hermetic），原因与
+  三处配套解析（`@deepseek-ai/*` 指向源码 / external 规则反转 / React 单实例）写在
+  `vitest.config.ts` 注释里；覆盖到哪些人工冒烟项见 smoke-test.md。
 
 ## 6. 配置
 

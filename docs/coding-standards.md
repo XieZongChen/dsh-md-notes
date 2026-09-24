@@ -252,8 +252,22 @@
 
 ## 8. 测试
 
-- ✅ **vitest 已引入**（`npm test` / `test:watch`，`vitest.config.ts`，Node 环境、扫
-  `src/**/*.test.ts`）。`npm test` 全绿作为合并前提（当前 14 文件 161 例）。
+- ✅ **vitest 已引入**（`npm test` / `test:watch`，`vitest.config.ts`）。`npm test` 全绿作为
+  合并前提（当前 25 文件 316 例）。
+- **两条线**：Node 线（`src/**/*.test.ts`，默认环境，纯领域/装配，无 jsdom/React/dsh，CI 也跑）
+  与浏览器线（`src/**/*.dom.test.ts`，文件内 `// @vitest-environment jsdom`，用
+  `@deepseek-ai/dsh-client-test-runtime` 的 jsdom 台架挂生产 SlotRegistry + 渲染器驱动界面）。
+  浏览器线要 `npm run link-deps` 的 harness checkout（npm 的 client 插件包是
+  `window.__ModuleLoader__` 包装，Node 加载不了），缺则整类 exclude；解析门面与配套三处修正
+  的「为什么」写在 `vitest.config.ts` 注释里。写浏览器线用例的约定：
+  - 文件名固定 `*.dom.test.ts`（build program 只 exclude `*.test.ts`，改名即进 `lib/`）；
+  - 文案断言前用 `usePinnedBrowserLanguages('zh-CN')` 钉住语言（jsdom 默认继承宿主语言）；
+  - `declare()` 的 slot kind 必须与 harness 的 SlotMap 一致（`sidebar.footer.action` /
+    `shell.overlay` / `settings.section` 都是 `kind: 'list'`）——类型会拦，别用 `single` 凑；
+  - 桩 host API 时桩 `fetch` 而不是桩 `api.ts`（让 `api()` 的 JSON 形状、method 分发真实执行）；
+  - 防抖那类时序用假定时器 + `act` 确定性推进，别 `sleep`；
+  - 交互（click/change）放 `act` 里。异步数据链仍会打 React 的 `not wrapped in act` 建议——
+    属已知噪音，在文件头注明即可，不是失败。
 - **测纯领域函数**（当前已覆盖）：`note-links`（解析/预处理/路径）、`notes`（sanitize/titleOf +
   mkdtemp 读写 + 路径穿越回归 + meta 重建）、`settings`（mergeSettings + #17 空分支语义）、
   `keyed-lock`（并发语义）、`note-text`（文本提取）、`git`（仓库解析 + 同步/冲突纯函数 +
@@ -348,6 +362,8 @@
 | 21 | ✅ `client/index.ts` 可选服务注册 | `ctx.get('inputTriggers')` 在 apply 期一次判定：cordis 服务启动与模块到达时序交错时会永久错过（@ 菜单空白，重启复现）；typecheck/测试不可见（纯浏览器时序） | 高 | 已修：get→else `ctx.inject([...])` 晚到激活（dsh client-modules webServer 同款），viewer 注册同步加固；探针实例实测菜单恢复（commit e21968a） |
 | 22 | ✅ `ContextSource.openReference` | 在 Lexical chip 命令内同步调用可抛异常的外部服务（sidebar claim）：异常穿透打坏编辑器（#20 连锁、chip 不可删）；且 picomatch `**` 不匹配 `..` 段，点状会话地址不可认领 | 高 | 已修：跨工作区 ref 经快照解析为绝对地址 + try/catch 安全拒绝（见 paths.ts noteRefAddress 注释）；教训：编辑器命令回调里的一切外部调用必须自吞异常 |
 | 23 | ✅ 工具输出 schema（`push_notes` 等 `defineTool`） | **dsh 在运行期按声明的 schema 校验工具返回值，类型不符会让整个工具调用失败**（不是降级、不是截断）。曾实测：`note_search` 原样返回 `listNotes` 的 `updatedAt`，而该值在 meta 缓存缺失时来自 `stat().mtimeMs`（**浮点**），schema 却声明 `integer` → 工具直接报 `"value.results[0].updatedAt" must be an integer`，在新建笔记上完全不可用。typecheck 与单测都发现不了——单测 fixture 恰好用的是整数 | 高 | 已在当时删除该工具时一并修正；**规则保留**：对外暴露的数值字段按 schema 类型**显式归一**（如 `Math.trunc(Number(x)) \|\| 0`），别相信上游「看起来是整数」；写 schema 时先问源头的真实类型 |
+
+| 24 | `vitest.config.ts` + `*.dom.test.ts` | 浏览器线护栏**本地专属**：它要 harness checkout 的源码解析（npm 上的 dsh client 插件包是 `window.__ModuleLoader__` 包装产物，Node 里加载不了），而 CI 无 checkout ⇒ 该类文件在 CI 被 exclude，前端回归在 CI 仍只有 Node 线 | 中 | 本地护栏已落地（3 文件 6 例，见 smoke-test.md「已被机器覆盖的人工项」）；根治 = 上游给出可脱离 monorepo 消费的 client 测试运行时（见 TODO 平台问题），届时删除自研解析门面并把该线并入 CI |
 
 > 本节是活的：修掉一条就把该行标 ✅ 并注明 commit；新增隐患随时补。目标是在功能继续增长前
 > 把「高/中」级别清空。
