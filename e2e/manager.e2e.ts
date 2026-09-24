@@ -10,9 +10,9 @@
  */
 
 import type { Browser, Page } from 'playwright'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { compareOrRecord } from './pixel.ts'
-import { closePage, launchChromium, launchWebHarness, openHarnessPage, type HarnessPage, type WebHarness } from './scaffold.ts'
+import { closePage, launchChromium, launchWebHarness, openHarnessPage, resetHarnessPage, type HarnessPage, type WebHarness } from './scaffold.ts'
 
 /** The seeded note's title, as the manager lists it. */
 const NOTE_TITLE = '笔记 A'
@@ -43,6 +43,10 @@ describe('notes manager (real browser)', () => {
     await browser.close()
     await harness.stop()
   })
+
+  // Sharing one page across cases is what makes the suite fast; reloading to the
+  // ready state is what keeps cases independent of each other's open panels.
+  beforeEach(async () => { await resetHarnessPage(opened.page) })
 
   it('opens from the sidebar entry and lists the seeded workspace and note', async () => {
     const { page } = opened

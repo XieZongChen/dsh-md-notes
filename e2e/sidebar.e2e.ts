@@ -10,8 +10,8 @@
  */
 
 import type { Browser } from 'playwright'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { closePage, launchChromium, launchWebHarness, openHarnessPage, type HarnessPage, type WebHarness } from './scaffold.ts'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { closePage, launchChromium, launchWebHarness, openHarnessPage, resetHarnessPage, type HarnessPage, type WebHarness } from './scaffold.ts'
 
 describe('sidebar footer entry (real browser)', () => {
   let harness: WebHarness
@@ -29,6 +29,10 @@ describe('sidebar footer entry (real browser)', () => {
     await browser.close()
     await harness.stop()
   })
+
+  // Sharing one page across cases is what makes the suite fast; reloading to the
+  // ready state is what keeps cases independent of each other's open panels.
+  beforeEach(async () => { await resetHarnessPage(opened.page) })
 
   it('renders a full-width footer row whose container stacks entries', async () => {
     const { page } = opened

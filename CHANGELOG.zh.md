@@ -47,6 +47,15 @@
   BMP / AVIF（单张上限 8 MB），不支持的格式会提示原因且不插入无效引用。图片目前
   只存在本机，Git 同步仍只镜像 `.md`（详见[使用文档](docs/usage.zh.md#插入图片)）。
 
+### Fixed
+
+- 修复「笔记管理器 → ⚙ 设置」入口在 dsh 0.1.7 上失效：该入口靠
+  `button[aria-haspopup="dialog"]:not([aria-label])` 找 dsh 的设置触发按钮，而新版本给该
+  按钮加了 `aria-label`，选择器匹配为空——点设置只会关掉管理器、之后什么都不发生。现改为
+  按平台自身的槽位锚点定位（`[data-slot="sidebar.settings"]`，退化时用
+  `[data-slot="settings.trigger"]`），且面板导航格不再假设它位于 `role="dialog"` 内。
+  见[设置面板](docs/usage.zh.md#6-设置面板)。
+
 ## [0.13.0] - 2026-09-11
 
 ### Breaking

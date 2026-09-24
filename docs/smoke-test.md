@@ -60,13 +60,15 @@ DSH_E2E_UPDATE_BASELINE=1 npm run test:e2e   # 重录像素基线
 > `@` 引用注入与跨步去重、真实 git 远端同步与冲突横幅、灯箱/长文本省略等观感细项、
 > 多插件共存、中文 IME。
 
-### 这条线刚发现的回归（`it.fails` 记录现场）
+### 这条线发现并已修掉的回归
 
-管理器的「设置」快捷入口在 dsh 0.1.7-rc.1 上**已失效**：它按
+管理器的「设置」快捷入口曾在 dsh 0.1.7-rc.1 上失效：它按
 `button[aria-haspopup="dialog"]:not([aria-label])` 找设置触发按钮，而当前唯一的触发按钮带
-`aria-label="设置"`（实测匹配数 0），于是关闭管理器后什么都不发生。
-`e2e/settings.e2e.ts` 用 `it.fails` 把它钉住：修好后该用例会以「expected failure passed」
-报错，提醒把它转成普通用例。详见 coding-standards §12 #25。
+`aria-label="设置"`（实测匹配数 0），于是关闭管理器后什么都不发生；同一处还假设设置面板在
+`role="dialog"` 内（实测也不是）。现改为按平台槽位锚点定位（`[data-slot="sidebar.settings"]`，
+退化 `[data-slot="settings.trigger"]`），导航格按可见标签在全局 `nav button` 里找。
+`e2e/settings.e2e.ts` 的「reaches our section from the manager shortcut」就是这条修复的
+常驻护栏。详见 coding-standards §12 #25。
 
 ## 验证范围速查（按改动面裁剪）
 

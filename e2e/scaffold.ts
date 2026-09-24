@@ -250,14 +250,35 @@ export async function openHarnessPage(browser: Browser, url: string): Promise<Ha
   })
   const page = await context.newPage()
   await page.goto(url, { waitUntil: 'load' })
-  // The client keeps long-lived streams open, so `networkidle` never fires; the
-  // shell rendering is the real readiness signal (and the token has already been
-  // exchanged for the session cookie by the root redirect).
+  await settleHarnessPage(page)
+  return { page, context }
+}
+
+/**
+ * Bring a page to the lane's ready state: shell rendered, first-use prompts gone,
+ * the seeded workspace answering through the plugin's own route, no mask left.
+ *
+ * The token in the page URL is exchanged for the session cookie by the root
+ * redirect, so a reload returns to the same authenticated shell — which is what
+ * {@link resetHarnessPage} relies on to give every case an independent start.
+ * `networkidle` is deliberately not used: the client keeps long-lived streams open.
+ * @param page - the harness page.
+ */
+export async function settleHarnessPage(page: Page): Promise<void> {
   await waitForShell(page)
   await dismissFirstUseModals(page)
   await waitForSeededWorkspace(page)
   await waitForUnobstructed(page)
-  return { page, context }
+}
+
+/**
+ * Reload a page back to the ready state, so cases sharing one context never
+ * inherit the previous case's open panel or typed query.
+ * @param page - the harness page.
+ */
+export async function resetHarnessPage(page: Page): Promise<void> {
+  await page.reload({ waitUntil: 'load' })
+  await settleHarnessPage(page)
 }
 
 /**

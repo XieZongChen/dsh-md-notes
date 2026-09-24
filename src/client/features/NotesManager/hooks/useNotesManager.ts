@@ -82,20 +82,32 @@ export function useNotesManager({ store, tracker, t, sessions }: NotesManagerPro
    * Open dsh's own settings panel and jump to the "MD 笔记" section. The
    * settings shell owns its open state locally and exposes no external API,
    * so this simulates the two clicks a user would make: the sidebar settings
-   * trigger, then the section's nav cell. The trigger is the only
-   * `button[aria-haspopup="dialog"]` without an aria-label on the page; the
-   * nav cell is matched by the section's localized label. Closes the manager
-   * first so its overlay cannot cover the settings modal.
+   * trigger, then the section's nav cell. Closes the manager first so its
+   * overlay cannot cover the settings panel.
+   *
+   * Both anchors are the platform's own slot/DOM contract, never the trigger's
+   * class or its localized label:
+   * - trigger: the dialog-hosting button inside `[data-slot="sidebar.settings"]`
+   *   (fallback: the button around `[data-slot="settings.trigger"]`, then the
+   *   first dialog trigger anywhere). The previous
+   *   `button[aria-haspopup="dialog"]:not([aria-label])` heuristic silently
+   *   stopped matching on dsh 0.1.7-rc.1, where that button gained an
+   *   `aria-label` — see coding-standards §12 #25.
+   * - nav cell: the panel is a plain overlay (no `[role="dialog"]`), so cells are
+   *   looked up unscoped and matched by the section label the framework renders
+   *   from `git.settingsNav`.
    */
   const openDshSettings = (): void => {
     close()
-    const trigger = document.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]:not([aria-label])')
+    const trigger = document.querySelector<HTMLButtonElement>('[data-slot="sidebar.settings"] button[aria-haspopup="dialog"]')
+      ?? document.querySelector<HTMLElement>('[data-slot="settings.trigger"]')?.closest('button')
+      ?? document.querySelector<HTMLButtonElement>('button[aria-haspopup="dialog"]')
     trigger?.click()
     // The panel mounts async; retry locating the nav cell a few times.
     let attempts = 0
     const locate = (): void => {
       attempts += 1
-      const cells = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="dialog"] nav button'))
+      const cells = Array.from(document.querySelectorAll<HTMLButtonElement>('nav button'))
       const cell = cells.find((b) => b.textContent?.trim() === t('git.settingsNav'))
       if (cell !== undefined) { cell.click(); return }
       if (attempts < 8) window.setTimeout(locate, 100)

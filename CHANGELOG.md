@@ -63,6 +63,16 @@ Only user-visible functional changes are recorded (no documentation, code refact
   still mirrors `.md` only (see the
   [user guide](docs/usage.md#inserting-images)).
 
+### Fixed
+
+- Fixed the notes manager's **⚙ settings** shortcut on dsh 0.1.7: it located dsh's
+  settings trigger with `button[aria-haspopup="dialog"]:not([aria-label])`, but the
+  new dsh gives that button an `aria-label`, so the selector matched nothing —
+  clicking ⚙ only closed the manager and nothing else happened. It now anchors on
+  the platform's own slot (`[data-slot="sidebar.settings"]`, falling back to
+  `[data-slot="settings.trigger"]`), and the panel's nav cell is no longer assumed
+  to live inside `role="dialog"`. See [the settings panel](docs/usage.md#6-the-settings-panel).
+
 ## [0.13.0] - 2026-09-11
 
 ### Breaking

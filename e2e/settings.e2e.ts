@@ -9,18 +9,17 @@
  * reachable and rendered by the shipped panel — including the nav label it is
  * filed under.
  *
- * The second case is a **known regression** recorded with `it.fails`: the
- * manager's 「设置」 shortcut builds
- * `button[aria-haspopup="dialog"]:not([aria-label])`, and on dsh 0.1.7-rc.1 the one
- * such trigger carries `aria-label="设置"`, so the selector matches nothing and
- * the shortcut dead-ends. When the shortcut is fixed, this case flips to
- * "expected failure passed" and must be promoted to a normal test.
+ * The second case covers the manager's 「设置」 shortcut: it used to build
+ * `button[aria-haspopup="dialog"]:not([aria-label])`, which stopped matching on dsh
+ * 0.1.7-rc.1 (that trigger gained an `aria-label`) and left the shortcut dead. The
+ * fix anchors on `[data-slot="sidebar.settings"]` instead, and this case fails if
+ * either half of the two-click simulation breaks again (coding-standards §12 #25).
  * @module dsh-md-notes/e2e/settings.e2e
  */
 
 import type { Browser, Page } from 'playwright'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { closePage, launchChromium, launchWebHarness, openHarnessPage, type HarnessPage, type WebHarness } from './scaffold.ts'
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { closePage, launchChromium, launchWebHarness, openHarnessPage, resetHarnessPage, type HarnessPage, type WebHarness } from './scaffold.ts'
 
 /** Nav cell our section is filed under (`git.settingsNav`). */
 const SECTION_LABEL = 'MD 笔记'
@@ -54,6 +53,10 @@ describe('settings section (real browser)', () => {
     await harness.stop()
   })
 
+  // Sharing one page across cases is what makes the suite fast; reloading to the
+  // ready state is what keeps cases independent of each other's open panels.
+  beforeEach(async () => { await resetHarnessPage(opened.page) })
+
   it('renders the git form under its nav label with the stored values', async () => {
     const { page } = opened
     await openOurSection(page)
@@ -64,12 +67,11 @@ describe('settings section (real browser)', () => {
     expect(await page.getByRole('button', { name: '保存设置' }).count()).toBe(1)
   })
 
-  it.fails('reaches our section from the manager shortcut', async () => {
+  it('reaches our section from the manager shortcut', async () => {
     const { page } = opened
     await page.getByRole('button', { name: 'MD 笔记' }).click()
     await page.locator('button[title="设置"]').first().click()
-    // Known-broken: the shortcut's selector no longer matches any trigger, so the
-    // section never opens. Short waits keep this expected failure quick.
-    await page.getByRole('button', { name: '保存设置' }).waitFor({ state: 'visible', timeout: 5_000 })
+    await page.getByRole('button', { name: '保存设置' }).waitFor({ state: 'visible', timeout: 15_000 })
+    expect(await page.getByText('笔记保存在哪里').count()).toBeGreaterThan(0)
   })
 })
