@@ -375,7 +375,7 @@
 
 | 24 | `vitest.config.ts` + `*.dom.test.ts` | 浏览器线护栏**本地专属**：它要 harness checkout 的源码解析（npm 上的 dsh client 插件包是 `window.__ModuleLoader__` 包装产物，Node 里加载不了），而 CI 无 checkout ⇒ 该类文件在 CI 被 exclude，前端回归在 CI 仍只有 Node 线 | 中 | 本地护栏已落地（3 文件 6 例，见 smoke-test.md「已被机器覆盖的人工项」）；根治 = 上游给出可脱离 monorepo 消费的 client 测试运行时（见 TODO 平台问题），届时删除自研解析门面并把该线并入 CI |
 
-| 25 | `client/NotesManager/hooks/useNotesManager.ts` `openDshSettings` | 找设置触发按钮的 `querySelector('button[aria-haspopup="dialog"]:not([aria-label])')` 在 dsh 0.1.7-rc.1 上**匹配数为 0**（实测该唯一触发按钮带 `aria-label="设置"`）→ 管理器「设置」快捷入口静默失效（先关了管理器，再什么都不发生）。typecheck/单测都看不见 | 中 | 已由 `e2e/settings.e2e.ts` 的 `it.fails` 钉住现场；修法二选一并保持 `:not([aria-label])` 的**本意**（区分设置触发与其它 dialog 按钮）：dsh 若提供设置导航扩展点则改用它，否则按更稳的锚点定位并在拿到扩展点后替换（见 TODO 平台问题「设置面板导航」） |
+| 25 | ✅ `client/NotesManager/hooks/useNotesManager.ts` `openDshSettings` | 找设置触发按钮的 `querySelector('button[aria-haspopup="dialog"]:not([aria-label])')` 在 dsh 0.1.7-rc.1 上**匹配数为 0**（实测该唯一触发按钮带 `aria-label="设置"`）→ 管理器「设置」快捷入口静默失效（先关了管理器，再什么都不发生）。typecheck/单测都看不见 | 中 | 已修（commit `3d4a101`）：触发器改按平台槽位 `[data-slot="sidebar.settings"] button[aria-haspopup="dialog"]` 定位（退化 `[data-slot="settings.trigger"]`），导航格不再假设面板在 `role="dialog"` 内；`e2e/settings.e2e.ts` 由 `it.fails` 转正为常驻护栏。**根治**仍是 dsh 提供设置面板导航扩展点（见 TODO 平台问题「设置面板导航」），届时删掉这两次模拟点击 |
 
 > 本节是活的：修掉一条就把该行标 ✅ 并注明 commit；新增隐患随时补。目标是在功能继续增长前
 > 把「高/中」级别清空。
